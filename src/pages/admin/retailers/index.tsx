@@ -1,17 +1,10 @@
-import * as React from "react";
-import {
-  Plus,
-  Store,
-  MoreHorizontal,
-  Loader2,
-  AlertCircle,
-  X,
-} from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
-import Link from "next/link";
+import * as React from 'react';
+import { Plus, Store, MoreHorizontal, Loader2, AlertCircle, X } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
+import Link from 'next/link';
 
-import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { cn } from "@/utils/cn";
+import { TablePlaceholder } from '@/components/ui/table-placeholder';
+import { cn } from '@/utils/cn';
 import {
   fetchRetailers,
   fetchCommissionGroups,
@@ -22,19 +15,19 @@ import {
   type Agent,
   type ProfileData,
   type RetailerData,
-} from "@/actions";
-import useRequireRole from "@/hooks/useRequireRole";
+} from '@/actions';
+import useRequireRole from '@/hooks/useRequireRole';
+import { RetailerTable } from '@/components/admin/retailers/RetailerTable';
+import { AddRetailerDialog } from '@/components/admin/retailers/AddRetailerDialog';
 
 export default function AdminRetailers() {
   // Protect this route - only allow admin role
-  const { isLoading: isRoleLoading } = useRequireRole("admin");
+  const { isLoading: isRoleLoading } = useRequireRole('admin');
 
   // States for data
   const [retailers, setRetailers] = React.useState<AdminRetailer[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
-  const [commissionGroups, setCommissionGroups] = React.useState<
-    CommissionGroup[]
-  >([]);
+  const [commissionGroups, setCommissionGroups] = React.useState<CommissionGroup[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -54,15 +47,15 @@ export default function AdminRetailers() {
     password: string;
     autoGeneratePassword: boolean;
   }>({
-    businessName: "",
-    contactName: "",
-    email: "",
-    location: "",
-    agentId: "",
-    commissionGroupId: "",
-    initialBalance: "0",
-    creditLimit: "0",
-    password: "",
+    businessName: '',
+    contactName: '',
+    email: '',
+    location: '',
+    agentId: '',
+    commissionGroupId: '',
+    initialBalance: '0',
+    creditLimit: '0',
+    password: '',
     autoGeneratePassword: false,
   });
 
@@ -74,8 +67,7 @@ export default function AdminRetailers() {
 
       try {
         // Fetch retailers
-        const { data: retailersData, error: retailersError } =
-          await fetchRetailers();
+        const { data: retailersData, error: retailersError } = await fetchRetailers();
 
         if (retailersError) {
           setError(`Failed to load retailers: ${retailersError.message}`);
@@ -85,8 +77,7 @@ export default function AdminRetailers() {
         setRetailers(retailersData || []);
 
         // Fetch commission groups
-        const { data: groupsData, error: groupsError } =
-          await fetchCommissionGroups();
+        const { data: groupsData, error: groupsError } = await fetchCommissionGroups();
 
         if (groupsError) {
           setError(`Failed to load commission groups: ${groupsError.message}`);
@@ -105,11 +96,7 @@ export default function AdminRetailers() {
 
         setAgents(agentsData || []);
       } catch (err) {
-        setError(
-          `Unexpected error: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
+        setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setIsLoading(false);
       }
@@ -119,29 +106,26 @@ export default function AdminRetailers() {
   }, []);
 
   // Handler for input changes in the form
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    if (type === "checkbox") {
+    if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
+      setFormData(prev => ({ ...prev, [name]: checked }));
 
       // If auto-generate is checked, generate a random password
-      if (name === "autoGeneratePassword" && checked) {
+      if (name === 'autoGeneratePassword' && checked) {
         const generatedPassword = generateRandomPassword();
-        setFormData((prev) => ({ ...prev, password: generatedPassword }));
+        setFormData(prev => ({ ...prev, password: generatedPassword }));
       }
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
   // Generate a random password with letters, numbers, and special characters
   const generateRandomPassword = () => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-    let password = "";
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -151,7 +135,7 @@ export default function AdminRetailers() {
   // Handler for re-generating password
   const handleRegeneratePassword = () => {
     const newPassword = generateRandomPassword();
-    setFormData((prev) => ({ ...prev, password: newPassword }));
+    setFormData(prev => ({ ...prev, password: newPassword }));
   };
 
   // Validate form before submission
@@ -159,14 +143,14 @@ export default function AdminRetailers() {
     // Check email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      return { isValid: false, error: "Please enter a valid email address" };
+      return { isValid: false, error: 'Please enter a valid email address' };
     }
 
     // Check password length - Supabase requires at least 6 characters
     if (formData.password.length < 6) {
       return {
         isValid: false,
-        error: "Password must be at least 6 characters long",
+        error: 'Password must be at least 6 characters long',
       };
     }
 
@@ -180,7 +164,7 @@ export default function AdminRetailers() {
     // Validate the form first
     const validation = validateForm();
     if (!validation.isValid) {
-      setFormError(validation.error || "Invalid form submission");
+      setFormError(validation.error || 'Invalid form submission');
       return;
     }
 
@@ -193,7 +177,7 @@ export default function AdminRetailers() {
       const profileData: ProfileData = {
         full_name: formData.contactName,
         email: formData.email,
-        role: "retailer",
+        role: 'retailer',
       };
 
       // Create retailer data
@@ -206,7 +190,7 @@ export default function AdminRetailers() {
         commission_group_id: formData.commissionGroupId || undefined,
         initial_balance: parseFloat(formData.initialBalance) || 0,
         credit_limit: parseFloat(formData.creditLimit) || 0,
-        status: "active",
+        status: 'active',
       };
 
       // Call the createRetailer action with the new parameter format
@@ -233,24 +217,20 @@ export default function AdminRetailers() {
 
         // Reset form data
         setFormData({
-          businessName: "",
-          contactName: "",
-          email: "",
-          location: "",
-          agentId: "",
-          commissionGroupId: "",
-          initialBalance: "0",
-          creditLimit: "0",
-          password: "",
+          businessName: '',
+          contactName: '',
+          email: '',
+          location: '',
+          agentId: '',
+          commissionGroupId: '',
+          initialBalance: '0',
+          creditLimit: '0',
+          password: '',
           autoGeneratePassword: false,
         });
       }
     } catch (err) {
-      setError(
-        `Error creating retailer: ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
+      setError(`Error creating retailer: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -279,69 +259,12 @@ export default function AdminRetailers() {
     );
   }
 
-  // Format data for the table
-  const tableData = retailers.map((retailer) => {
-    const availableCredit = retailer.credit_limit - (retailer.credit_used || 0);
-    
-    const row = {
-      Name: (
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Store className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="font-medium">{retailer.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {retailer.email}
-            </div>
-          </div>
-        </div>
-      ),
-      Agent: retailer.agent_name || "None",
-      "Commission Group": retailer.commission_group_name || "None",
-      Balance: `R ${retailer.balance.toFixed(2)}`,
-      "Available Credit": `R ${availableCredit.toFixed(2)}`,
-      Status: (
-        <div
-          className={cn(
-            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-            retailer.status === "active"
-              ? "bg-green-500/10 text-green-500"
-              : retailer.status === "inactive"
-              ? "bg-amber-500/10 text-amber-500"
-              : "bg-destructive/10 text-destructive"
-          )}
-        >
-          {retailer.status.charAt(0).toUpperCase() + retailer.status.slice(1)}
-        </div>
-      ),
-    };
-
-    // Wrap each row in a Link component
-    return Object.entries(row).reduce((acc, [key, value]) => {
-      acc[key] = (
-        <Link
-          href={`/admin/retailers/${retailer.id}`}
-          className="cursor-pointer"
-          style={{ display: "block" }}
-        >
-          {value}
-        </Link>
-      );
-      return acc;
-    }, {} as Record<string, React.ReactNode>);
-  });
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Retailers
-          </h1>
-          <p className="text-muted-foreground">
-            Manage retailer accounts and settings.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Retailers</h1>
+          <p className="text-muted-foreground">Manage retailer accounts and settings.</p>
         </div>
         <button
           onClick={() => setShowAddDialog(true)}
@@ -352,230 +275,20 @@ export default function AdminRetailers() {
         </button>
       </div>
 
-      <TablePlaceholder
-        columns={["Name", "Agent", "Commission Group", "Balance", "Available Credit", "Status"]}
-        data={tableData}
-        rowsClickable={true}
-      />
+      <RetailerTable retailers={retailers} />
 
-      {/* Add Retailer Dialog */}
-      <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
-            <div className="flex items-center justify-between">
-              <Dialog.Title className="text-lg font-semibold">
-                Add New Retailer
-              </Dialog.Title>
-              <Dialog.Close className="rounded-full p-2 hover:bg-muted">
-                <X className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Close</span>
-              </Dialog.Close>
-            </div>
-            <div className="mt-4 space-y-6">
-              {formError && (
-                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    {formError}
-                  </div>
-                </div>
-              )}
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Retailer Name</label>
-                  <input
-                    type="text"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Enter retailer name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Contact Person</label>
-                  <input
-                    type="text"
-                    name="contactName"
-                    value={formData.contactName}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Contact person name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Contact email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Location</label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Business location"
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Password</label>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="autoGeneratePassword"
-                        name="autoGeneratePassword"
-                        checked={formData.autoGeneratePassword}
-                        onChange={handleInputChange}
-                        className="mr-2 h-4 w-4 rounded border-gray-300"
-                      />
-                      <label
-                        htmlFor="autoGeneratePassword"
-                        className="text-sm text-muted-foreground"
-                      >
-                        Auto-generate password
-                      </label>
-                    </div>
-                  </div>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      disabled={formData.autoGeneratePassword}
-                      className="w-full rounded-md rounded-r-none border border-input bg-background px-3 py-2 text-sm"
-                      placeholder={
-                        formData.autoGeneratePassword
-                          ? "Auto-generated password"
-                          : "Set password"
-                      }
-                      required
-                    />
-                    {formData.autoGeneratePassword && (
-                      <button
-                        type="button"
-                        onClick={handleRegeneratePassword}
-                        className="flex items-center justify-center rounded-md rounded-l-none border border-l-0 border-input bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/90"
-                      >
-                        Regenerate
-                      </button>
-                    )}
-                  </div>
-                  {formData.autoGeneratePassword && (
-                    <p className="text-xs text-muted-foreground">
-                      This password will be used for the retailer's login
-                      account.
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Agent</label>
-                    <select
-                      name="agentId"
-                      value={formData.agentId}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Select Agent</option>
-                      {agents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.full_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Commission Group
-                    </label>
-                    <select
-                      name="commissionGroupId"
-                      value={formData.commissionGroupId}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Select Group</option>
-                      {commissionGroups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">
-                    Initial Available Balance
-                  </label>
-                  <input
-                    type="number"
-                    name="initialBalance"
-                    value={formData.initialBalance}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-6">
-                  <label className="text-sm font-medium">Credit Limit</label>
-                  <input
-                    type="number"
-                    name="creditLimit"
-                    value={formData.creditLimit}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="pt-2 flex justify-end space-x-2">
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-                    >
-                      Cancel
-                    </button>
-                  </Dialog.Close>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Add Retailer"
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <AddRetailerDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        formData={formData}
+        agents={agents}
+        commissionGroups={commissionGroups}
+        formError={formError}
+        isSubmitting={isSubmitting}
+        onInputChange={handleInputChange}
+        onRegeneratePassword={handleRegeneratePassword}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
