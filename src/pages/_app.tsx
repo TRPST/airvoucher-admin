@@ -21,7 +21,7 @@ export default function App({ Component, pageProps }: AppProps) {
   
   // Original checks
   const isLandingPage = router.pathname === "/";
-  const isAuthPage = router.pathname.startsWith("/auth/") || isPortalAuthPage;
+  const isAuthPage = router.pathname.startsWith("/auth") || isPortalAuthPage;
   const is404Page = router.pathname === "/404";
 
   // Determine user role based on URL path

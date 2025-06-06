@@ -401,115 +401,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const bottomTabItems = getBottomTabItems(role);
   const mobileSidebarItems = getMobileSidebarItems(role);
 
-  // Special handling for cashier role - minimal UI
-  if (role === "cashier") {
-    // Calculate values for display
-    const balanceDisplay = balance.toFixed(2);
-    const creditDisplay = availableCredit.toFixed(2);
-
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        {/* Simple header for cashiers with key for re-render */}
-        <div
-          className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4"
-          key={`cashier-header-${balanceDisplay}-${creditDisplay}`}
-        >
-          <div className="flex items-center">
-            <img
-              src="/assets/airvoucher-logo.png"
-              alt="AirVoucher Logo"
-              className="h-8 mr-2"
-            />
-            <span className="font-bold">
-              {terminalName && retailerName
-                ? `${retailerName} ${window.innerWidth < 640 ? '' : ' • '}${terminalName}`
-                : "AirVoucher Terminal"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Balance Display for Desktop */}
-            {isBalanceLoading ? (
-              <div className="hidden sm:flex items-center gap-2">
-                <div className="w-36 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
-                <div className="w-36 h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center gap-2">
-                <div className="flex items-center px-4 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium">
-                  Balance:{" "}
-                  <span className="ml-1 font-bold">R{balanceDisplay}</span>
-                </div>
-                <div className="flex items-center px-4 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium">
-                  Credit:{" "}
-                  <span className="ml-1 font-bold">R{creditDisplay}</span>
-                </div>
-              </div>
-            )}
-            <ThemeToggle />
-            {user && (
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <button
-                    className="rounded-md p-2 hover:bg-muted transition-colors outline-none"
-                    aria-label="User menu"
-                  >
-                    <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground">
-                      <Avatar.Fallback>
-                        {user.email ? user.email.charAt(0).toUpperCase() : "C"}
-                      </Avatar.Fallback>
-                    </Avatar.Root>
-                  </button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    side="bottom"
-                    align="end"
-                    sideOffset={8}
-                    className="z-50 min-w-[200px] bg-background border border-border rounded-md shadow-md overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 p-1"
-                  >
-                    <div className="border-b border-border px-3 py-2 mb-1">
-                      <p className="text-sm font-medium">{user.email}</p>
-                    </div>
-                    <DropdownMenu.Item
-                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted cursor-pointer outline-none"
-                      onSelect={handleSignOut}
-                    >
-                      <LogOut className="mr-3 h-5 w-5" />
-                      Sign Out
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            )}
-          </div>
-        </div>
-
-        {/* Full-width balance row for mobile */}
-        <div className="sticky top-[57px] z-20 w-full border-b border-border bg-background p-3 sm:hidden">
-          {isBalanceLoading ? (
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex-1 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
-              <div className="flex-1 h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex-1 items-center px-3 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium text-sm flex justify-center">
-                Balance: <span className="ml-1 font-bold">R{balanceDisplay}</span>
-              </div>
-              <div className="flex-1 items-center px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium text-sm flex justify-center">
-                Credit: <span className="ml-1 font-bold">R{creditDisplay}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Main content - no sidebar */}
-        <main className="flex-1">
-          <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
-        </main>
-      </div>
-    );
-  }
 
   // Regular layout for other roles
   return (
@@ -525,38 +416,10 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex flex-col">
-            <span className="font-bold">AirVoucher</span>
-            {terminalName && retailerName && (
-              <span className="text-xs text-muted-foreground">
-                {retailerName} • {terminalName}
-              </span>
-            )}
+            <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8" />
           </div>
         </div>
         <ThemeToggle />
-      </div>
-
-      {/* Mobile balance display - sticky below navbar */}
-      <div className="sticky top-[57px] z-20 bg-background border-b border-border p-3 flex justify-center items-center md:hidden">
-        {isBalanceLoading ? (
-          <div className="flex items-center gap-2 w-full justify-center">
-            <div className="w-[45%] h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
-            <div className="w-[45%] h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 w-full justify-center">
-            <div className="flex items-center px-3 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium text-sm flex-1 justify-center">
-              Balance:{" "}
-              <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium text-sm flex-1 justify-center">
-              Credit:{" "}
-              <span className="ml-1 font-bold">
-                R{availableCredit.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mobile sidebar (drawer) */}
@@ -584,7 +447,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                     alt="AirVoucher Logo"
                     className="h-8 mr-2"
                   />
-                  AirVoucher
+                  
                 </h1>
               </div>
             </div>
@@ -686,8 +549,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                   src="/assets/airvoucher-logo.png"
                   alt="AirVoucher Logo"
                   className="h-8 mr-2"
-                />
-                AirVoucher
+                />                
               </h1>
             </div>
           </div>
