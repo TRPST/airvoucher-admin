@@ -1,20 +1,38 @@
-import { useEffect, useState, useMemo } from "react";
-import { Activity, DollarSign, Store, Users, AlertCircle, Search, Filter, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Activity,
+  DollarSign,
+  Store,
+  Users,
+  AlertCircle,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
-import { StatsTile } from "@/components/ui/stats-tile";
-import { StickyStatsHeader } from "@/components/admin/StickyStatsHeader";
-import { SalesOverTimeChart, type SalesDataPoint } from "@/components/admin/charts/SalesOverTimeChart";
-import { SalesByVoucherTypeChart, type VoucherTypeSales } from "@/components/admin/charts/SalesByVoucherTypeChart";
-import useRequireRole from "@/hooks/useRequireRole";
-import { cn } from "@/utils/cn";
+import { StatsTile } from '@/components/ui/stats-tile';
+import { StickyStatsHeader } from '@/components/admin/StickyStatsHeader';
+import {
+  SalesOverTimeChart,
+  type SalesDataPoint,
+} from '@/components/admin/charts/SalesOverTimeChart';
+import {
+  SalesByVoucherTypeChart,
+  type VoucherTypeSales,
+} from '@/components/admin/charts/SalesByVoucherTypeChart';
+import useRequireRole from '@/hooks/useRequireRole';
+import { cn } from '@/utils/cn';
 import {
   fetchRetailers,
   fetchSalesReport,
   fetchEarningsSummary,
   type Retailer,
   type SalesReport,
-} from "@/actions/adminActions";
+} from '@/actions/adminActions';
 
 // Process sales data for time series chart
 function processTimeSeriesData(salesData: SalesReport[]): SalesDataPoint[] {
@@ -43,13 +61,13 @@ function processTimeSeriesData(salesData: SalesReport[]): SalesDataPoint[] {
       // Format date for display (e.g., "May 24")
       const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
       });
-      
+
       result.push({
         date: dateStr,
         formattedDate,
-        amount: salesByDate[dateStr] || 0
+        amount: salesByDate[dateStr] || 0,
       });
     }
     return result;
@@ -60,9 +78,9 @@ function processTimeSeriesData(salesData: SalesReport[]): SalesDataPoint[] {
     date,
     formattedDate: new Date(date).toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     }),
-    amount: salesByDate[date]
+    amount: salesByDate[date],
   }));
 }
 
@@ -84,8 +102,8 @@ function processVoucherTypeData(salesData: SalesReport[]): VoucherTypeSales[] {
 }
 
 // Define sorting options (removed terminal_name)
-type SortField = "date" | "voucher_type" | "amount" | "retailer_name";
-type SortDirection = "asc" | "desc";
+type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name';
+type SortDirection = 'asc' | 'desc';
 
 export default function AdminDashboard() {
   // State for dashboard data
@@ -97,17 +115,17 @@ export default function AdminDashboard() {
   const [salesData30Days, setSalesData30Days] = useState<SalesReport[]>([]);
 
   // Table state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>("all");
-  const [retailerNameFilter, setRetailerNameFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
+  const [retailerNameFilter, setRetailerNameFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Protect this route - only allow admin role
-  const { isLoading: isAuthLoading } = useRequireRole("admin");
+  const { isLoading: isAuthLoading } = useRequireRole('admin');
 
   // Get unique voucher types for filter dropdown
   const voucherTypes = useMemo(() => {
@@ -129,7 +147,7 @@ export default function AdminDashboard() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (sale) =>
+        sale =>
           sale.voucher_type?.toLowerCase().includes(term) ||
           sale.retailer_name?.toLowerCase().includes(term) ||
           sale.id.toLowerCase().includes(term)
@@ -137,12 +155,12 @@ export default function AdminDashboard() {
     }
 
     // Apply voucher type filter
-    if (voucherTypeFilter !== "all") {
+    if (voucherTypeFilter !== 'all') {
       filtered = filtered.filter(sale => sale.voucher_type === voucherTypeFilter);
     }
 
     // Apply retailer name filter
-    if (retailerNameFilter !== "all") {
+    if (retailerNameFilter !== 'all') {
       filtered = filtered.filter(sale => sale.retailer_name === retailerNameFilter);
     }
 
@@ -152,88 +170,91 @@ export default function AdminDashboard() {
       let bValue: string | number | Date;
 
       switch (sortField) {
-        case "date":
+        case 'date':
           aValue = new Date(a.created_at);
           bValue = new Date(b.created_at);
           break;
-        case "voucher_type":
-          aValue = a.voucher_type || "";
-          bValue = b.voucher_type || "";
+        case 'voucher_type':
+          aValue = a.voucher_type || '';
+          bValue = b.voucher_type || '';
           break;
-        case "amount":
+        case 'amount':
           aValue = a.amount;
           bValue = b.amount;
           break;
-        case "retailer_name":
-          aValue = a.retailer_name || "";
-          bValue = b.retailer_name || "";
+        case 'retailer_name':
+          aValue = a.retailer_name || '';
+          bValue = b.retailer_name || '';
           break;
         default:
           return 0;
       }
 
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
     return filtered;
-  }, [salesData30Days, searchTerm, voucherTypeFilter, retailerNameFilter, sortField, sortDirection]);
+  }, [
+    salesData30Days,
+    searchTerm,
+    voucherTypeFilter,
+    retailerNameFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedSales.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSales = filteredAndSortedSales.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const paginatedSales = filteredAndSortedSales.slice(startIndex, startIndex + itemsPerPage);
 
   // Table data formatting - Now using profit directly from database
   const tableData = useMemo(() => {
-    return paginatedSales.map((sale) => {
+    return paginatedSales.map(sale => {
       // Use the profit field directly from the database (calculated by RPC function)
       const airVoucherProfit = sale.profit || 0;
-      
+
       // Calculate supplier commission amount
       const supplierCommissionAmount = sale.amount * (sale.supplier_commission_pct / 100);
-      
+
       return {
-        Date: new Date(sale.created_at).toLocaleString("en-ZA", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
+        Date: new Date(sale.created_at).toLocaleString('en-ZA', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
         }),
-        "Type": (
+        Type: (
           <div className="flex items-center gap-2">
             <div
               className={cn(
-                "h-2 w-2 rounded-full",
-                sale.voucher_type === "Mobile"
-                  ? "bg-primary"
-                  : sale.voucher_type === "OTT"
-                  ? "bg-purple-500"
-                  : sale.voucher_type === "Hollywoodbets"
-                  ? "bg-green-500"
-                  : sale.voucher_type === "Ringa"
-                  ? "bg-amber-500"
-                  : "bg-pink-500"
+                'h-2 w-2 rounded-full',
+                sale.voucher_type === 'Mobile'
+                  ? 'bg-primary'
+                  : sale.voucher_type === 'OTT'
+                    ? 'bg-purple-500'
+                    : sale.voucher_type === 'Hollywoodbets'
+                      ? 'bg-green-500'
+                      : sale.voucher_type === 'Ringa'
+                        ? 'bg-amber-500'
+                        : 'bg-pink-500'
               )}
             />
-            <span>{sale.voucher_type || "Unknown"}</span>
+            <span>{sale.voucher_type || 'Unknown'}</span>
           </div>
         ),
         Amount: `R ${sale.amount.toFixed(2)}`,
-        Retailer: sale.retailer_name || "Unknown",
-        "Supp. Com.": `R ${supplierCommissionAmount.toFixed(2)}`,
-        "Ret. Com.": `R ${sale.retailer_commission.toFixed(2)}`,
-        "Agent Com.": `R ${sale.agent_commission.toFixed(2)}`,
-        "AV Profit": (
-          <span className={cn(
-            "font-medium",
-            airVoucherProfit >= 0 ? "text-green-600" : "text-red-600"
-          )}>
+        Retailer: sale.retailer_name || 'Unknown',
+        'Supp. Com.': `R ${supplierCommissionAmount.toFixed(2)}`,
+        'Ret. Com.': `R ${sale.retailer_commission.toFixed(2)}`,
+        'Agent Com.': `R ${sale.agent_commission.toFixed(2)}`,
+        'AV Profit': (
+          <span
+            className={cn('font-medium', airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600')}
+          >
             R {airVoucherProfit.toFixed(2)}
           </span>
         ),
@@ -244,10 +265,10 @@ export default function AdminDashboard() {
   // Handle sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection("desc");
+      setSortDirection('desc');
     }
     setCurrentPage(1);
   };
@@ -258,43 +279,33 @@ export default function AdminDashboard() {
   }, [searchTerm, voucherTypeFilter, retailerNameFilter]);
 
   // Calculate dashboard metrics
-  const todaySalesTotal = todaySales.reduce(
-    (sum, sale) => sum + sale.amount,
-    0
-  );
+  const todaySalesTotal = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
 
   // Calculate today's AirVoucher profit using the profit field from database
   const todaysProfit = todaySales.reduce((sum, sale) => {
     return sum + (sale.profit || 0);
   }, 0);
 
-  const activeRetailers = retailers.filter(
-    (retailer) => retailer.status === "active"
-  ).length;
+  const activeRetailers = retailers.filter(retailer => retailer.status === 'active').length;
 
   // We don't have agents data yet, let's estimate based on the retailers
-  const agentsCount = new Set(
-    retailers.map((r) => r.agent_profile_id).filter(Boolean)
-  ).size;
+  const agentsCount = new Set(retailers.map(r => r.agent_profile_id).filter(Boolean)).size;
 
   // Fetch dashboard data
   useEffect(() => {
     async function loadDashboardData() {
       setIsDataLoading(true);
       try {
-        console.log("Loading admin dashboard data...");
+        console.log('Loading admin dashboard data...');
 
         // Get retailers
-        const { data: retailersData, error: retailersError } =
-          await fetchRetailers();
+        const { data: retailersData, error: retailersError } = await fetchRetailers();
         if (retailersError) {
-          throw new Error(
-            `Error fetching retailers: ${retailersError.message}`
-          );
+          throw new Error(`Error fetching retailers: ${retailersError.message}`);
         }
 
         // Get today's sales
-        const today = new Date().toISOString().split("T")[0];
+        const today = new Date().toISOString().split('T')[0];
         const { data: salesData, error: salesError } = await fetchSalesReport({
           startDate: today,
           endDate: new Date().toISOString(),
@@ -306,8 +317,8 @@ export default function AdminDashboard() {
         // Get sales for past 30 days
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
-        
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
         const { data: salesData30Days, error: salesError30Days } = await fetchSalesReport({
           startDate: thirtyDaysAgoStr,
           endDate: new Date().toISOString(),
@@ -317,29 +328,28 @@ export default function AdminDashboard() {
         }
 
         // Get earnings summary
-        const { data: earningsData, error: earningsError } =
-          await fetchEarningsSummary({
-            startDate: today,
-            endDate: new Date().toISOString(),
-          });
+        const { data: earningsData, error: earningsError } = await fetchEarningsSummary({
+          startDate: today,
+          endDate: new Date().toISOString(),
+        });
         if (earningsError) {
           throw new Error(`Error fetching earnings: ${earningsError.message}`);
         }
 
         console.log('salesData30Days: ', salesData30Days);
-        
+
         // Debug: Display profit values from database
         if (salesData30Days && salesData30Days.length > 0) {
           console.log('DEBUG: Profit values from database by voucher type:');
-          
+
           // Group by voucher type to see the pattern
           const voucherTypeMap = new Map();
-          salesData30Days.forEach((sale) => {
+          salesData30Days.forEach(sale => {
             const key = sale.voucher_type;
             if (!voucherTypeMap.has(key)) {
-              const retailerPct = (sale.retailer_commission / sale.amount * 100).toFixed(2);
-              const agentPct = (sale.agent_commission / sale.amount * 100).toFixed(2);
-              
+              const retailerPct = ((sale.retailer_commission / sale.amount) * 100).toFixed(2);
+              const agentPct = ((sale.agent_commission / sale.amount) * 100).toFixed(2);
+
               voucherTypeMap.set(key, {
                 voucher_type: sale.voucher_type,
                 amount: sale.amount,
@@ -348,11 +358,11 @@ export default function AdminDashboard() {
                 agent_commission: sale.agent_commission,
                 profit_from_db: sale.profit || 0,
                 retailer_pct_calculated: retailerPct + '%',
-                agent_pct_calculated: agentPct + '%'
+                agent_pct_calculated: agentPct + '%',
               });
             }
           });
-          
+
           console.table(Array.from(voucherTypeMap.values()));
         }
 
@@ -363,18 +373,13 @@ export default function AdminDashboard() {
 
         // Calculate platform commission
         const commission =
-          earningsData?.reduce(
-            (sum, item) => sum + item.platform_commission,
-            0
-          ) || 0;
+          earningsData?.reduce((sum, item) => sum + item.platform_commission, 0) || 0;
         setPlatformCommission(commission);
 
-        console.log("Dashboard data loaded successfully");
+        console.log('Dashboard data loaded successfully');
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
+        console.error('Error loading dashboard data:', err);
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
         setIsDataLoading(false);
       }
@@ -409,7 +414,7 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center text-red-500">
-        <AlertCircle className="h-12 w-12 mb-4" />
+        <AlertCircle className="mb-4 h-12 w-12" />
         <h2 className="text-xl font-bold">Error Loading Dashboard</h2>
         <p>{error}</p>
       </div>
@@ -419,12 +424,8 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Welcome to your AirVoucher admin dashboard.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome to your AirVoucher admin dashboard.</p>
       </div>
 
       {/* Mobile Sticky Stats Header */}
@@ -437,7 +438,7 @@ export default function AdminDashboard() {
       />
 
       {/* Desktop Stats Grid */}
-      <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="hidden grid-cols-1 gap-4 sm:grid-cols-2 md:grid lg:grid-cols-4">
         <StatsTile
           label="Today's Sales"
           value={`R ${todaySalesTotal.toFixed(2)}`}
@@ -470,12 +471,12 @@ export default function AdminDashboard() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <SalesOverTimeChart 
-          data={processTimeSeriesData(salesData30Days)} 
-          isLoading={isDataLoading} 
+        <SalesOverTimeChart
+          data={processTimeSeriesData(salesData30Days)}
+          isLoading={isDataLoading}
         />
-        <SalesByVoucherTypeChart 
-          data={processVoucherTypeData(salesData30Days)} 
+        <SalesByVoucherTypeChart
+          data={processVoucherTypeData(salesData30Days)}
           isLoading={isDataLoading}
         />
       </div>
@@ -497,18 +498,18 @@ export default function AdminDashboard() {
               <input
                 type="search"
                 placeholder="Search sales..."
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <button 
+            <button
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
-                "inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm",
-                showFilters 
-                  ? "bg-primary text-primary-foreground border-primary" 
-                  : "border-input bg-background hover:bg-muted"
+                'inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm',
+                showFilters
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-input bg-background hover:bg-muted'
               )}
             >
               <Filter className="mr-2 h-4 w-4" />
@@ -521,7 +522,7 @@ export default function AdminDashboard() {
         {showFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="rounded-lg border border-border bg-card p-4 shadow-sm"
           >
@@ -535,10 +536,10 @@ export default function AdminDashboard() {
                   id="voucherTypeFilter"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={voucherTypeFilter}
-                  onChange={(e) => setVoucherTypeFilter(e.target.value)}
+                  onChange={e => setVoucherTypeFilter(e.target.value)}
                 >
                   <option value="all">All Types</option>
-                  {voucherTypes.map((type) => (
+                  {voucherTypes.map(type => (
                     <option key={type} value={type}>
                       {type}
                     </option>
@@ -553,10 +554,10 @@ export default function AdminDashboard() {
                   id="retailerNameFilter"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={retailerNameFilter}
-                  onChange={(e) => setRetailerNameFilter(e.target.value)}
+                  onChange={e => setRetailerNameFilter(e.target.value)}
                 >
                   <option value="all">All Retailers</option>
-                  {retailerNames.map((name) => (
+                  {retailerNames.map(name => (
                     <option key={name} value={name}>
                       {name}
                     </option>
@@ -576,62 +577,58 @@ export default function AdminDashboard() {
                   <tr className="border-b border-border">
                     <th className="whitespace-nowrap px-4 py-3">
                       <button
-                        onClick={() => handleSort("date")}
+                        onClick={() => handleSort('date')}
                         className="flex items-center gap-1 hover:text-foreground"
                       >
                         Date
-                        {sortField === "date" && (
-                          sortDirection === "asc" ? (
+                        {sortField === 'date' &&
+                          (sortDirection === 'asc' ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
                             <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
+                          ))}
                       </button>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3">
                       <button
-                        onClick={() => handleSort("voucher_type")}
+                        onClick={() => handleSort('voucher_type')}
                         className="flex items-center gap-1 hover:text-foreground"
                       >
                         Type
-                        {sortField === "voucher_type" && (
-                          sortDirection === "asc" ? (
+                        {sortField === 'voucher_type' &&
+                          (sortDirection === 'asc' ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
                             <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
+                          ))}
                       </button>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3">
                       <button
-                        onClick={() => handleSort("amount")}
+                        onClick={() => handleSort('amount')}
                         className="flex items-center gap-1 hover:text-foreground"
                       >
                         Amount
-                        {sortField === "amount" && (
-                          sortDirection === "asc" ? (
+                        {sortField === 'amount' &&
+                          (sortDirection === 'asc' ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
                             <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
+                          ))}
                       </button>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3">
                       <button
-                        onClick={() => handleSort("retailer_name")}
+                        onClick={() => handleSort('retailer_name')}
                         className="flex items-center gap-1 hover:text-foreground"
                       >
                         Retailer
-                        {sortField === "retailer_name" && (
-                          sortDirection === "asc" ? (
+                        {sortField === 'retailer_name' &&
+                          (sortDirection === 'asc' ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
                             <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
+                          ))}
                       </button>
                     </th>
                     <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
@@ -644,32 +641,24 @@ export default function AdminDashboard() {
                   {tableData.map((row, index) => (
                     <tr
                       key={`row-${startIndex + index}`}
-                      className="border-b border-border hover:bg-muted/30 transition-colors"
+                      className="border-b border-border transition-colors hover:bg-muted/30"
                     >
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Date}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Type}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap font-medium">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Type}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
                         {row.Amount}
                       </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Retailer}
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Retailer}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
+                        {row['Supp. Com.']}
                       </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-orange-600 font-medium">
-                        {row["Supp. Com."]}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
+                        {row['Ret. Com.']}
                       </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-green-600 font-medium">
-                        {row["Ret. Com."]}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
+                        {row['Agent Com.']}
                       </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-blue-600 font-medium">
-                        {row["Agent Com."]}
-                      </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap">
-                        {row["AV Profit"]}
-                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm">{row['AV Profit']}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -682,31 +671,33 @@ export default function AdminDashboard() {
                 {/* Results text - condensed on mobile */}
                 <div className="text-sm text-muted-foreground">
                   <span className="hidden sm:inline">Showing </span>
-                  {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of {filteredAndSortedSales.length}
+                  {startIndex + 1} to{' '}
+                  {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of{' '}
+                  {filteredAndSortedSales.length}
                   <span className="hidden sm:inline"> results</span>
                 </div>
-                
+
                 {/* Navigation controls */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">Previous</span>
+                    <span className="ml-1 hidden sm:inline">Previous</span>
                   </button>
-                  
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+
+                  <span className="whitespace-nowrap text-sm text-muted-foreground">
                     Page {currentPage} of {totalPages}
                   </span>
-                  
+
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <span className="hidden sm:inline mr-1">Next</span>
+                    <span className="mr-1 hidden sm:inline">Next</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>

@@ -24,31 +24,6 @@ export default function App({ Component, pageProps }: AppProps) {
   const isAuthPage = router.pathname.startsWith("/auth") || isPortalAuthPage;
   const is404Page = router.pathname === "/404";
 
-  // Determine user role based on URL path
-  // Default to "cashier" instead of "admin"
-  let role: "admin" | "retailer" | "agent" | "terminal" | "cashier" = "cashier";
-  
-  // Only set a specific role if the path clearly indicates it
-  if (router.pathname.includes("/admin/") || router.pathname === "/admin") {
-    role = "admin";
-  } else if (router.pathname.includes("/retailer/") || router.pathname === "/retailer") {
-    role = "retailer";
-  } else if (router.pathname.includes("/agent/") || router.pathname === "/agent") {
-    role = "agent";
-  } else if (router.pathname.includes("/terminal/") || router.pathname === "/terminal") {
-    role = "terminal";
-  }
-  
-  // For portal pages, extract the role from the URL
-  if (router.pathname.startsWith("/portal/")) {
-    const portalRole = router.query.portal as string;
-    if (portalRole === "admin") role = "admin";
-    else if (portalRole === "retailer") role = "retailer";
-    else if (portalRole === "agent") role = "agent"; 
-    else if (portalRole === "terminal") role = "terminal";
-    else if (portalRole === "cashier") role = "cashier";
-  }
-
   // Render a loader initially before client-side code runs
   if (!mounted) {
     return (
@@ -74,7 +49,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider attribute="class">
       <ToastProvider>
         <TerminalProvider>
-          <Layout role={role}>
+          <Layout>
             <Component {...pageProps} />
           </Layout>
         </TerminalProvider>
