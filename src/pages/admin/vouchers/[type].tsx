@@ -1,6 +1,6 @@
-import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/router";
+import * as React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   ChevronLeft,
   CreditCard,
@@ -14,62 +14,75 @@ import {
   Pencil,
   Check,
   X,
-} from "lucide-react";
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import {
+  getVoucherCommissionOverride,
+  upsertVoucherCommissionOverride,
+  getVoucherCommissionOverridesForType,
+} from '@/actions/admin/commissionOverrideActions';
+import { ManageVoucherCommissionModal } from '@/components/admin/vouchers/ManageVoucherCommissionModal';
+import { Tooltip } from '@/components/ui/tooltip';
 
-import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { cn } from "@/utils/cn";
-import { 
-  fetchVoucherInventory, 
-  fetchVoucherTypes
-} from "@/actions";
-import type { VoucherInventory } from "@/actions/types/adminTypes";
-import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
+import { TablePlaceholder } from '@/components/ui/table-placeholder';
+import { cn } from '@/utils/cn';
+import { fetchVoucherInventory, fetchVoucherTypes } from '@/actions';
+import type { VoucherInventory } from '@/actions/types/adminTypes';
+import { VoucherUploadDialog } from '@/components/admin/vouchers/VoucherUploadDialog';
 
 export default function VoucherTypeDetail() {
   const router = useRouter();
   const { type: typeId } = router.query;
-  
+
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchTerm, setSearchTerm] = React.useState('');
   const [sortBy, setSortBy] = React.useState<{
     field: string;
-    direction: "asc" | "desc";
+    direction: 'asc' | 'desc';
   }>({
-    field: "amount",
-    direction: "asc",
+    field: 'amount',
+    direction: 'asc',
   });
   const [vouchers, setVouchers] = React.useState<VoucherInventory[]>([]);
-  const [typeName, setTypeName] = React.useState<string>("");
+  const [typeName, setTypeName] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [supplierCommission, setSupplierCommission] = React.useState<number>(0);
   const [editingCommission, setEditingCommission] = React.useState(false);
-  const [newCommission, setNewCommission] = React.useState<string>("");
+  const [newCommission, setNewCommission] = React.useState<string>('');
   const [savingCommission, setSavingCommission] = React.useState(false);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
+  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
+  const [commissionModalLoading, setCommissionModalLoading] = useState(false);
+  const [commissionModalDefault, setCommissionModalDefault] = useState<any>(null);
+  const [commissionModalVoucher, setCommissionModalVoucher] = useState<{
+    amount: number;
+  } | null>(null);
+  const [commissionOverrides, setCommissionOverrides] = useState<Record<string, any>>({}); // key: amount as string
 
   // Fetch voucher type details including supplier commission
   React.useEffect(() => {
     async function loadData() {
       try {
-        if (!typeId || typeof typeId !== "string") return;
-        
+        if (!typeId || typeof typeId !== 'string') return;
+
         setIsLoading(true);
-        
+
         // First, get the voucher type details
         const { data: voucherTypes, error: typesError } = await fetchVoucherTypes();
-        
+
         if (typesError) {
           throw new Error(`Failed to load voucher types: ${typesError.message}`);
         }
-        
+
         const selectedType = voucherTypes?.find(t => t.id === typeId);
         if (!selectedType) {
-          throw new Error("Voucher type not found");
+          throw new Error('Voucher type not found');
         }
-        
+
         setTypeName(selectedType.name);
-        
+
         // Find the supplier commission percentage from the selected type
         const selectedTypeObj = voucherTypes?.find(t => t.id === typeId);
         if (selectedTypeObj && 'supplier_commission_pct' in selectedTypeObj) {
@@ -77,30 +90,24 @@ export default function VoucherTypeDetail() {
           setSupplierCommission(commissionPct);
           setNewCommission(commissionPct.toFixed(2));
         }
-        
+
         // Then fetch vouchers for this type
         const { data, error: fetchError } = await fetchVoucherInventory(typeId);
 
         if (fetchError) {
           // Don't throw an error for no inventory, just set empty vouchers
-          if (fetchError.message === "No voucher inventory data found") {
+          if (fetchError.message === 'No voucher inventory data found') {
             setVouchers([]);
           } else {
-            throw new Error(
-              `Failed to load voucher inventory: ${fetchError.message}`
-            );
+            throw new Error(`Failed to load voucher inventory: ${fetchError.message}`);
           }
         } else {
           setVouchers(data || []);
           console.log(`${selectedType.name} vouchers:`, data);
         }
       } catch (err) {
-        console.error("Error loading voucher data:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load voucher inventory"
-        );
+        console.error('Error loading voucher data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load voucher inventory');
       } finally {
         setIsLoading(false);
       }
@@ -108,24 +115,6 @@ export default function VoucherTypeDetail() {
 
     loadData();
   }, [typeId]);
-
-  // Handle upload success - fetch new vouchers in background without loading state
-  const handleUploadSuccess = () => {
-    // Fetch new vouchers in background without showing loading state
-    if (typeId && typeof typeId === "string") {
-      fetchVoucherInventory(typeId)
-        .then(({ data, error: fetchError }) => {
-          if (fetchError) {
-            console.error("Error reloading voucher inventory:", fetchError.message);
-          } else {
-            setVouchers(data || []);
-          }
-        })
-        .catch((err) => {
-          console.error("Error reloading voucher data:", err);
-        });
-    }
-  };
 
   // Group vouchers by amount for better inventory overview
   const groupedVouchers = React.useMemo(() => {
@@ -137,10 +126,11 @@ export default function VoucherTypeDetail() {
         available: number;
         sold: number;
         disabled: number;
+        voucherId: string;
       }
     >();
 
-    vouchers.forEach((voucher) => {
+    vouchers.forEach(voucher => {
       // Create a key based on the amount
       const key = `${voucher.amount}`;
       const current = groups.get(key) || {
@@ -149,23 +139,60 @@ export default function VoucherTypeDetail() {
         available: 0,
         sold: 0,
         disabled: 0,
+        voucherId: voucher.id, // first voucher with this amount
       };
 
       current.count++;
-
-      if (voucher.status === "available") {
+      if (voucher.status === 'available') {
         current.available++;
-      } else if (voucher.status === "sold") {
+      } else if (voucher.status === 'sold') {
         current.sold++;
-      } else if (voucher.status === "disabled") {
+      } else if (voucher.status === 'disabled') {
         current.disabled++;
       }
-
+      // Always keep the first voucherId for this amount
       groups.set(key, current);
     });
 
     return Array.from(groups.values());
   }, [vouchers]);
+
+  // Fetch all overrides for this voucher_type_id on load and after save
+  useEffect(() => {
+    async function fetchOverrides() {
+      if (!typeId || typeof typeId !== 'string') return;
+      const { data, error } = await getVoucherCommissionOverridesForType(typeId);
+      if (error || !data) {
+        setCommissionOverrides({});
+        return;
+      }
+      // Map: amount (as string) -> override
+      const overrides: Record<string, any> = {};
+      data.forEach((row: any) => {
+        overrides[row.amount.toString()] = row;
+      });
+      setCommissionOverrides(overrides);
+    }
+    fetchOverrides();
+  }, [typeId, vouchers]);
+
+  // Handle upload success - fetch new vouchers in background without loading state
+  const handleUploadSuccess = () => {
+    // Fetch new vouchers in background without showing loading state
+    if (typeId && typeof typeId === 'string') {
+      fetchVoucherInventory(typeId)
+        .then(({ data, error: fetchError }) => {
+          if (fetchError) {
+            console.error('Error reloading voucher inventory:', fetchError.message);
+          } else {
+            setVouchers(data || []);
+          }
+        })
+        .catch(err => {
+          console.error('Error reloading voucher data:', err);
+        });
+    }
+  };
 
   // Filter and sort vouchers
   const filteredVouchers = React.useMemo(() => {
@@ -174,9 +201,7 @@ export default function VoucherTypeDetail() {
     // Apply search filter (filter by amount)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((voucher) =>
-        voucher.amount.toString().includes(term)
-      );
+      filtered = filtered.filter(voucher => voucher.amount.toString().includes(term));
     }
 
     // Apply sorting
@@ -184,15 +209,15 @@ export default function VoucherTypeDetail() {
       const field = sortBy.field as keyof typeof a;
 
       // For inventory value, calculate dynamically
-      if (sortBy.field === "inventoryValue") {
+      if (sortBy.field === 'inventoryValue') {
         const aValue = a.available * a.amount;
         const bValue = b.available * b.amount;
-        return sortBy.direction === "asc" ? aValue - bValue : bValue - aValue;
+        return sortBy.direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
 
       // Handle number comparison
-      if (typeof a[field] === "number" && typeof b[field] === "number") {
-        return sortBy.direction === "asc"
+      if (typeof a[field] === 'number' && typeof b[field] === 'number') {
+        return sortBy.direction === 'asc'
           ? (a[field] as number) - (b[field] as number)
           : (b[field] as number) - (a[field] as number);
       }
@@ -208,10 +233,10 @@ export default function VoucherTypeDetail() {
     if (sortBy.field === field) {
       setSortBy({
         field,
-        direction: sortBy.direction === "asc" ? "desc" : "asc",
+        direction: sortBy.direction === 'asc' ? 'desc' : 'asc',
       });
     } else {
-      setSortBy({ field, direction: "asc" });
+      setSortBy({ field, direction: 'asc' });
     }
   };
 
@@ -222,14 +247,11 @@ export default function VoucherTypeDetail() {
   );
 
   // Format data for table
-  const tableData = filteredVouchers.map((voucher) => {
-    const stockStatus =
-      voucher.available < 10
-        ? "Low"
-        : voucher.available < 50
-        ? "Medium"
-        : "High";
-
+  const tableData = filteredVouchers.map(voucher => {
+    const group = groupedVouchers.find(g => g.amount === voucher.amount);
+    const amount = voucher.amount;
+    const stockStatus = voucher.available < 10 ? 'Low' : voucher.available < 50 ? 'Medium' : 'High';
+    const override = commissionOverrides[amount.toString()];
     return {
       Value: `R ${voucher.amount.toFixed(2)}`,
       Available: (
@@ -237,12 +259,12 @@ export default function VoucherTypeDetail() {
           <span>{voucher.available.toLocaleString()}</span>
           <div
             className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-              stockStatus === "Low"
-                ? "bg-destructive/10 text-destructive"
-                : stockStatus === "Medium"
-                ? "bg-amber-500/10 text-amber-500"
-                : "bg-green-500/10 text-green-500"
+              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+              stockStatus === 'Low'
+                ? 'bg-destructive/10 text-destructive'
+                : stockStatus === 'Medium'
+                  ? 'bg-amber-500/10 text-amber-500'
+                  : 'bg-green-500/10 text-green-500'
             )}
           >
             {stockStatus}
@@ -251,7 +273,41 @@ export default function VoucherTypeDetail() {
       ),
       Sold: voucher.sold.toLocaleString(),
       Disabled: voucher.disabled.toLocaleString(),
-      "Inventory Value": `R ${(voucher.amount * voucher.available).toFixed(2)}`,
+      'Inventory Value': `R ${(voucher.amount * voucher.available).toFixed(2)}`,
+      Commissions: (
+        <div className="flex items-center gap-2">
+          <button
+            className="inline-flex items-center rounded border border-primary/20 bg-primary/10 px-2 py-1 text-xs text-primary hover:bg-primary/20"
+            onClick={async () => {
+              setCommissionModalVoucher({ amount });
+              setCommissionModalLoading(true);
+              const { data } = await getVoucherCommissionOverride(typeId as string, amount);
+              setCommissionModalDefault(
+                data
+                  ? {
+                      supplier_pct: data.supplier_pct,
+                      retailer_pct: data.retailer_pct,
+                      agent_pct: data.agent_pct,
+                    }
+                  : undefined
+              );
+              setCommissionModalLoading(false);
+              setCommissionModalOpen(true);
+            }}
+            disabled={commissionModalLoading}
+            type="button"
+          >
+            Manage Commissions
+          </button>
+          {override && (
+            <Tooltip content="This voucher has custom commission overrides.">
+              <span className="ml-1 text-lg" role="img" aria-label="Override">
+                ⚙️
+              </span>
+            </Tooltip>
+          )}
+        </div>
+      ),
     };
   });
 
@@ -259,7 +315,7 @@ export default function VoucherTypeDetail() {
     if (sortBy.field !== field) {
       return null;
     }
-    return sortBy.direction === "asc" ? (
+    return sortBy.direction === 'asc' ? (
       <ArrowUp className="ml-1 h-3 w-3" />
     ) : (
       <ArrowDown className="ml-1 h-3 w-3" />
@@ -271,7 +327,7 @@ export default function VoucherTypeDetail() {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <Loader2 className="mb-2 h-8 w-8 animate-spin text-primary" />
           <p>Loading voucher inventory...</p>
         </div>
       </div>
@@ -302,17 +358,18 @@ export default function VoucherTypeDetail() {
     return (
       <div className="space-y-6">
         <Link href="/admin/vouchers" passHref>
-          <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-            <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+          <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
+            <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
             Back to vouchers
           </button>
         </Link>
-        
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ marginTop: 10 }}>
+
+        <div
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          style={{ marginTop: 10 }}
+        >
           <div>
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              {typeName} Vouchers
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{typeName} Vouchers</h1>
             <p className="text-muted-foreground">
               View and manage {typeName} vouchers by denomination
             </p>
@@ -325,7 +382,7 @@ export default function VoucherTypeDetail() {
             Upload {typeName} Vouchers
           </button>
         </div>
-        
+
         {/* Supplier Commission Card - Empty State */}
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -335,7 +392,7 @@ export default function VoucherTypeDetail() {
                 Commission percentage paid to the supplier for each voucher sold
               </p>
             </div>
-            
+
             {!editingCommission ? (
               <div className="flex items-center gap-2">
                 <div className="rounded-md bg-primary/10 px-3 py-1 text-primary">
@@ -361,7 +418,7 @@ export default function VoucherTypeDetail() {
                     max="100"
                     step="0.01"
                     value={newCommission}
-                    onChange={(e) => setNewCommission(e.target.value)}
+                    onChange={e => setNewCommission(e.target.value)}
                     className="w-24 rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
                   <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
@@ -373,33 +430,33 @@ export default function VoucherTypeDetail() {
                     // Validate input
                     const value = parseFloat(newCommission);
                     if (isNaN(value) || value < 0 || value > 100) {
-                      setCommissionError("Please enter a valid percentage between 0 and 100");
+                      setCommissionError('Please enter a valid percentage between 0 and 100');
                       return;
                     }
-                    
+
                     setSavingCommission(true);
                     setCommissionError(null);
-                    
+
                     try {
                       // Import the action function
-                      const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
-                      
+                      const { updateSupplierCommission } = await import(
+                        '@/actions/admin/voucherActions'
+                      );
+
                       // Use the action function
                       const { error } = await updateSupplierCommission(typeId as string, value);
-                      
+
                       if (error) {
                         throw new Error(error.message || 'Failed to update supplier commission');
                       }
-                      
+
                       // Update the local state with the new value
                       setSupplierCommission(value);
                       setEditingCommission(false);
                     } catch (err) {
                       console.error('Error updating supplier commission:', err);
                       setCommissionError(
-                        err instanceof Error
-                          ? err.message
-                          : 'Failed to update supplier commission'
+                        err instanceof Error ? err.message : 'Failed to update supplier commission'
                       );
                     } finally {
                       setSavingCommission(false);
@@ -427,14 +484,14 @@ export default function VoucherTypeDetail() {
               </div>
             )}
           </div>
-          
+
           {commissionError && (
-            <div className="mt-2 rounded-md bg-destructive/10 p-2 text-destructive text-sm">
+            <div className="mt-2 rounded-md bg-destructive/10 p-2 text-sm text-destructive">
               {commissionError}
             </div>
           )}
         </div>
-        
+
         <div className="flex h-[40vh] items-center justify-center">
           <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
             <CreditCard className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
@@ -444,7 +501,7 @@ export default function VoucherTypeDetail() {
             </p>
           </div>
         </div>
-        
+
         {/* Voucher Upload Dialog */}
         <VoucherUploadDialog
           isOpen={showUploadDialog}
@@ -461,61 +518,63 @@ export default function VoucherTypeDetail() {
   const columnHeaders = (
     <tr className="border-b border-border">
       <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("amount")}
+        className="cursor-pointer whitespace-nowrap px-4 py-3 text-left"
+        onClick={() => toggleSort('amount')}
       >
-        <div className="flex items-center">
+        <span className="flex items-center gap-1">
           Value <SortIndicator field="amount" />
-        </div>
+        </span>
       </th>
       <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("available")}
+        className="cursor-pointer whitespace-nowrap px-4 py-3 text-left"
+        onClick={() => toggleSort('available')}
       >
-        <div className="flex items-center">
+        <span className="flex items-center gap-1">
           Available <SortIndicator field="available" />
-        </div>
+        </span>
       </th>
       <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("sold")}
+        className="cursor-pointer whitespace-nowrap px-4 py-3 text-left"
+        onClick={() => toggleSort('sold')}
       >
-        <div className="flex items-center">
+        <span className="flex items-center gap-1">
           Sold <SortIndicator field="sold" />
-        </div>
+        </span>
       </th>
       <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("disabled")}
+        className="cursor-pointer whitespace-nowrap px-4 py-3 text-left"
+        onClick={() => toggleSort('disabled')}
       >
-        <div className="flex items-center">
+        <span className="flex items-center gap-1">
           Disabled <SortIndicator field="disabled" />
-        </div>
+        </span>
       </th>
       <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("inventoryValue")}
+        className="cursor-pointer whitespace-nowrap px-4 py-3 text-left"
+        onClick={() => toggleSort('inventoryValue')}
       >
-        <div className="flex items-center">
+        <span className="flex items-center gap-1">
           Inventory Value <SortIndicator field="inventoryValue" />
-        </div>
+        </span>
       </th>
+      <th className="whitespace-nowrap px-4 py-3 text-left">Commissions</th>
     </tr>
   );
 
   return (
     <div className="space-y-6">
       <Link href="/admin/vouchers" passHref>
-        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+        <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
+          <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
           Back to vouchers
         </button>
       </Link>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ marginTop: 10 }}>
+      <div
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        style={{ marginTop: 10 }}
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            {typeName} Vouchers
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{typeName} Vouchers</h1>
           <p className="text-muted-foreground">
             View and manage {typeName} vouchers by denomination
           </p>
@@ -538,7 +597,7 @@ export default function VoucherTypeDetail() {
               Commission percentage paid to the supplier for each voucher sold
             </p>
           </div>
-          
+
           {!editingCommission ? (
             <div className="flex items-center gap-2">
               <div className="rounded-md bg-primary/10 px-3 py-1 text-primary">
@@ -564,7 +623,7 @@ export default function VoucherTypeDetail() {
                   max="100"
                   step="0.01"
                   value={newCommission}
-                  onChange={(e) => setNewCommission(e.target.value)}
+                  onChange={e => setNewCommission(e.target.value)}
                   className="w-24 rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
@@ -576,33 +635,33 @@ export default function VoucherTypeDetail() {
                   // Validate input
                   const value = parseFloat(newCommission);
                   if (isNaN(value) || value < 0 || value > 100) {
-                    setCommissionError("Please enter a valid percentage between 0 and 100");
+                    setCommissionError('Please enter a valid percentage between 0 and 100');
                     return;
                   }
-                  
+
                   setSavingCommission(true);
                   setCommissionError(null);
-                  
+
                   try {
                     // Import the action function
-                    const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
-                    
+                    const { updateSupplierCommission } = await import(
+                      '@/actions/admin/voucherActions'
+                    );
+
                     // Use the action function
                     const { error } = await updateSupplierCommission(typeId as string, value);
-                    
+
                     if (error) {
                       throw new Error(error.message || 'Failed to update supplier commission');
                     }
-                    
+
                     // Update the local state with the new value
                     setSupplierCommission(value);
                     setEditingCommission(false);
                   } catch (err) {
                     console.error('Error updating supplier commission:', err);
                     setCommissionError(
-                      err instanceof Error
-                        ? err.message
-                        : 'Failed to update supplier commission'
+                      err instanceof Error ? err.message : 'Failed to update supplier commission'
                     );
                   } finally {
                     setSavingCommission(false);
@@ -630,9 +689,9 @@ export default function VoucherTypeDetail() {
             </div>
           )}
         </div>
-        
+
         {commissionError && (
-          <div className="mt-2 rounded-md bg-destructive/10 p-2 text-destructive text-sm">
+          <div className="mt-2 rounded-md bg-destructive/10 p-2 text-sm text-destructive">
             {commissionError}
           </div>
         )}
@@ -645,17 +704,12 @@ export default function VoucherTypeDetail() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500" />
               <h2 className="text-xl font-semibold">
-                {vouchers
-                  .filter((v) => v.status === "available")
-                  .length.toLocaleString()}{" "}
-                Available
+                {vouchers.filter(v => v.status === 'available').length.toLocaleString()} Available
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Total inventory value:{" "}
-              <span className="font-semibold">
-                R {totalInventoryValue.toFixed(2)}
-              </span>
+              Total inventory value:{' '}
+              <span className="font-semibold">R {totalInventoryValue.toFixed(2)}</span>
             </p>
           </div>
 
@@ -664,10 +718,7 @@ export default function VoucherTypeDetail() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-primary" />
                 <span className="font-medium">
-                  {vouchers
-                    .filter((v) => v.status === "sold")
-                    .length.toLocaleString()}{" "}
-                  Sold
+                  {vouchers.filter(v => v.status === 'sold').length.toLocaleString()} Sold
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">Used vouchers</p>
@@ -676,10 +727,7 @@ export default function VoucherTypeDetail() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-500" />
                 <span className="font-medium">
-                  {vouchers
-                    .filter((v) => v.status === "disabled")
-                    .length.toLocaleString()}{" "}
-                  Disabled
+                  {vouchers.filter(v => v.status === 'disabled').length.toLocaleString()} Disabled
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">Inactive vouchers</p>
@@ -693,7 +741,7 @@ export default function VoucherTypeDetail() {
                 type="text"
                 placeholder="Search by amount..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
@@ -708,12 +756,9 @@ export default function VoucherTypeDetail() {
             <thead>{columnHeaders}</thead>
             <tbody>
               {tableData.map((row, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-border transition-colors hover:bg-muted/50"
-                >
+                <tr key={i} className="border-b border-border transition-colors hover:bg-muted/50">
                   {Object.entries(row).map(([key, value]) => (
-                    <td key={key} className="p-4 whitespace-nowrap">
+                    <td key={key} className="whitespace-nowrap p-4">
                       {value}
                     </td>
                   ))}
@@ -722,11 +767,10 @@ export default function VoucherTypeDetail() {
               {tableData.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
-                    className="p-8 text-center text-muted-foreground whitespace-nowrap"
+                    colSpan={6}
+                    className="whitespace-nowrap p-8 text-center text-muted-foreground"
                   >
-                    No vouchers found. Try adjusting your search or upload new
-                    vouchers.
+                    No vouchers found. Try adjusting your search or upload new vouchers.
                   </td>
                 </tr>
               )}
@@ -742,6 +786,38 @@ export default function VoucherTypeDetail() {
         onSuccess={handleUploadSuccess}
         voucherTypeId={typeId as string}
         voucherTypeName={typeName}
+      />
+      <ManageVoucherCommissionModal
+        open={commissionModalOpen}
+        onClose={() => setCommissionModalOpen(false)}
+        amount={commissionModalVoucher?.amount || 0}
+        voucherTypeId={typeId as string}
+        defaultValues={commissionModalDefault}
+        onSave={async values => {
+          if (!commissionModalVoucher) return;
+          setCommissionModalLoading(true);
+          const { error } = await upsertVoucherCommissionOverride({
+            voucher_type_id: typeId as string,
+            amount: commissionModalVoucher.amount,
+            ...values,
+          });
+          setCommissionModalLoading(false);
+          if (error) {
+            toast.error(
+              'Failed to save commission override: ' + (error.message || 'Unknown error')
+            );
+          } else {
+            toast.success('Commission override saved!');
+            setCommissionModalOpen(false);
+            // Refresh overrides
+            const { data } = await getVoucherCommissionOverridesForType(typeId as string);
+            const overrides: Record<string, any> = {};
+            (data || []).forEach((row: any) => {
+              overrides[row.amount.toString()] = row;
+            });
+            setCommissionOverrides(overrides);
+          }
+        }}
       />
     </div>
   );
