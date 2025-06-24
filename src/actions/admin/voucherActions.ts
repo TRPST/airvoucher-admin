@@ -1,5 +1,5 @@
-import { createClient } from "@/utils/supabase/client";
-import { VoucherInventory, ResponseType } from "../types/adminTypes";
+import { createClient } from '@/utils/supabase/client';
+import { VoucherInventory, ResponseType } from '../types/adminTypes';
 
 /**
  * Fetch a single voucher type by ID
@@ -8,11 +8,11 @@ export async function fetchVoucherType(
   id: string
 ): Promise<ResponseType<{ id: string; name: string; supplier_commission_pct: number }>> {
   const supabase = createClient();
-  
+
   const { data, error } = await supabase
-    .from("voucher_types")
-    .select("id, name, supplier_commission_pct")
-    .eq("id", id)
+    .from('voucher_types')
+    .select('id, name, supplier_commission_pct')
+    .eq('id', id)
     .single();
 
   return { data, error };
@@ -26,12 +26,12 @@ export async function updateSupplierCommission(
   supplierCommissionPct: number
 ): Promise<ResponseType<{ id: string }>> {
   const supabase = createClient();
-  
+
   const { data, error } = await supabase
-    .from("voucher_types")
+    .from('voucher_types')
     .update({ supplier_commission_pct: supplierCommissionPct })
-    .eq("id", id)
-    .select("id")
+    .eq('id', id)
+    .select('id')
     .single();
 
   return { data, error };
@@ -58,111 +58,80 @@ export async function fetchVoucherInventory(
   typeId?: string
 ): Promise<ResponseType<VoucherInventory[]>> {
   const supabase = createClient();
-  
+
   // First, get all voucher types to use as a lookup table
   const { data: voucherTypes, error: typesError } = await supabase
-    .from("voucher_types")
-    .select("id, name");
+    .from('voucher_types')
+    .select('id, name');
 
   if (typesError) {
     return { data: null, error: typesError };
   }
-
-  console.log("Voucher types from database:", voucherTypes);
 
   // Create a lookup map for voucher type names by ID
   const typeNameMap = new Map<string, string>();
   voucherTypes.forEach((type: { id: string; name: string }) => {
     typeNameMap.set(type.id, type.name);
   });
-  
-  console.log("Voucher type mapping:", Object.fromEntries(typeNameMap.entries()));
 
   // Now get all voucher inventory using pagination to overcome Supabase's default 1000 row limit
   let allData: any[] = [];
   let hasMore = true;
   let page = 0;
   const pageSize = 1000;
-  
+
   while (hasMore) {
     // Build query with optional type filter
-    let query = supabase
-      .from("voucher_inventory")
-      .select("*");
-    
+    let query = supabase.from('voucher_inventory').select('*');
+
     // Apply type filter if provided
     if (typeId) {
       query = query.eq('voucher_type_id', typeId);
     }
-    
+
     // Apply pagination
-    const { data: pageData, error: pageError } = await query
-      .range(page * pageSize, (page + 1) * pageSize - 1);
-    
+    const { data: pageData, error: pageError } = await query.range(
+      page * pageSize,
+      (page + 1) * pageSize - 1
+    );
+
     if (pageError) {
       return { data: null, error: pageError };
     }
-    
+
     if (pageData.length > 0) {
       allData = [...allData, ...pageData];
       page++;
-      console.log(`Fetched page ${page} with ${pageData.length} records. Total records: ${allData.length}`);
     } else {
       hasMore = false;
     }
-    
+
     // Safety check to prevent infinite loops
     if (page > 20) {
-      console.warn("Stopped pagination after 20 pages to prevent infinite loops");
       hasMore = false;
     }
   }
-  
+
   const data = allData;
 
   if (data.length === 0) {
-    return { 
-      data: null, 
-      error: new Error("No voucher inventory data found") 
+    return {
+      data: null,
+      error: new Error('No voucher inventory data found'),
     };
   }
 
-  // Log the unique voucher type IDs in the inventory
-  const uniqueTypeIds = [...new Set(data.map(v => v.voucher_type_id))];
-  console.log("Unique voucher type IDs in inventory:", uniqueTypeIds);
-  
-  // Check for any vouchers with type IDs not in our mapping
-  const unmappedTypeIds = uniqueTypeIds.filter(id => !typeNameMap.has(id));
-  if (unmappedTypeIds.length > 0) {
-    console.warn("Found vouchers with unmapped type IDs:", unmappedTypeIds);
-  }
-  
-  // Log high-value vouchers directly from the database
-  const highValueVouchers = data.filter(v => v.amount >= 100);
-  console.log(`Found ${highValueVouchers.length} high-value vouchers (≥ R100) in database:`, 
-    highValueVouchers.map(v => ({ 
-      id: v.id, 
-      amount: v.amount, 
-      type_id: v.voucher_type_id,
-      type_name: typeNameMap.get(v.voucher_type_id) || "UNKNOWN" 
-    }))
-  );
-
   // Transform the data to match the VoucherInventory type, using the lookup table
-  const inventory = data.map((voucher) => ({
+  const inventory = data.map(voucher => ({
     id: voucher.id,
     amount: voucher.amount,
     pin: voucher.pin,
     serial_number: voucher.serial_number,
     expiry_date: voucher.expiry_date,
-    status: voucher.status as "available" | "sold" | "disabled",
-    voucher_type_name: typeNameMap.get(voucher.voucher_type_id) || "",
+    status: voucher.status as 'available' | 'sold' | 'disabled',
+    voucher_type_name: typeNameMap.get(voucher.voucher_type_id) || '',
   }));
 
-  // Log high-value vouchers after transformation
-  const highValueInventory = inventory.filter(v => v.amount >= 100);
-  console.log(`Found ${highValueInventory.length} high-value vouchers after transformation:`);
-  
   return { data: inventory, error: null };
 }
 
@@ -179,11 +148,11 @@ export async function uploadVouchers(
   }>
 ): Promise<ResponseType<{ count: number }>> {
   const supabase = createClient();
-  
-  const { data, error } = await supabase.from("voucher_inventory").insert(
-    vouchers.map((v) => ({
+
+  const { data, error } = await supabase.from('voucher_inventory').insert(
+    vouchers.map(v => ({
       ...v,
-      status: "available",
+      status: 'available',
     }))
   );
 
@@ -197,124 +166,136 @@ export async function uploadVouchers(
 /**
  * Disable a voucher in the inventory
  */
-export async function disableVoucher(
-  id: string
-): Promise<ResponseType<{ id: string }>> {
+export async function disableVoucher(id: string): Promise<ResponseType<{ id: string }>> {
   const supabase = createClient();
-  
+
   const { data, error } = await supabase
-    .from("voucher_inventory")
-    .update({ status: "disabled" })
-    .eq("id", id)
-    .select("id")
+    .from('voucher_inventory')
+    .update({ status: 'disabled' })
+    .eq('id', id)
+    .select('id')
     .single();
 
   return { data, error };
 }
 
 /**
- * Fetch voucher type summaries for the main page
+ * Fetch voucher type summaries for the main page - OPTIMIZED VERSION
  */
-export async function fetchVoucherTypeSummaries(): Promise<
-  ResponseType<VoucherTypeSummary[]>
-> {
+export async function fetchVoucherTypeSummaries(): Promise<ResponseType<VoucherTypeSummary[]>> {
   const supabase = createClient();
-  
+
   try {
-    console.log("Starting fetchVoucherTypeSummaries");
-    
     // Get all voucher types with supplier commission percentage
     const { data: voucherTypes, error: typesError } = await supabase
-      .from("voucher_types")
-      .select("id, name, supplier_commission_pct");
+      .from('voucher_types')
+      .select('id, name, supplier_commission_pct');
 
     if (typesError) {
-      console.error("Error fetching voucher types:", typesError);
       return { data: null, error: typesError };
     }
 
-    console.log("Fetched voucher types:", voucherTypes);
-    
     // Return empty array if no voucher types found
     if (!voucherTypes || voucherTypes.length === 0) {
-      console.log("No voucher types found, returning empty array");
       return { data: [], error: null };
     }
 
-    // Create default summaries with empty statistics
-    const summaries: VoucherTypeSummary[] = voucherTypes.map((type: { id: string; name: string; supplier_commission_pct: number }) => {
-      let icon = "credit-card";
-      if (type.name.toLowerCase().includes("ringa")) {
-        icon = "phone";
-      } else if (type.name.toLowerCase().includes("hollywood")) {
-        icon = "film";
-      } else if (type.name.toLowerCase().includes("easyload")) {
-        icon = "zap";
-      }
-      
-      return {
-        id: type.id,
-        name: type.name,
-        totalVouchers: 0,
-        availableVouchers: 0,
-        soldVouchers: 0,
-        disabledVouchers: 0,
-        uniqueAmounts: [],
-        totalValue: 0,
-        icon,
-        supplierCommissionPct: type.supplier_commission_pct
-      };
-    });
+    // Fetch aggregated stats for all voucher types in parallel
+    const summariesPromises = voucherTypes.map(
+      async (type: { id: string; name: string; supplier_commission_pct: number }) => {
+        // Get aggregated stats for this voucher type
+        const { data: statsData, error: statsError } = await supabase.rpc(
+          'get_voucher_type_stats',
+          { type_id: type.id }
+        );
 
-    // Try to get voucher inventory, but don't fail if this fails
-    try {
-      console.log("Attempting to fetch voucher inventory");
-      const { data: allVouchers, error: voucherError } = await fetchVoucherInventory();
+        let stats = {
+          totalVouchers: 0,
+          availableVouchers: 0,
+          soldVouchers: 0,
+          disabledVouchers: 0,
+          totalValue: 0,
+          uniqueAmounts: [] as number[],
+        };
 
-      if (voucherError) {
-        console.warn("Warning: Error fetching voucher inventory:", voucherError);
-        // Continue with empty statistics
-      } else if (allVouchers && allVouchers.length > 0) {
-        console.log(`Successfully fetched ${allVouchers.length} vouchers`);
-        
-        // Update summaries with actual voucher data
-        summaries.forEach(summary => {
-          // Filter vouchers by this type
-          const typeVouchers = allVouchers.filter(
-            v => v.voucher_type_name.toLowerCase() === summary.name.toLowerCase()
-          );
+        // If RPC doesn't exist or fails, fall back to manual aggregation
+        if (statsError || !statsData) {
+          // Get counts by status
+          const statusPromises = ['available', 'sold', 'disabled'].map(async status => {
+            const { count } = await supabase
+              .from('voucher_inventory')
+              .select('*', { count: 'exact', head: true })
+              .eq('voucher_type_id', type.id)
+              .eq('status', status);
+            return { status, count: count || 0 };
+          });
 
-          if (typeVouchers.length > 0) {
-            // Count by status
-            summary.totalVouchers = typeVouchers.length;
-            summary.availableVouchers = typeVouchers.filter(v => v.status === "available").length;
-            summary.soldVouchers = typeVouchers.filter(v => v.status === "sold").length;
-            summary.disabledVouchers = typeVouchers.filter(v => v.status === "disabled").length;
+          const statusCounts = await Promise.all(statusPromises);
 
-            // Get unique amounts
-            summary.uniqueAmounts = [...new Set(typeVouchers.map(v => v.amount))].sort((a, b) => a - b);
+          statusCounts.forEach(({ status, count }) => {
+            stats.totalVouchers += count;
+            if (status === 'available') stats.availableVouchers = count;
+            else if (status === 'sold') stats.soldVouchers = count;
+            else if (status === 'disabled') stats.disabledVouchers = count;
+          });
 
-            // Calculate total value of available vouchers
-            summary.totalValue = typeVouchers
-              .filter(v => v.status === "available")
-              .reduce((sum, v) => sum + v.amount, 0);
+          // Get total value and unique amounts for available vouchers only
+          if (stats.availableVouchers > 0) {
+            const { data: amountData } = await supabase
+              .from('voucher_inventory')
+              .select('amount')
+              .eq('voucher_type_id', type.id)
+              .eq('status', 'available')
+              .limit(1000); // Limit to prevent huge queries
+
+            if (amountData) {
+              const amounts = new Set<number>();
+              amountData.forEach((v: { amount: number }) => {
+                amounts.add(v.amount);
+                stats.totalValue += v.amount;
+              });
+              stats.uniqueAmounts = Array.from(amounts).sort((a, b) => a - b);
+            }
           }
-        });
-      } else {
-        console.log("No vouchers found in inventory");
-      }
-    } catch (inventoryError) {
-      console.error("Error processing voucher inventory:", inventoryError);
-      // Continue with empty statistics
-    }
+        } else {
+          // Use RPC results if available
+          stats = {
+            totalVouchers: statsData.total_vouchers || 0,
+            availableVouchers: statsData.available_vouchers || 0,
+            soldVouchers: statsData.sold_vouchers || 0,
+            disabledVouchers: statsData.disabled_vouchers || 0,
+            totalValue: statsData.total_value || 0,
+            uniqueAmounts: statsData.unique_amounts || [],
+          };
+        }
 
-    console.log("Returning voucher type summaries:", summaries);
+        // Determine icon based on name
+        let icon = 'credit-card';
+        if (type.name.toLowerCase().includes('ringa')) {
+          icon = 'phone';
+        } else if (type.name.toLowerCase().includes('hollywood')) {
+          icon = 'film';
+        } else if (type.name.toLowerCase().includes('easyload')) {
+          icon = 'zap';
+        }
+
+        return {
+          id: type.id,
+          name: type.name,
+          ...stats,
+          icon,
+          supplierCommissionPct: type.supplier_commission_pct,
+        };
+      }
+    );
+
+    const summaries = await Promise.all(summariesPromises);
+
     return { data: summaries, error: null };
   } catch (error) {
-    console.error("Unhandled error in fetchVoucherTypeSummaries:", error);
-    return { 
-      data: [], 
-      error: error instanceof Error ? error : new Error("Failed to fetch voucher type summaries") 
+    return {
+      data: [],
+      error: error instanceof Error ? error : new Error('Failed to fetch voucher type summaries'),
     };
   }
 }
