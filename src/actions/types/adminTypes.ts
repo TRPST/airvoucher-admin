@@ -1,4 +1,4 @@
-import { PostgrestError } from "@supabase/supabase-js";
+import { PostgrestError } from '@supabase/supabase-js';
 
 export type Retailer = {
   id: string;
@@ -9,7 +9,7 @@ export type Retailer = {
   credit_limit: number;
   credit_used: number;
   commission_balance: number;
-  status: "active" | "suspended" | "inactive";
+  status: 'active' | 'suspended' | 'inactive';
   full_name: string;
   email: string;
   agent_name?: string;
@@ -26,7 +26,7 @@ export type Agent = {
   avatar_url?: string;
   created_at: string;
   updated_at: string;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
   retailer_count: number;
   mtd_sales: number;
   mtd_commission: number;
@@ -38,7 +38,7 @@ export type Terminal = {
   id: string;
   name: string;
   last_active: string | null;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
   auth_user_id?: string; // Now optional since it's been removed from the database
   email?: string; // Optional since we're not fetching it anymore
 };
@@ -49,7 +49,7 @@ export type VoucherInventory = {
   pin: string;
   serial_number: string | null;
   expiry_date: string | null;
-  status: "available" | "sold" | "disabled";
+  status: 'available' | 'sold' | 'disabled';
   voucher_type_name: string;
 };
 
@@ -75,6 +75,7 @@ export type SalesReport = {
   retailer_name: string;
   voucher_type: string;
   supplier_commission_pct: number;
+  supplier_commission: number;
   amount: number;
   retailer_commission: number;
   agent_commission: number;
@@ -101,7 +102,7 @@ export type ProfileData = {
   full_name: string;
   email: string;
   phone?: string;
-  role: "admin" | "retailer" | "agent" | "terminal";
+  role: 'admin' | 'retailer' | 'agent' | 'terminal';
 };
 
 export type RetailerData = {
@@ -113,7 +114,7 @@ export type RetailerData = {
   commission_group_id?: string;
   initial_balance?: number;
   credit_limit?: number;
-  status?: "active" | "suspended" | "inactive";
+  status?: 'active' | 'suspended' | 'inactive';
 };
 
 export type CreateRetailerParams = {

@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION complete_voucher_sale(
   voucher_inventory_id UUID,
   retailer_id UUID,
   terminal_id UUID,
-  voucher_type_id UUID,
+  in_voucher_type_id UUID,
   sale_amount NUMERIC(12,2),
   retailer_commission_pct NUMERIC(5,2),
   agent_commission_pct NUMERIC(5,2)
@@ -34,6 +34,13 @@ DECLARE
   product_name TEXT;
   ref_number TEXT;
   sale_timestamp TIMESTAMPTZ;
+  -- Commission override variables
+  override_supplier_pct NUMERIC(5,2);
+  override_retailer_pct NUMERIC(5,2);
+  override_agent_pct NUMERIC(5,2);
+  final_supplier_pct NUMERIC(5,2);
+  final_retailer_pct NUMERIC(5,2);
+  final_agent_pct NUMERIC(5,2);
 BEGIN
   -- Check if voucher is available
   PERFORM id FROM voucher_inventory 
@@ -81,15 +88,37 @@ BEGIN
   -- Get product name and supplier commission percentage from voucher type
   SELECT vt.name, vt.supplier_commission_pct INTO product_name, voucher_supplier_commission_pct
     FROM voucher_types vt
-    WHERE vt.id = voucher_type_id;
+    WHERE vt.id = in_voucher_type_id;
+
+  -- Check for commission override for this voucher type and amount
+  SELECT supplier_pct, retailer_pct, agent_pct 
+    INTO override_supplier_pct, override_retailer_pct, override_agent_pct
+    FROM voucher_commission_overrides
+    WHERE voucher_commission_overrides.voucher_type_id = in_voucher_type_id
+    AND voucher_commission_overrides.amount = sale_amount;
+
+  -- Use override values if they exist, otherwise use the original values
+  IF FOUND THEN
+    -- Override exists, use override values (stored as whole numbers 0-100)
+    final_supplier_pct := override_supplier_pct;
+    final_retailer_pct := override_retailer_pct;
+    final_agent_pct := override_agent_pct;
+  ELSE
+    -- No override, use original values
+    -- Note: supplier_commission_pct is stored as whole number, but retailer/agent rates are decimals
+    final_supplier_pct := voucher_supplier_commission_pct;
+    final_retailer_pct := retailer_commission_pct * 100; -- Convert decimal to whole number for consistency
+    final_agent_pct := agent_commission_pct * 100; -- Convert decimal to whole number for consistency
+  END IF;
 
   -- Calculate commissions correctly:
   -- 1. AirVoucher gets commission from supplier based on sale amount
-  airvoucher_commission := sale_amount * (voucher_supplier_commission_pct / 100);
+  airvoucher_commission := sale_amount * (final_supplier_pct / 100);
   
   -- 2. Retailer and agent commissions are percentages of what AirVoucher receives
-  retailer_commission := airvoucher_commission * retailer_commission_pct;
-  agent_commission := airvoucher_commission * agent_commission_pct;
+  -- Note: All final_*_pct values are now consistently whole numbers, so divide by 100
+  retailer_commission := airvoucher_commission * (final_retailer_pct / 100);
+  agent_commission := airvoucher_commission * (final_agent_pct / 100);
   
   -- 3. Calculate profit (what AirVoucher keeps)
   profit := airvoucher_commission - retailer_commission - agent_commission;
@@ -116,6 +145,7 @@ BEGIN
     terminal_id,
     voucher_inventory_id,
     sale_amount,
+    supplier_commission,
     retailer_commission,
     agent_commission,
     profit
@@ -123,6 +153,7 @@ BEGIN
     terminal_id,
     voucher_inventory_id,
     sale_amount,
+    airvoucher_commission,
     retailer_commission,
     agent_commission,
     profit

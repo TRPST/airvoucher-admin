@@ -1,10 +1,5 @@
-import { createClient } from "@/utils/supabase/client";
-import {
-  SalesReport,
-  EarningsSummary,
-  InventoryReport,
-  ResponseType,
-} from "../types/adminTypes";
+import { createClient } from '@/utils/supabase/client';
+import { SalesReport, EarningsSummary, InventoryReport, ResponseType } from '../types/adminTypes';
 
 /**
  * Fetch sales report with optional date filtering
@@ -17,13 +12,12 @@ export async function fetchSalesReport({
   endDate?: string;
 }): Promise<ResponseType<SalesReport[]>> {
   const supabase = createClient();
-  
-  let query = supabase
-  .from("sales")
-  .select(`
+
+  let query = supabase.from('sales').select(`
     id,
     created_at,
     sale_amount,
+    supplier_commission,
     retailer_commission,
     agent_commission,
     profit,
@@ -42,11 +36,11 @@ export async function fetchSalesReport({
   `);
 
   if (startDate) {
-    query = query.gte("created_at", startDate);
+    query = query.gte('created_at', startDate);
   }
 
   if (endDate) {
-    query = query.lte("created_at", endDate);
+    query = query.lte('created_at', endDate);
   }
 
   const { data, error } = await query;
@@ -58,16 +52,16 @@ export async function fetchSalesReport({
   const salesReport = data.map((sale: any) => ({
     id: sale.id,
     created_at: sale.created_at,
-    terminal_name: sale.terminal?.name || "",
-    retailer_name: sale.terminal?.retailer?.name || "",
-    voucher_type: sale.voucher?.voucher_type?.name || "",
+    terminal_name: sale.terminal?.name || '',
+    retailer_name: sale.terminal?.retailer?.name || '',
+    voucher_type: sale.voucher?.voucher_type?.name || '',
     supplier_commission_pct: sale.voucher?.voucher_type?.supplier_commission_pct || 0,
+    supplier_commission: sale.supplier_commission || 0,
     amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
     agent_commission: sale.agent_commission,
     profit: sale.profit || 0,
   }));
-  
 
   return { data: salesReport, error: null };
 }
@@ -83,9 +77,9 @@ export async function fetchEarningsSummary({
   endDate?: string;
 }): Promise<ResponseType<EarningsSummary[]>> {
   const supabase = createClient();
-  
+
   // This is a complex query, so we'll use a custom SQL function or client-side aggregation
-  let query = supabase.from("sales").select(`
+  let query = supabase.from('sales').select(`
       sale_amount,
       retailer_commission,
       agent_commission,
@@ -96,11 +90,11 @@ export async function fetchEarningsSummary({
     `);
 
   if (startDate) {
-    query = query.gte("created_at", startDate);
+    query = query.gte('created_at', startDate);
   }
 
   if (endDate) {
-    query = query.lte("created_at", endDate);
+    query = query.lte('created_at', endDate);
   }
 
   const { data, error } = await query;
@@ -113,8 +107,7 @@ export async function fetchEarningsSummary({
   const summaryMap = new Map<string, EarningsSummary>();
 
   for (const sale of data as any[]) {
-    const voucherType =
-      sale.voucher_inventory?.voucher_types?.name || "Unknown";
+    const voucherType = sale.voucher_inventory?.voucher_types?.name || 'Unknown';
     const amount = sale.sale_amount || 0;
     const retailerCommission = sale.retailer_commission || 0;
     const agentCommission = sale.agent_commission || 0;
@@ -148,12 +141,10 @@ export async function fetchEarningsSummary({
 /**
  * Fetch inventory report with counts by status and voucher type
  */
-export async function fetchInventoryReport(): Promise<
-  ResponseType<InventoryReport[]>
-> {
+export async function fetchInventoryReport(): Promise<ResponseType<InventoryReport[]>> {
   const supabase = createClient();
-  
-  const { data, error } = await supabase.from("voucher_inventory").select(`
+
+  const { data, error } = await supabase.from('voucher_inventory').select(`
       status,
       voucher_types!inner (name)
     `);
@@ -166,7 +157,7 @@ export async function fetchInventoryReport(): Promise<
   const reportMap = new Map<string, InventoryReport>();
 
   for (const voucher of data as any[]) {
-    const voucherType = voucher.voucher_types?.name || "Unknown";
+    const voucherType = voucher.voucher_types?.name || 'Unknown';
 
     if (!reportMap.has(voucherType)) {
       reportMap.set(voucherType, {
@@ -179,11 +170,11 @@ export async function fetchInventoryReport(): Promise<
 
     const report = reportMap.get(voucherType)!;
 
-    if (voucher.status === "available") {
+    if (voucher.status === 'available') {
       report.available += 1;
-    } else if (voucher.status === "sold") {
+    } else if (voucher.status === 'sold') {
       report.sold += 1;
-    } else if (voucher.status === "disabled") {
+    } else if (voucher.status === 'disabled') {
       report.disabled += 1;
     }
   }

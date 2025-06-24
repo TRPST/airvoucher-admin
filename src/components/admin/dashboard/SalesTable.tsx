@@ -99,8 +99,9 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
     // Use the profit field directly from the database
     const airVoucherProfit = sale.profit || 0;
 
-    // Calculate supplier commission amount
-    const supplierCommissionAmount = sale.amount * (sale.supplier_commission_pct / 100);
+    // Use the stored supplier commission amount (accounts for overrides)
+    const supplierCommissionAmount =
+      sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
 
     return {
       Date: new Date(sale.created_at).toLocaleString('en-ZA', {

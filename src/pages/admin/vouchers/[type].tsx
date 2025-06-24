@@ -311,14 +311,22 @@ export default function VoucherTypeDetail() {
     };
   });
 
+  // Update SortIndicator to show both arrows by default, and only the active one when sorted
   const SortIndicator = ({ field }: { field: string }) => {
     if (sortBy.field !== field) {
-      return null;
+      // Not sorted: show both arrows faded
+      return (
+        <span className="ml-1 flex flex-col text-muted-foreground opacity-60">
+          <ArrowUp className="-mb-1 h-3 w-3" />
+          <ArrowDown className="-mt-1 h-3 w-3" />
+        </span>
+      );
     }
+    // Sorted: show only the active direction, highlighted
     return sortBy.direction === 'asc' ? (
-      <ArrowUp className="ml-1 h-3 w-3" />
+      <ArrowUp className="ml-1 h-3 w-3 text-primary" />
     ) : (
-      <ArrowDown className="ml-1 h-3 w-3" />
+      <ArrowDown className="ml-1 h-3 w-3 text-primary" />
     );
   };
 
