@@ -49,3 +49,20 @@ Each supplier requires a specific file format:
   - Column 3: Serial Number
   - Column 4: PIN
   - Last Column: Expiry date (`YYYYMMDD`)
+
+### Unipin
+
+- **Format**: Pipe-delimited text file
+- **Valid Lines**: Start with `D|` and contain `UPN` in the second column
+- **Example**:  
+  `D|UPN000500|500.00|0|500.00|07/01/2025|122099|0002103221445|350040043`
+
+- **Column Structure**:
+  - Column 1: Line identifier (`D`)
+  - Column 2: Voucher type (contains `UPN`)
+  - Column 3: Amount (e.g., `500.00`)
+  - Column 4-5: Other data
+  - Column 6: Expiry date (`DD/MM/YYYY`)
+  - Column 7: Additional data
+  - Second Last Column: PIN (13 digits)
+  - Last Column: Serial Number

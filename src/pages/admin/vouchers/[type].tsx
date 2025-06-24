@@ -192,6 +192,7 @@ export default function VoucherTypeDetail() {
           console.error('Error reloading voucher data:', err);
         });
     }
+    setShowUploadDialog(false); // Close the dialog after successful upload
   };
 
   // Filter and sort vouchers

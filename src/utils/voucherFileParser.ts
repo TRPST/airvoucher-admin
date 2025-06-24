@@ -1,4 +1,4 @@
-import { VoucherType } from "@/actions/admin/commissionActions";
+import { VoucherType } from '@/actions/admin/commissionActions';
 
 type ParsedVoucher = {
   voucher_type_id: string;
@@ -18,20 +18,17 @@ type ParseResult = {
 /**
  * Parse a voucher file and extract voucher data
  */
-export function parseVoucherFile(
-  fileContent: string,
-  voucherTypes: VoucherType[]
-): ParseResult {
-  const lines = fileContent.split("\n").filter(line => line.trim().length > 0);
+export function parseVoucherFile(fileContent: string, voucherTypes: VoucherType[]): ParseResult {
+  const lines = fileContent.split('\n').filter(line => line.trim().length > 0);
   const result: ParseResult = {
     vouchers: [],
     errors: [],
     totalLines: lines.length,
-    validLines: 0
+    validLines: 0,
   };
-  
+
   if (lines.length === 0) {
-    result.errors.push("File is empty");
+    result.errors.push('File is empty');
     return result;
   }
 
@@ -43,32 +40,36 @@ export function parseVoucherFile(
   let hasTelkom = false;
   let hasMTN = false;
   let hasCellC = false;
-  
+  let hasUnipin = false;
+
   for (const line of lines) {
-    if (line.startsWith("D|") && line.includes("RINGA")) {
+    if (line.startsWith('D|') && line.includes('RINGA')) {
       hasRinga = true;
       break;
-    } else if (line.startsWith("D|") && line.includes("HWB")) {
+    } else if (line.startsWith('D|') && line.includes('HWB')) {
       hasHollywoodbets = true;
       break;
-    } else if (line.startsWith("Easyload")) {
+    } else if (line.startsWith('Easyload')) {
       hasEasyload = true;
       break;
-    } else if (line.startsWith("D|") && line.includes("VDD")) {
+    } else if (line.startsWith('D|') && line.includes('VDD')) {
       hasVodacom = true;
       break;
-    } else if (line.startsWith("D|") && line.includes("TM")) {
+    } else if (line.startsWith('D|') && line.includes('TM')) {
       hasTelkom = true;
       break;
-    } else if (line.startsWith("D|") && line.includes("MTN")) {
+    } else if (line.startsWith('D|') && line.includes('MTN')) {
       hasMTN = true;
       break;
-    } else if (line.startsWith("D|") && line.includes("CELLC")) {
+    } else if (line.startsWith('D|') && line.includes('CELLC')) {
       hasCellC = true;
+      break;
+    } else if (line.startsWith('D|') && line.includes('UPN')) {
+      hasUnipin = true;
       break;
     }
   }
-  
+
   if (hasRinga) {
     return parseRingaFormat(lines, voucherTypes, result);
   } else if (hasHollywoodbets) {
@@ -83,8 +84,12 @@ export function parseVoucherFile(
     return parseMTNFormat(lines, voucherTypes, result);
   } else if (hasCellC) {
     return parseCellCFormat(lines, voucherTypes, result);
+  } else if (hasUnipin) {
+    return parseUnipinFormat(lines, voucherTypes, result);
   } else {
-    result.errors.push("Unknown file format. Expected Ringa, Hollywoodbets, Easyload, Vodacom, Telkom, MTN, or CellC format.");
+    result.errors.push(
+      'Unknown file format. Expected Ringa, Hollywoodbets, Easyload, Vodacom, Telkom, MTN, CellC, or Unipin format.'
+    );
     return result;
   }
 }
@@ -99,21 +104,21 @@ function parseRingaFormat(
   result: ParseResult
 ): ParseResult {
   // Find Ringa voucher type ID
-  const ringaType = voucherTypes.find(type => type.name.toLowerCase() === "ringa");
+  const ringaType = voucherTypes.find(type => type.name.toLowerCase() === 'ringa');
   if (!ringaType) {
-    result.errors.push("Ringa voucher type not found in database");
+    result.errors.push('Ringa voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines (starting with 'H')
-    if (!line.startsWith("D|") || !line.includes("RINGA")) {
+    if (!line.startsWith('D|') || !line.includes('RINGA')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -121,7 +126,7 @@ function parseRingaFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -137,12 +142,14 @@ function parseRingaFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -159,21 +166,21 @@ function parseHollywoodbetsFormat(
   result: ParseResult
 ): ParseResult {
   // Find Hollywoodbets voucher type ID
-  const hwbType = voucherTypes.find(type => type.name.toLowerCase() === "hollywoodbets");
+  const hwbType = voucherTypes.find(type => type.name.toLowerCase() === 'hollywoodbets');
   if (!hwbType) {
-    result.errors.push("Hollywoodbets voucher type not found in database");
+    result.errors.push('Hollywoodbets voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines
-    if (!line.startsWith("D|") || !line.includes("HWB")) {
+    if (!line.startsWith('D|') || !line.includes('HWB')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -181,7 +188,7 @@ function parseHollywoodbetsFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -197,12 +204,14 @@ function parseHollywoodbetsFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -219,21 +228,21 @@ function parseEasyloadFormat(
   result: ParseResult
 ): ParseResult {
   // Find Easyload voucher type ID
-  const easyloadType = voucherTypes.find(type => type.name.toLowerCase() === "easyload");
+  const easyloadType = voucherTypes.find(type => type.name.toLowerCase() === 'easyload');
   if (!easyloadType) {
-    result.errors.push("Easyload voucher type not found in database");
+    result.errors.push('Easyload voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines
-    if (!line.startsWith("Easyload")) {
+    if (!line.startsWith('Easyload')) {
       continue;
     }
 
     try {
-      const columns = line.split(",");
+      const columns = line.split(',');
       if (columns.length < 5) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -244,7 +253,7 @@ function parseEasyloadFormat(
       const serialNumber = columns[2];
       const pin = columns[3];
       const expiryDateStr = columns[4];
-      
+
       // Convert YYYYMMDD to YYYY-MM-DD
       const expiryDate = `${expiryDateStr.substring(0, 4)}-${expiryDateStr.substring(4, 6)}-${expiryDateStr.substring(6, 8)}`;
 
@@ -258,12 +267,14 @@ function parseEasyloadFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -280,21 +291,21 @@ function parseVodacomFormat(
   result: ParseResult
 ): ParseResult {
   // Find Vodacom voucher type ID
-  const vodacomType = voucherTypes.find(type => type.name.toLowerCase() === "vodacom");
+  const vodacomType = voucherTypes.find(type => type.name.toLowerCase() === 'vodacom');
   if (!vodacomType) {
-    result.errors.push("Vodacom voucher type not found in database");
+    result.errors.push('Vodacom voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines
-    if (!line.startsWith("D|") || !line.includes("VDD")) {
+    if (!line.startsWith('D|') || !line.includes('VDD')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -302,7 +313,7 @@ function parseVodacomFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -318,12 +329,14 @@ function parseVodacomFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -340,21 +353,21 @@ function parseTelkomFormat(
   result: ParseResult
 ): ParseResult {
   // Find Telkom voucher type ID
-  const telkomType = voucherTypes.find(type => type.name.toLowerCase() === "telkom");
+  const telkomType = voucherTypes.find(type => type.name.toLowerCase() === 'telkom');
   if (!telkomType) {
-    result.errors.push("Telkom voucher type not found in database");
+    result.errors.push('Telkom voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines
-    if (!line.startsWith("D|") || !line.includes("TM")) {
+    if (!line.startsWith('D|') || !line.includes('TM')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -362,7 +375,7 @@ function parseTelkomFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -378,12 +391,14 @@ function parseTelkomFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -400,21 +415,21 @@ function parseMTNFormat(
   result: ParseResult
 ): ParseResult {
   // Find MTN voucher type ID
-  const mtnType = voucherTypes.find(type => type.name.toLowerCase() === "mtn");
+  const mtnType = voucherTypes.find(type => type.name.toLowerCase() === 'mtn');
   if (!mtnType) {
-    result.errors.push("MTN voucher type not found in database");
+    result.errors.push('MTN voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines
-    if (!line.startsWith("D|") || !line.includes("MTN")) {
+    if (!line.startsWith('D|') || !line.includes('MTN')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -422,7 +437,7 @@ function parseMTNFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -438,12 +453,14 @@ function parseMTNFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -460,21 +477,21 @@ function parseCellCFormat(
   result: ParseResult
 ): ParseResult {
   // Find CellC voucher type ID
-  const cellcType = voucherTypes.find(type => type.name.toLowerCase() === "cellc");
+  const cellcType = voucherTypes.find(type => type.name.toLowerCase() === 'cellc');
   if (!cellcType) {
-    result.errors.push("CellC voucher type not found in database");
+    result.errors.push('CellC voucher type not found in database');
     return result;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip non-voucher lines or header lines
-    if (!line.startsWith("D|") || !line.includes("CELLC")) {
+    if (!line.startsWith('D|') || !line.includes('CELLC')) {
       continue;
     }
 
     try {
-      const columns = line.split("|");
+      const columns = line.split('|');
       if (columns.length < 9) {
         result.errors.push(`Line ${i + 1}: Insufficient columns`);
         continue;
@@ -482,7 +499,7 @@ function parseCellCFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[2]);
-      const expiryDateParts = columns[5].split("/");
+      const expiryDateParts = columns[5].split('/');
       // Convert DD/MM/YYYY to YYYY-MM-DD
       const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
       const serialNumber = columns[columns.length - 2];
@@ -498,12 +515,76 @@ function parseCellCFormat(
         amount,
         pin,
         serial_number: serialNumber,
-        expiry_date: expiryDate
+        expiry_date: expiryDate,
       });
-      
+
       result.validLines++;
     } catch (error) {
-      result.errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parse Unipin format voucher file
+ * Format: D|UPN000500|500.00|0|500.00|07/01/2025|122099|0002103221445|350040043
+ */
+function parseUnipinFormat(
+  lines: string[],
+  voucherTypes: VoucherType[],
+  result: ParseResult
+): ParseResult {
+  // Find Unipin voucher type ID
+  const unipinType = voucherTypes.find(type => type.name.toLowerCase() === 'unipin');
+  if (!unipinType) {
+    result.errors.push('Unipin voucher type not found in database');
+    return result;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip non-voucher lines or header lines
+    if (!line.startsWith('D|') || !line.includes('UPN')) {
+      continue;
+    }
+
+    try {
+      const columns = line.split('|');
+      if (columns.length < 9) {
+        result.errors.push(`Line ${i + 1}: Insufficient columns`);
+        continue;
+      }
+
+      // Extract relevant data
+      const amount = parseFloat(columns[2]);
+      const expiryDateParts = columns[5].split('/');
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
+      const pin = columns[columns.length - 2]; // Second last column is the PIN (13 digits)
+      const serialNumber = columns[columns.length - 1]; // Last column as serial number
+
+      if (isNaN(amount)) {
+        result.errors.push(`Line ${i + 1}: Invalid amount`);
+        continue;
+      }
+
+      result.vouchers.push({
+        voucher_type_id: unipinType.id,
+        amount,
+        pin,
+        serial_number: serialNumber,
+        expiry_date: expiryDate,
+      });
+
+      result.validLines++;
+    } catch (error) {
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -511,8 +592,8 @@ function parseCellCFormat(
 }
 
 export function getVoucherTypeNameFromFile(fileContent: string): string | null {
-  const lines = fileContent.split("\n").filter(line => line.trim().length > 0);
-  
+  const lines = fileContent.split('\n').filter(line => line.trim().length > 0);
+
   if (lines.length === 0) {
     return null;
   }
@@ -520,22 +601,24 @@ export function getVoucherTypeNameFromFile(fileContent: string): string | null {
   // Check all lines to determine format, not just the first line
   // This handles files with header lines
   for (const line of lines) {
-    if (line.startsWith("D|") && line.includes("RINGA")) {
-      return "Ringa";
-    } else if (line.startsWith("D|") && line.includes("HWB")) {
-      return "Hollywoodbets";
-    } else if (line.startsWith("Easyload")) {
-      return "Easyload";
-    } else if (line.startsWith("D|") && line.includes("VDD")) {
-      return "Vodacom";
-    } else if (line.startsWith("D|") && line.includes("TM")) {
-      return "Telkom";
-    } else if (line.startsWith("D|") && line.includes("MTN")) {
-      return "MTN";
-    } else if (line.startsWith("D|") && line.includes("CELLC")) {
-      return "CellC";
+    if (line.startsWith('D|') && line.includes('RINGA')) {
+      return 'Ringa';
+    } else if (line.startsWith('D|') && line.includes('HWB')) {
+      return 'Hollywoodbets';
+    } else if (line.startsWith('Easyload')) {
+      return 'Easyload';
+    } else if (line.startsWith('D|') && line.includes('VDD')) {
+      return 'Vodacom';
+    } else if (line.startsWith('D|') && line.includes('TM')) {
+      return 'Telkom';
+    } else if (line.startsWith('D|') && line.includes('MTN')) {
+      return 'MTN';
+    } else if (line.startsWith('D|') && line.includes('CELLC')) {
+      return 'CellC';
+    } else if (line.startsWith('D|') && line.includes('UPN')) {
+      return 'Unipin';
     }
   }
-  
+
   return null;
 }
