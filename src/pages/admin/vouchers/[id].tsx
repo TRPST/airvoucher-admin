@@ -33,7 +33,7 @@ import { VoucherUploadDialog } from '@/components/admin/vouchers/VoucherUploadDi
 
 export default function VoucherTypeDetail() {
   const router = useRouter();
-  const { type: typeId } = router.query;
+  const { id: typeId } = router.query;
 
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');

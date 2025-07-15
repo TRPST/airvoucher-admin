@@ -1,5 +1,14 @@
 import { createClient } from '@/utils/supabase/client';
-import { VoucherInventory, ResponseType } from '../types/adminTypes';
+import {
+  VoucherInventory,
+  ResponseType,
+  VoucherType,
+  NetworkProvider,
+  VoucherCategory,
+  DataDuration,
+  NetworkVoucherSummary,
+  VoucherCategorySummary,
+} from '../types/adminTypes';
 
 /**
  * Fetch a single voucher type by ID
@@ -296,6 +305,189 @@ export async function fetchVoucherTypeSummaries(): Promise<ResponseType<VoucherT
     return {
       data: [],
       error: error instanceof Error ? error : new Error('Failed to fetch voucher type summaries'),
+    };
+  }
+}
+
+/**
+ * Fetch all voucher types with categorization info
+ */
+export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.from('voucher_types').select('*').order('name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network provider
+ */
+export async function fetchVoucherTypesByNetwork(
+  networkProvider: NetworkProvider
+): Promise<ResponseType<VoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .order('category, sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network and category
+ */
+export async function fetchVoucherTypesByNetworkAndCategory(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory
+): Promise<ResponseType<VoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .eq('category', category)
+    .order('sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network, category, and sub-category
+ */
+export async function fetchVoucherTypesByNetworkCategoryAndDuration(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory,
+  subCategory: DataDuration
+): Promise<ResponseType<VoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .eq('category', category)
+    .eq('sub_category', subCategory)
+    .order('name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch network-grouped voucher summaries for enhanced main page
+ */
+export async function fetchNetworkVoucherSummaries(): Promise<
+  ResponseType<{
+    networks: NetworkVoucherSummary[];
+    other: VoucherTypeSummary[];
+  }>
+> {
+  const supabase = createClient();
+
+  try {
+    // Get all voucher types with categorization
+    const { data: voucherTypes, error: typesError } = await supabase
+      .from('voucher_types')
+      .select('*');
+
+    if (typesError) {
+      return { data: null, error: typesError };
+    }
+
+    if (!voucherTypes || voucherTypes.length === 0) {
+      return { data: { networks: [], other: [] }, error: null };
+    }
+
+    // Separate network providers from other vouchers
+    const networkTypes = voucherTypes.filter(
+      (type: VoucherType) =>
+        type.network_provider &&
+        ['cellc', 'mtn', 'vodacom', 'telkom'].includes(type.network_provider)
+    );
+
+    const otherTypes = voucherTypes.filter(
+      (type: VoucherType) => !type.network_provider || type.category === 'other'
+    );
+
+    // Group network types by provider
+    const networkGroups = networkTypes.reduce(
+      (acc: Record<string, VoucherType[]>, type: VoucherType) => {
+        if (!type.network_provider) return acc;
+        if (!acc[type.network_provider]) {
+          acc[type.network_provider] = [];
+        }
+        acc[type.network_provider].push(type);
+        return acc;
+      },
+      {}
+    );
+
+    // Build network summaries with category breakdown
+    const networkSummaries: NetworkVoucherSummary[] = [];
+
+    for (const [networkProvider, types] of Object.entries(networkGroups)) {
+      const networkSummary: NetworkVoucherSummary = {
+        network_provider: networkProvider as NetworkProvider,
+        name: networkProvider.charAt(0).toUpperCase() + networkProvider.slice(1),
+        total_vouchers: 0,
+        total_value: 0,
+        categories: {},
+      };
+
+      // Group by category and sub-category
+      for (const type of types as VoucherType[]) {
+        const { data: inventory } = await supabase
+          .from('voucher_inventory')
+          .select('amount, status')
+          .eq('voucher_type_id', type.id);
+
+        if (inventory) {
+          const categorySummary: VoucherCategorySummary = {
+            voucher_count: inventory.length,
+            total_value: inventory.reduce((sum, v) => sum + v.amount, 0),
+            available_count: inventory.filter(v => v.status === 'available').length,
+            sold_count: inventory.filter(v => v.status === 'sold').length,
+            disabled_count: inventory.filter(v => v.status === 'disabled').length,
+          };
+
+          networkSummary.total_vouchers += categorySummary.voucher_count;
+          networkSummary.total_value += categorySummary.total_value;
+
+          if (type.category === 'airtime') {
+            networkSummary.categories.airtime = categorySummary;
+          } else if (type.category === 'data' && type.sub_category) {
+            if (!networkSummary.categories.data) {
+              networkSummary.categories.data = {};
+            }
+            networkSummary.categories.data[type.sub_category as DataDuration] = categorySummary;
+          }
+        }
+      }
+
+      networkSummaries.push(networkSummary);
+    }
+
+    // Build "other" voucher summaries using existing function
+    const { data: otherSummaries } = await fetchVoucherTypeSummaries();
+    const filteredOtherSummaries =
+      otherSummaries?.filter(summary => otherTypes.some(type => type.id === summary.id)) || [];
+
+    return {
+      data: {
+        networks: networkSummaries,
+        other: filteredOtherSummaries,
+      },
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error:
+        error instanceof Error ? error : new Error('Failed to fetch network voucher summaries'),
     };
   }
 }

@@ -38,6 +38,11 @@ export {
   fetchVoucherTypeSummaries,
   fetchVoucherType,
   updateSupplierCommission,
+  fetchVoucherTypes,
+  fetchVoucherTypesByNetwork,
+  fetchVoucherTypesByNetworkAndCategory,
+  fetchVoucherTypesByNetworkCategoryAndDuration,
+  fetchNetworkVoucherSummaries,
 } from './admin/voucherActions';
 export type { VoucherTypeSummary } from './admin/voucherActions';
 
@@ -48,7 +53,6 @@ export { processVoucherFile } from './admin/voucherFileActions';
 export {
   fetchCommissionGroups,
   upsertCommissionRate,
-  fetchVoucherTypes,
   createCommissionGroup,
   createCommissionRates,
 } from './admin/commissionActions';

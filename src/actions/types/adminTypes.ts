@@ -53,6 +53,44 @@ export type VoucherInventory = {
   voucher_type_name: string;
 };
 
+export type VoucherType = {
+  id: string;
+  name: string;
+  supplier_commission_pct: number;
+  category: 'airtime' | 'data' | 'other' | null;
+  sub_category: 'daily' | 'weekly' | 'monthly' | null;
+  network_provider: 'cellc' | 'mtn' | 'vodacom' | 'telkom' | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NetworkProvider = 'cellc' | 'mtn' | 'vodacom' | 'telkom';
+export type VoucherCategory = 'airtime' | 'data' | 'other';
+export type DataDuration = 'daily' | 'weekly' | 'monthly';
+
+export type NetworkVoucherSummary = {
+  network_provider: NetworkProvider;
+  name: string;
+  total_vouchers: number;
+  total_value: number;
+  categories: {
+    airtime?: VoucherCategorySummary;
+    data?: {
+      daily?: VoucherCategorySummary;
+      weekly?: VoucherCategorySummary;
+      monthly?: VoucherCategorySummary;
+    };
+  };
+};
+
+export type VoucherCategorySummary = {
+  voucher_count: number;
+  total_value: number;
+  available_count: number;
+  sold_count: number;
+  disabled_count: number;
+};
+
 export type CommissionGroup = {
   id: string;
   name: string;
