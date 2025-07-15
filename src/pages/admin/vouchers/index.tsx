@@ -52,6 +52,23 @@ function SafeComponent({ children }: { children: React.ReactNode }) {
   }
 }
 
+// Configuration for voucher ordering - modify this array to change the display order
+const VOUCHER_DISPLAY_ORDER = [
+  'EasyLoad',
+  'Hollywoodbets',
+  'Ringa',
+  'OTT',
+  'Unipin',
+  'DSTV',
+  'Eskom',
+  'HelloPaisa',
+  'Mukuru',
+  'Ecocash',
+  'MangaungMunicipality',
+  'GlobalAirtime',
+  // Add new voucher type names here in your desired order
+];
+
 // Main component separated to handle errors properly
 function VouchersPageContent() {
   const [networkSummaries, setNetworkSummaries] = React.useState<NetworkVoucherSummary[]>([]);
@@ -93,6 +110,38 @@ function VouchersPageContent() {
     };
   }, []);
 
+  // Sort other vouchers based on predefined order
+  const sortedOtherVouchers = React.useMemo(() => {
+    if (!otherVouchers.length) return [];
+
+    // Create a copy of the array to avoid mutating the original
+    const sorted = [...otherVouchers];
+
+    // Sort based on the predefined order
+    sorted.sort((a, b) => {
+      const aIndex = VOUCHER_DISPLAY_ORDER.findIndex(name =>
+        a.name.toLowerCase().includes(name.toLowerCase())
+      );
+      const bIndex = VOUCHER_DISPLAY_ORDER.findIndex(name =>
+        b.name.toLowerCase().includes(name.toLowerCase())
+      );
+
+      // If both items are in the order array, sort by their position
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+
+      // If only one item is in the order array, prioritize it
+      if (aIndex !== -1 && bIndex === -1) return -1;
+      if (aIndex === -1 && bIndex !== -1) return 1;
+
+      // If neither item is in the order array, maintain alphabetical order
+      return a.name.localeCompare(b.name);
+    });
+
+    return sorted;
+  }, [otherVouchers]);
+
   // Memoize expensive calculations combining both network and other vouchers
   const stats = React.useMemo(() => {
     const networkTotals = networkSummaries.reduce(
@@ -103,7 +152,7 @@ function VouchersPageContent() {
       { totalVouchers: 0, totalValue: 0 }
     );
 
-    const otherTotals = otherVouchers.reduce(
+    const otherTotals = sortedOtherVouchers.reduce(
       (acc, voucher) => ({
         availableVouchers: acc.availableVouchers + voucher.availableVouchers,
         totalValue: acc.totalValue + voucher.totalValue,
@@ -119,7 +168,7 @@ function VouchersPageContent() {
       totalSoldVouchers: otherTotals.soldVouchers, // Networks don't track sold separately yet
       totalDisabledVouchers: otherTotals.disabledVouchers, // Networks don't track disabled separately yet
     };
-  }, [networkSummaries, otherVouchers]);
+  }, [networkSummaries, sortedOtherVouchers]);
 
   // Loading state
   if (isLoading) {
@@ -211,11 +260,11 @@ function VouchersPageContent() {
       )}
 
       {/* Other Voucher Types Section */}
-      {otherVouchers.length > 0 && (
+      {sortedOtherVouchers.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Other Vouchers</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {otherVouchers.map(voucherType => (
+            {sortedOtherVouchers.map(voucherType => (
               <VoucherTypeCard key={voucherType.id} summary={voucherType} />
             ))}
           </div>
@@ -223,7 +272,7 @@ function VouchersPageContent() {
       )}
 
       {/* Empty State */}
-      {networkSummaries.length === 0 && otherVouchers.length === 0 && (
+      {networkSummaries.length === 0 && sortedOtherVouchers.length === 0 && (
         <div className="rounded-lg border border-border bg-card p-10 text-center">
           <CreditCard className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-medium">No Voucher Types Found</h3>
@@ -367,7 +416,9 @@ const NetworkCard = React.memo(({ network }: { network: NetworkVoucherSummary })
       >
         <Phone className="h-6 w-6" />
       </div>
-      <h3 className="mb-2 text-xl font-medium">{network.name}</h3>
+      <h3 className="mb-2 text-xl font-medium">
+        {network.name === 'Mtn' ? network.name.toUpperCase() : network.name}
+      </h3>
 
       <div className="mb-3 space-y-1">
         {/* Total vouchers */}

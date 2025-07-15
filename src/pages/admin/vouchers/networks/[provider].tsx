@@ -19,7 +19,9 @@ export default function NetworkProviderVoucherSelection() {
   // Capitalize provider name for display
   const providerName = React.useMemo(() => {
     if (typeof provider === 'string') {
-      return provider.charAt(0).toUpperCase() + provider.slice(1);
+      const name = provider.charAt(0).toUpperCase() + provider.slice(1);
+      // Special case for MTN to ensure it's fully capitalized
+      return name === 'Mtn' ? 'MTN' : name;
     }
     return '';
   }, [provider]);
@@ -115,21 +117,23 @@ export default function NetworkProviderVoucherSelection() {
       <div className="grid max-w-2xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
         {hasAirtime && (
           <CategoryCard
-            title="Airtime"
-            description="Manage airtime vouchers"
+            title={`${providerName} Airtime`}
+            description={`Manage ${providerName} airtime vouchers`}
             icon={Phone}
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/airtime`)}
             colorClass="bg-blue-500/10 text-blue-500 border-blue-500/20"
+            linkText="Airtime"
           />
         )}
 
         {hasData && (
           <CategoryCard
-            title="Data"
-            description="Manage data bundle vouchers"
+            title={`${providerName} Data`}
+            description={`Manage ${providerName} data bundle vouchers`}
             icon={Database}
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/data`)}
             colorClass="bg-green-500/10 text-green-500 border-green-500/20"
+            linkText="Data"
           />
         )}
       </div>
@@ -157,6 +161,7 @@ interface CategoryCardProps {
   icon: React.ComponentType<{ className?: string }>;
   onClick: () => void;
   colorClass: string;
+  linkText: string;
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({
@@ -165,6 +170,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   icon: Icon,
   onClick,
   colorClass,
+  linkText,
 }) => {
   return (
     <div

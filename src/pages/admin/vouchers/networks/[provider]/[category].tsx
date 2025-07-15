@@ -21,7 +21,9 @@ export default function CategoryVoucherSelection() {
   // Capitalize names for display
   const providerName = React.useMemo(() => {
     if (typeof provider === 'string') {
-      return provider.charAt(0).toUpperCase() + provider.slice(1);
+      const name = provider.charAt(0).toUpperCase() + provider.slice(1);
+      // Special case for MTN to ensure it's fully capitalized
+      return name === 'Mtn' ? 'MTN' : name;
     }
     return '';
   }, [provider]);
@@ -155,6 +157,7 @@ export default function CategoryVoucherSelection() {
               key={duration}
               duration={duration}
               provider={provider as string}
+              providerName={providerName}
               onClick={() => router.push(`/admin/vouchers/networks/${provider}/data/${duration}`)}
             />
           ))}
@@ -191,43 +194,49 @@ export default function CategoryVoucherSelection() {
 interface DurationCardProps {
   duration: DataDuration;
   provider: string;
+  providerName: string;
   onClick: () => void;
 }
 
-const DurationCard: React.FC<DurationCardProps> = ({ duration, provider, onClick }) => {
+const DurationCard: React.FC<DurationCardProps> = ({
+  duration,
+  provider,
+  providerName,
+  onClick,
+}) => {
   // Map duration to icon and color
   const durationConfig = React.useMemo(() => {
     switch (duration) {
       case 'daily':
         return {
           icon: Clock,
-          title: 'Daily Data',
-          description: 'Short-term data bundles',
+          title: `${providerName} Daily Data`,
+          description: `${providerName} short-term data bundles`,
           colorClass: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
         };
       case 'weekly':
         return {
           icon: Calendar,
-          title: 'Weekly Data',
-          description: 'Medium-term data bundles',
+          title: `${providerName} Weekly Data`,
+          description: `${providerName} medium-term data bundles`,
           colorClass: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
         };
       case 'monthly':
         return {
           icon: CalendarDays,
-          title: 'Monthly Data',
-          description: 'Long-term data bundles',
+          title: `${providerName} Monthly Data`,
+          description: `${providerName} long-term data bundles`,
           colorClass: 'bg-green-500/10 text-green-500 border-green-500/20',
         };
       default:
         return {
           icon: Calendar,
-          title: String(duration).charAt(0).toUpperCase() + String(duration).slice(1),
-          description: `${String(duration)} data bundles`,
+          title: `${providerName} ${String(duration).charAt(0).toUpperCase() + String(duration).slice(1)} Data`,
+          description: `${providerName} ${String(duration)} data bundles`,
           colorClass: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
         };
     }
-  }, [duration]);
+  }, [duration, providerName]);
 
   const { icon: Icon, title, description, colorClass } = durationConfig;
 
