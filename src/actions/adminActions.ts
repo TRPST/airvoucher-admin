@@ -4,7 +4,7 @@
  */
 
 // Re-export all types
-export * from "./types/adminTypes";
+export * from './types/adminTypes';
 
 // Re-export retailer actions
 export {
@@ -13,7 +13,7 @@ export {
   updateRetailer,
   updateRetailerBalance,
   fetchAgents,
-} from "./admin/retailerActions";
+} from './admin/retailerActions';
 
 // Re-export agent actions
 export {
@@ -25,10 +25,10 @@ export {
   assignRetailerToAgent,
   unassignRetailerFromAgent,
   fetchUnassignedRetailers,
-} from "./admin/agentActions";
+} from './admin/agentActions';
 
 // Re-export terminal actions
-export { fetchTerminals, createTerminal } from "./admin/terminalActions";
+export { fetchTerminals, createTerminal, createTerminalWithUser } from './admin/terminalActions';
 
 // Re-export voucher actions
 export {
@@ -38,11 +38,11 @@ export {
   fetchVoucherTypeSummaries,
   fetchVoucherType,
   updateSupplierCommission,
-} from "./admin/voucherActions";
-export type { VoucherTypeSummary } from "./admin/voucherActions";
+} from './admin/voucherActions';
+export type { VoucherTypeSummary } from './admin/voucherActions';
 
 // Re-export voucher file upload actions
-export { processVoucherFile } from "./admin/voucherFileActions";
+export { processVoucherFile } from './admin/voucherFileActions';
 
 // Re-export commission actions
 export {
@@ -51,11 +51,11 @@ export {
   fetchVoucherTypes,
   createCommissionGroup,
   createCommissionRates,
-} from "./admin/commissionActions";
+} from './admin/commissionActions';
 
 // Re-export report actions
 export {
   fetchSalesReport,
   fetchEarningsSummary,
   fetchInventoryReport,
-} from "./admin/reportActions";
+} from './admin/reportActions';

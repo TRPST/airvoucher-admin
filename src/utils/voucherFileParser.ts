@@ -250,8 +250,8 @@ function parseEasyloadFormat(
 
       // Extract relevant data
       const amount = parseFloat(columns[1]);
-      const serialNumber = columns[2];
-      const pin = columns[3];
+      const pin = columns[2];
+      const serialNumber = columns[3];
       const expiryDateStr = columns[4];
 
       // Convert YYYYMMDD to YYYY-MM-DD
