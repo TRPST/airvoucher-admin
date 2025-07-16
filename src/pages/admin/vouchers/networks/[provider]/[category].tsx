@@ -81,7 +81,10 @@ export default function CategoryVoucherSelection() {
     }
   }, [category, voucherTypes, isLoading, router]);
 
-  // Get unique data durations for data category
+  // Define preferred order for data durations (easily configurable)
+  const dataDurationOrder: DataDuration[] = ['daily', 'weekly', 'monthly'];
+
+  // Get unique data durations for data category and sort by preferred order
   const dataDurations = React.useMemo(() => {
     if (category !== 'data') return [];
 
@@ -92,7 +95,12 @@ export default function CategoryVoucherSelection() {
       }
     });
 
-    return Array.from(durations).sort();
+    const availableDurations = Array.from(durations);
+
+    // Sort by the predefined order, with any unknown durations at the end
+    return dataDurationOrder
+      .filter(duration => availableDurations.includes(duration))
+      .concat(availableDurations.filter(duration => !dataDurationOrder.includes(duration)));
   }, [voucherTypes, category]);
 
   // Loading state
