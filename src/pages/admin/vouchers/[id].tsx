@@ -176,23 +176,23 @@ export default function VoucherTypeDetail() {
     fetchOverrides();
   }, [typeId, vouchers]);
 
-  // Handle upload success - fetch new vouchers in background without loading state
-  const handleUploadSuccess = () => {
-    // Fetch new vouchers in background without showing loading state
+  // Handle upload success - fetch new vouchers and wait for completion
+  const handleUploadSuccess = async (): Promise<void> => {
+    // Fetch new vouchers and wait for completion
     if (typeId && typeof typeId === 'string') {
-      fetchVoucherInventory(typeId)
-        .then(({ data, error: fetchError }) => {
-          if (fetchError) {
-            console.error('Error reloading voucher inventory:', fetchError.message);
-          } else {
-            setVouchers(data || []);
-          }
-        })
-        .catch(err => {
-          console.error('Error reloading voucher data:', err);
-        });
+      try {
+        const { data, error: fetchError } = await fetchVoucherInventory(typeId);
+        if (fetchError) {
+          console.error('Error reloading voucher inventory:', fetchError.message);
+          throw new Error(fetchError.message);
+        } else {
+          setVouchers(data || []);
+        }
+      } catch (err) {
+        console.error('Error reloading voucher data:', err);
+        throw err;
+      }
     }
-    setShowUploadDialog(false); // Close the dialog after successful upload
   };
 
   // Filter and sort vouchers
@@ -298,7 +298,7 @@ export default function VoucherTypeDetail() {
             disabled={commissionModalLoading}
             type="button"
           >
-            Manage Commissions
+            Specify Commissions
           </button>
           {override && (
             <Tooltip content="This voucher has custom commission overrides.">
@@ -398,7 +398,7 @@ export default function VoucherTypeDetail() {
             <div>
               <h3 className="text-lg font-medium">Supplier Commission</h3>
               <p className="text-sm text-muted-foreground">
-                Commission percentage paid to the supplier for each voucher sold
+                Commission percentage received from the supplier for each voucher sold
               </p>
             </div>
 
@@ -603,7 +603,7 @@ export default function VoucherTypeDetail() {
           <div>
             <h3 className="text-lg font-medium">Supplier Commission</h3>
             <p className="text-sm text-muted-foreground">
-              Commission percentage paid to the supplier for each voucher sold
+              Commission percentage received from the supplier for each voucher sold
             </p>
           </div>
 
@@ -713,7 +713,8 @@ export default function VoucherTypeDetail() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500" />
               <h2 className="text-xl font-semibold">
-                {vouchers.filter(v => v.status === 'available').length.toLocaleString()} Available
+                {vouchers.filter(v => v.status === 'available').length.toLocaleString()} vouchers
+                available
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">

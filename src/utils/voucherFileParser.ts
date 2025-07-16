@@ -39,7 +39,10 @@ export function parseVoucherFile(fileContent: string, voucherTypes: VoucherType[
   let hasVodacom = false;
   let hasTelkom = false;
   let hasMTN = false;
-  let hasCellC = false;
+  let hasCellCAirtime = false;
+  let hasCellCDailyData = false;
+  let hasCellCWeeklyData = false;
+  let hasCellCMonthlyData = false;
   let hasUnipin = false;
 
   for (const line of lines) {
@@ -61,8 +64,17 @@ export function parseVoucherFile(fileContent: string, voucherTypes: VoucherType[
     } else if (line.startsWith('D|') && line.includes('MTN')) {
       hasMTN = true;
       break;
+    } else if (line.startsWith('D|') && line.includes('CELCW')) {
+      hasCellCWeeklyData = true;
+      break;
+    } else if (line.startsWith('D|') && line.includes('CELCD')) {
+      hasCellCDailyData = true;
+      break;
+    } else if (line.startsWith('D|') && line.includes('CELCM')) {
+      hasCellCMonthlyData = true;
+      break;
     } else if (line.startsWith('D|') && line.includes('CELLC')) {
-      hasCellC = true;
+      hasCellCAirtime = true;
       break;
     } else if (line.startsWith('D|') && line.includes('UPN')) {
       hasUnipin = true;
@@ -82,13 +94,19 @@ export function parseVoucherFile(fileContent: string, voucherTypes: VoucherType[
     return parseTelkomFormat(lines, voucherTypes, result);
   } else if (hasMTN) {
     return parseMTNFormat(lines, voucherTypes, result);
-  } else if (hasCellC) {
-    return parseCellCFormat(lines, voucherTypes, result);
+  } else if (hasCellCWeeklyData) {
+    return parseCellCWeeklyDataFormat(lines, voucherTypes, result);
+  } else if (hasCellCDailyData) {
+    return parseCellCDailyDataFormat(lines, voucherTypes, result);
+  } else if (hasCellCMonthlyData) {
+    return parseCellCMonthlyDataFormat(lines, voucherTypes, result);
+  } else if (hasCellCAirtime) {
+    return parseCellCAirtimeFormat(lines, voucherTypes, result);
   } else if (hasUnipin) {
     return parseUnipinFormat(lines, voucherTypes, result);
   } else {
     result.errors.push(
-      'Unknown file format. Expected Ringa, Hollywoodbets, Easyload, Vodacom, Telkom, MTN, CellC, or Unipin format.'
+      'Unknown file format. Expected Ringa, Hollywoodbets, Easyload, Vodacom, Telkom, MTN, CellC (Airtime, Daily Data, Weekly Data, Monthly Data), or Unipin format.'
     );
     return result;
   }
@@ -468,18 +486,18 @@ function parseMTNFormat(
 }
 
 /**
- * Parse CellC format voucher file
+ * Parse CellC Airtime format voucher file
  * Format: D|CELLC0025|25.00|120|25.00|20/09/2071|123579|730230876973|844148321723|5
  */
-function parseCellCFormat(
+function parseCellCAirtimeFormat(
   lines: string[],
   voucherTypes: VoucherType[],
   result: ParseResult
 ): ParseResult {
-  // Find CellC voucher type ID
-  const cellcType = voucherTypes.find(type => type.name.toLowerCase() === 'cellc');
-  if (!cellcType) {
-    result.errors.push('CellC voucher type not found in database');
+  // Find CellC Airtime voucher type ID
+  const cellcAirtimeType = voucherTypes.find(type => type.name.toLowerCase() === 'cellc airtime');
+  if (!cellcAirtimeType) {
+    result.errors.push('CellC Airtime voucher type not found in database');
     return result;
   }
 
@@ -511,7 +529,197 @@ function parseCellCFormat(
       }
 
       result.vouchers.push({
-        voucher_type_id: cellcType.id,
+        voucher_type_id: cellcAirtimeType.id,
+        amount,
+        pin,
+        serial_number: serialNumber,
+        expiry_date: expiryDate,
+      });
+
+      result.validLines++;
+    } catch (error) {
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parse CellC Weekly Data format voucher file
+ * Format: D|CELCW0020|20.00|0|20.00|20/09/2071|121570|730091573480|885441353971
+ */
+function parseCellCWeeklyDataFormat(
+  lines: string[],
+  voucherTypes: VoucherType[],
+  result: ParseResult
+): ParseResult {
+  // Find CellC Weekly Data voucher type ID
+  const cellcWeeklyType = voucherTypes.find(
+    type => type.name.toLowerCase() === 'cellc weekly data'
+  );
+  if (!cellcWeeklyType) {
+    result.errors.push('CellC Weekly Data voucher type not found in database');
+    return result;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip non-voucher lines or header lines
+    if (!line.startsWith('D|') || !line.includes('CELCW')) {
+      continue;
+    }
+
+    try {
+      const columns = line.split('|');
+      if (columns.length < 9) {
+        result.errors.push(`Line ${i + 1}: Insufficient columns`);
+        continue;
+      }
+
+      // Extract relevant data
+      const amount = parseFloat(columns[2]);
+      const expiryDateParts = columns[5].split('/');
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
+      const serialNumber = columns[columns.length - 2];
+      const pin = columns[columns.length - 1];
+
+      if (isNaN(amount)) {
+        result.errors.push(`Line ${i + 1}: Invalid amount`);
+        continue;
+      }
+
+      result.vouchers.push({
+        voucher_type_id: cellcWeeklyType.id,
+        amount,
+        pin,
+        serial_number: serialNumber,
+        expiry_date: expiryDate,
+      });
+
+      result.validLines++;
+    } catch (error) {
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parse CellC Daily Data format voucher file
+ * Format: D|CELCD0015|15.00|0|15.00|20/09/2071|121570|730091573480|885441353971
+ */
+function parseCellCDailyDataFormat(
+  lines: string[],
+  voucherTypes: VoucherType[],
+  result: ParseResult
+): ParseResult {
+  // Find CellC Daily Data voucher type ID
+  const cellcDailyType = voucherTypes.find(type => type.name.toLowerCase() === 'cellc daily data');
+  if (!cellcDailyType) {
+    result.errors.push('CellC Daily Data voucher type not found in database');
+    return result;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip non-voucher lines or header lines
+    if (!line.startsWith('D|') || !line.includes('CELCD')) {
+      continue;
+    }
+
+    try {
+      const columns = line.split('|');
+      if (columns.length < 9) {
+        result.errors.push(`Line ${i + 1}: Insufficient columns`);
+        continue;
+      }
+
+      // Extract relevant data
+      const amount = parseFloat(columns[2]);
+      const expiryDateParts = columns[5].split('/');
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
+      const serialNumber = columns[columns.length - 2];
+      const pin = columns[columns.length - 1];
+
+      if (isNaN(amount)) {
+        result.errors.push(`Line ${i + 1}: Invalid amount`);
+        continue;
+      }
+
+      result.vouchers.push({
+        voucher_type_id: cellcDailyType.id,
+        amount,
+        pin,
+        serial_number: serialNumber,
+        expiry_date: expiryDate,
+      });
+
+      result.validLines++;
+    } catch (error) {
+      result.errors.push(
+        `Line ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parse CellC Monthly Data format voucher file
+ * Format: D|CELCM0050|50.00|0|50.00|20/09/2071|121570|730091573480|885441353971
+ */
+function parseCellCMonthlyDataFormat(
+  lines: string[],
+  voucherTypes: VoucherType[],
+  result: ParseResult
+): ParseResult {
+  // Find CellC Monthly Data voucher type ID
+  const cellcMonthlyType = voucherTypes.find(
+    type => type.name.toLowerCase() === 'cellc monthly data'
+  );
+  if (!cellcMonthlyType) {
+    result.errors.push('CellC Monthly Data voucher type not found in database');
+    return result;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip non-voucher lines or header lines
+    if (!line.startsWith('D|') || !line.includes('CELCM')) {
+      continue;
+    }
+
+    try {
+      const columns = line.split('|');
+      if (columns.length < 9) {
+        result.errors.push(`Line ${i + 1}: Insufficient columns`);
+        continue;
+      }
+
+      // Extract relevant data
+      const amount = parseFloat(columns[2]);
+      const expiryDateParts = columns[5].split('/');
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      const expiryDate = `${expiryDateParts[2]}-${expiryDateParts[1]}-${expiryDateParts[0]}`;
+      const serialNumber = columns[columns.length - 2];
+      const pin = columns[columns.length - 1];
+
+      if (isNaN(amount)) {
+        result.errors.push(`Line ${i + 1}: Invalid amount`);
+        continue;
+      }
+
+      result.vouchers.push({
+        voucher_type_id: cellcMonthlyType.id,
         amount,
         pin,
         serial_number: serialNumber,
@@ -613,8 +821,14 @@ export function getVoucherTypeNameFromFile(fileContent: string): string | null {
       return 'Telkom';
     } else if (line.startsWith('D|') && line.includes('MTN')) {
       return 'MTN';
+    } else if (line.startsWith('D|') && line.includes('CELCW')) {
+      return 'CellC Weekly Data';
+    } else if (line.startsWith('D|') && line.includes('CELCD')) {
+      return 'CellC Daily Data';
+    } else if (line.startsWith('D|') && line.includes('CELCM')) {
+      return 'CellC Monthly Data';
     } else if (line.startsWith('D|') && line.includes('CELLC')) {
-      return 'CellC';
+      return 'CellC Airtime';
     } else if (line.startsWith('D|') && line.includes('UPN')) {
       return 'Unipin';
     }
