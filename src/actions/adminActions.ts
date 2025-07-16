@@ -43,8 +43,10 @@ export {
   fetchVoucherTypesByNetworkAndCategory,
   fetchVoucherTypesByNetworkCategoryAndDuration,
   fetchNetworkVoucherSummaries,
+  fetchNetworkCategoryStats,
+  fetchNetworkCategoryDurationStats,
 } from './admin/voucherActions';
-export type { VoucherTypeSummary } from './admin/voucherActions';
+export type { VoucherTypeSummary, CategoryStats } from './admin/voucherActions';
 
 // Re-export voucher file upload actions
 export { processVoucherFile } from './admin/voucherFileActions';

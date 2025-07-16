@@ -5,8 +5,10 @@ import { ChevronLeft, Phone, Database, Loader2, AlertCircle } from 'lucide-react
 import { cn } from '@/utils/cn';
 import {
   fetchVoucherTypesByNetwork,
+  fetchNetworkCategoryStats,
   type VoucherType,
   type NetworkProvider,
+  type CategoryStats,
 } from '@/actions/adminActions';
 
 export default function NetworkProviderVoucherSelection() {
@@ -123,6 +125,8 @@ export default function NetworkProviderVoucherSelection() {
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/airtime`)}
             colorClass="bg-blue-500/10 text-blue-500 border-blue-500/20"
             linkText="Airtime"
+            provider={provider as NetworkProvider}
+            category="airtime"
           />
         )}
 
@@ -134,6 +138,8 @@ export default function NetworkProviderVoucherSelection() {
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/data`)}
             colorClass="bg-green-500/10 text-green-500 border-green-500/20"
             linkText="Data"
+            provider={provider as NetworkProvider}
+            category="data"
           />
         )}
       </div>
@@ -162,6 +168,8 @@ interface CategoryCardProps {
   onClick: () => void;
   colorClass: string;
   linkText: string;
+  provider: NetworkProvider;
+  category: 'airtime' | 'data';
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({
@@ -171,7 +179,36 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   onClick,
   colorClass,
   linkText,
+  provider,
+  category,
 }) => {
+  const [stats, setStats] = React.useState<CategoryStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = React.useState(true);
+
+  // Fetch stats for this category
+  React.useEffect(() => {
+    async function loadStats() {
+      try {
+        setIsLoadingStats(true);
+        const { data, error } = await fetchNetworkCategoryStats(provider, category);
+
+        if (error) {
+          console.error(`Error loading ${category} stats:`, error);
+          setStats({ totalVouchers: 0, inventoryValue: 0, soldValue: 0 });
+        } else {
+          setStats(data);
+        }
+      } catch (err) {
+        console.error(`Error loading ${category} stats:`, err);
+        setStats({ totalVouchers: 0, inventoryValue: 0, soldValue: 0 });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+
+    loadStats();
+  }, [provider, category]);
+
   return (
     <div
       className={cn(
@@ -187,11 +224,36 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <Icon className="h-8 w-8" />
       </div>
 
-      <h3 className="mb-2 text-2xl font-medium">{title}</h3>
-      <p className="mb-6 text-muted-foreground">{description}</p>
+      <h3 className="mb-4 text-2xl font-medium">{title}</h3>
+      {/* <p className="mb-4 text-muted-foreground">{description}</p> */}
+
+      {/* Stats Section */}
+      {isLoadingStats ? (
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Loading stats...</span>
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+        </div>
+      ) : stats ? (
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Total Vouchers:</span>
+            <span className="font-medium">{stats.totalVouchers.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Inventory Value:</span>
+            <span className="font-medium">R {stats.inventoryValue.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Sold Value:</span>
+            <span className="font-medium">R {stats.soldValue.toFixed(2)}</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-auto flex items-center text-sm text-primary">
-        <span>Manage {title}</span>
+        <span>Manage</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"

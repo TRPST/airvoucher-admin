@@ -407,7 +407,7 @@ const NetworkCard = React.memo(({ network }: { network: NetworkVoucherSummary })
       className={cn(
         'flex h-full flex-col rounded-lg border border-border bg-card p-6 shadow-sm',
         'cursor-pointer transition-all duration-200 hover:border-primary/20 hover:shadow-md',
-        'transform hover:scale-[1.02]'
+        'pointer transform hover:scale-[1.02]'
       )}
       onClick={handleClick}
     >

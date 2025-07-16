@@ -491,3 +491,129 @@ export async function fetchNetworkVoucherSummaries(): Promise<
     };
   }
 }
+
+export type CategoryStats = {
+  totalVouchers: number;
+  inventoryValue: number;
+  soldValue: number;
+};
+
+/**
+ * Fetch stats for a specific network provider and category
+ */
+export async function fetchNetworkCategoryStats(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory
+): Promise<ResponseType<CategoryStats>> {
+  const supabase = createClient();
+
+  try {
+    // Get voucher types for this network and category
+    const { data: voucherTypes, error: typesError } = await supabase
+      .from('voucher_types')
+      .select('id')
+      .eq('network_provider', networkProvider)
+      .eq('category', category);
+
+    if (typesError) {
+      return { data: null, error: typesError };
+    }
+
+    if (!voucherTypes || voucherTypes.length === 0) {
+      return { data: { totalVouchers: 0, inventoryValue: 0, soldValue: 0 }, error: null };
+    }
+
+    const typeIds = voucherTypes.map(type => type.id);
+
+    // Get all inventory for these voucher types
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('voucher_inventory')
+      .select('amount, status')
+      .in('voucher_type_id', typeIds);
+
+    if (inventoryError) {
+      return { data: null, error: inventoryError };
+    }
+
+    if (!inventory || inventory.length === 0) {
+      return { data: { totalVouchers: 0, inventoryValue: 0, soldValue: 0 }, error: null };
+    }
+
+    // Calculate stats
+    const stats = {
+      totalVouchers: inventory.length,
+      inventoryValue: inventory
+        .filter(v => v.status === 'available')
+        .reduce((sum, v) => sum + v.amount, 0),
+      soldValue: inventory.filter(v => v.status === 'sold').reduce((sum, v) => sum + v.amount, 0),
+    };
+
+    return { data: stats, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error('Failed to fetch category stats'),
+    };
+  }
+}
+
+/**
+ * Fetch stats for a specific network provider, category, and duration
+ */
+export async function fetchNetworkCategoryDurationStats(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory,
+  duration: DataDuration
+): Promise<ResponseType<CategoryStats>> {
+  const supabase = createClient();
+
+  try {
+    // Get voucher types for this network, category, and duration
+    const { data: voucherTypes, error: typesError } = await supabase
+      .from('voucher_types')
+      .select('id')
+      .eq('network_provider', networkProvider)
+      .eq('category', category)
+      .eq('sub_category', duration);
+
+    if (typesError) {
+      return { data: null, error: typesError };
+    }
+
+    if (!voucherTypes || voucherTypes.length === 0) {
+      return { data: { totalVouchers: 0, inventoryValue: 0, soldValue: 0 }, error: null };
+    }
+
+    const typeIds = voucherTypes.map(type => type.id);
+
+    // Get all inventory for these voucher types
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('voucher_inventory')
+      .select('amount, status')
+      .in('voucher_type_id', typeIds);
+
+    if (inventoryError) {
+      return { data: null, error: inventoryError };
+    }
+
+    if (!inventory || inventory.length === 0) {
+      return { data: { totalVouchers: 0, inventoryValue: 0, soldValue: 0 }, error: null };
+    }
+
+    // Calculate stats
+    const stats = {
+      totalVouchers: inventory.length,
+      inventoryValue: inventory
+        .filter(v => v.status === 'available')
+        .reduce((sum, v) => sum + v.amount, 0),
+      soldValue: inventory.filter(v => v.status === 'sold').reduce((sum, v) => sum + v.amount, 0),
+    };
+
+    return { data: stats, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error('Failed to fetch category duration stats'),
+    };
+  }
+}

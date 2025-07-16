@@ -5,10 +5,12 @@ import { ChevronLeft, Clock, Calendar, CalendarDays, Loader2, AlertCircle } from
 import { cn } from '@/utils/cn';
 import {
   fetchVoucherTypesByNetworkAndCategory,
+  fetchNetworkCategoryDurationStats,
   type VoucherType,
   type NetworkProvider,
   type VoucherCategory,
   type DataDuration,
+  type CategoryStats,
 } from '@/actions/adminActions';
 
 export default function CategoryVoucherSelection() {
@@ -212,6 +214,37 @@ const DurationCard: React.FC<DurationCardProps> = ({
   providerName,
   onClick,
 }) => {
+  const [stats, setStats] = React.useState<CategoryStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = React.useState(true);
+
+  // Fetch stats for this duration
+  React.useEffect(() => {
+    async function loadStats() {
+      try {
+        setIsLoadingStats(true);
+        const { data, error } = await fetchNetworkCategoryDurationStats(
+          provider as NetworkProvider,
+          'data',
+          duration
+        );
+
+        if (error) {
+          console.error(`Error loading ${duration} data stats:`, error);
+          setStats({ totalVouchers: 0, inventoryValue: 0, soldValue: 0 });
+        } else {
+          setStats(data);
+        }
+      } catch (err) {
+        console.error(`Error loading ${duration} data stats:`, err);
+        setStats({ totalVouchers: 0, inventoryValue: 0, soldValue: 0 });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+
+    loadStats();
+  }, [provider, duration]);
+
   // Map duration to icon and color
   const durationConfig = React.useMemo(() => {
     switch (duration) {
@@ -263,11 +296,36 @@ const DurationCard: React.FC<DurationCardProps> = ({
         <Icon className="h-6 w-6" />
       </div>
 
-      <h3 className="mb-2 text-xl font-medium">{title}</h3>
-      <p className="mb-4 text-muted-foreground">{description}</p>
+      <h3 className="mb-4 text-xl font-medium">{title}</h3>
+      {/* <p className="mb-4 text-muted-foreground">{description}</p> */}
+
+      {/* Stats Section */}
+      {isLoadingStats ? (
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Loading stats...</span>
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+        </div>
+      ) : stats ? (
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Total Vouchers:</span>
+            <span className="font-medium">{stats.totalVouchers.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Inventory Value:</span>
+            <span className="font-medium">R {stats.inventoryValue.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Sold Value:</span>
+            <span className="font-medium">R {stats.soldValue.toFixed(2)}</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-auto flex items-center text-sm text-primary">
-        <span>Manage {title}</span>
+        <span>Manage</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"

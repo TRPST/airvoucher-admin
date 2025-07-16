@@ -799,7 +799,10 @@ export default function VoucherTypeDetail() {
             <thead>{columnHeaders}</thead>
             <tbody>
               {tableData.map((row, i) => (
-                <tr key={i} className="border-b border-border transition-colors hover:bg-muted/50">
+                <tr
+                  key={i}
+                  className="cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
+                >
                   {Object.entries(row).map(([key, value]) => (
                     <td key={key} className="whitespace-nowrap p-4">
                       {value}
