@@ -269,7 +269,7 @@ export default function VoucherTypeDetail() {
     const commissionsEarned = (supplierCommission / 100) * soldValue;
 
     return {
-      Type: `R ${voucher.amount.toFixed(2)} (${voucher.amount}MB)`,
+      Type: `R ${voucher.amount.toFixed(2)}`,
       Available: (
         <div className="flex items-center gap-2">
           <span>{voucher.available.toLocaleString()}</span>
