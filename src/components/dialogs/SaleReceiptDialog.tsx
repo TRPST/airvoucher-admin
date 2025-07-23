@@ -1,11 +1,12 @@
-import * as React from "react";
-import { Printer, X, Receipt, Clock, Hash } from "lucide-react";
+import * as React from 'react';
+import { Printer, X } from 'lucide-react';
 
 interface SaleReceiptDialogProps {
   receiptData: any;
   onClose: () => void;
   terminalName: string;
   retailerName: string;
+  retailerId?: string;
 }
 
 export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
@@ -13,15 +14,16 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
   onClose,
   terminalName,
   retailerName,
-}) => {  
+  retailerId,
+}) => {
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
     // Disable scrolling on body when modal is open
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = 'hidden';
 
     // Cleanup function to ensure scrolling is re-enabled when component unmounts
     return () => {
-      document.body.style.overflow = "auto";
+      document.body.style.overflow = 'auto';
     };
   }, []);
 
@@ -32,39 +34,65 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
 
   // Format voucher code with spaces (xxxx xxxx xxxx xxxx)
   const formatVoucherCode = (code: string) => {
-    if (!code) return "";
-    return code.replace(/(.{4})(?=.)/g, "$1 ");
+    if (!code) return '';
+    return code.replace(/(.{4})(?=.)/g, '$1 ');
   };
 
-  // Format date to local format
+  // Format date to receipt format (YYYY MM DD HH:mm:ss)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString("en-ZA", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    return date
+      .toLocaleString('en-ZA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      .replace(/\//g, ' ')
+      .replace(',', '');
+  };
+
+  // Generate merchant ID (ARV + first 8 chars of retailer ID)
+  const generateMerchantId = (retailerId: string) => {
+    if (!retailerId) return 'ARV00000000';
+    return `ARV${retailerId.substring(0, 8).toUpperCase()}`;
   };
 
   // Handle print button click
   const handlePrint = () => {
     // This will be implemented in the future
-    console.log("Print functionality will be added in the future");
+    console.log('Print functionality will be added in the future');
     window.print();
   };
 
   if (!receiptData) return null;
 
-  const saleDate = receiptData.timestamp || new Date().toISOString();
+  const saleDate = receiptData.timestamp || receiptData.created_at || new Date().toISOString();
   const voucherAmount = receiptData.amount || 0;
-  const pin = receiptData.voucher_code || receiptData.pin || "";
-  const serialNumber = receiptData.serial_number || "";
-  const refNumber = receiptData.ref_number || `REF-${Date.now()}`;
-  const instructions = receiptData.instructions || "Use the voucher code to recharge your account";
-  const voucherType = receiptData.voucherType || receiptData.product_name || "Voucher";
+  const pin = receiptData.voucher_code || receiptData.pin || '';
+  const serialNumber = receiptData.serial_number || '';
+  const refNumber =
+    receiptData.ref_number ||
+    (() => {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD format
+      const timestamp = Math.floor(now.getTime() / 1000) % 100000000; // Last 8 digits
+      const paddedTimestamp = timestamp.toString().padStart(8, '0');
+      return `${dateStr}-${paddedTimestamp}`;
+    })();
+  const voucherType =
+    receiptData.voucherType ||
+    receiptData.product_name ||
+    receiptData.voucher_type_name ||
+    'Voucher';
+
+  // New fields from voucher_types table
+  const instructions = receiptData.instructions || '';
+  const help = receiptData.help || '';
+  const websiteUrl = receiptData.website_url || '';
+  const merchantId = generateMerchantId(retailerId || receiptData.retailer_id || '');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
@@ -73,98 +101,68 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card shadow-lg max-h-[90vh] flex flex-col">
-        {/* Header - Fixed */}
-        <div className="flex flex-col items-center p-4 pb-2">
-          <div className="mb-2 rounded-full bg-green-500/10 p-3 text-green-500">
-            <Receipt className="h-6 w-6" />
-          </div>
-          <h2 className="mb-2 text-xl font-semibold">Voucher Sale Completed</h2>
-        </div>
-        
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-4">
-          <div className="w-full rounded-lg bg-muted p-4 mb-4">
-            {/* Receipt content */}
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium">Retailer:</span>
-                <span className="text-right">{retailerName}</span>
-              </div>
+      <div className="relative z-50 flex max-h-[90vh] w-full max-w-sm flex-col rounded-lg border border-border bg-card shadow-lg">
+        {/* Receipt Content - Styled like a thermal printer receipt */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4 text-center font-mono text-sm text-foreground">
+            {/* Air Voucher Header */}
+            <div className="text-lg font-bold">Air Voucher</div>
 
-              <div className="flex justify-between border-t border-border pt-2">
-                <span className="font-medium whitespace-nowrap">Terminal:</span>
-                <span className="text-right">{terminalName}</span>
-              </div>
+            {/* Retailer Name */}
+            <div className="text-base font-semibold">{retailerName}</div>
 
-              <div className="flex justify-between border-t border-border pt-2">
-                <span className="font-medium">Voucher:</span>
-                <span className="text-right">{voucherType} {formatAmount(voucherAmount)}</span>
-              </div>
+            {/* Voucher Type */}
+            <div className="text-base font-bold">{voucherType.toUpperCase()} VOUCHER</div>
 
-              <div className="flex justify-between border-t border-border pt-2">
-                <span className="font-medium">Amount Paid:</span>
-                <span className="text-right">{formatAmount(voucherAmount)}</span>
-              </div>
+            {/* Denomination */}
+            <div className="text-base">
+              {formatAmount(voucherAmount)} {voucherType}
+            </div>
 
-              <div className="border-t border-border pt-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Voucher Code:</span>
-                </div>
-                <div className="mt-1 flex items-center justify-center bg-background/50 p-2 rounded">
-                  <code className="text-lg font-bold tracking-wider text-primary">
-                    {formatVoucherCode(pin)}
-                  </code>
-                </div>
+            {/* PIN - Most prominent */}
+            <div className="my-6 rounded border-2 border-dashed border-border bg-muted p-4">
+              <div className="break-all text-lg font-bold tracking-wider text-foreground">
+                {formatVoucherCode(pin)}
               </div>
+            </div>
 
-              <div className="border-t border-border pt-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Instructions:</span>
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {instructions}
-                </div>
+            {/* Instructions */}
+            {instructions && (
+              <div className="text-left text-xs leading-relaxed text-muted-foreground">
+                {instructions}
               </div>
+            )}
 
-              <div className="flex justify-between border-t border-border pt-2 items-center">
-                <span className="font-medium">Serial Number:</span>
-                <code className="font-mono text-xs bg-background/50 p-1 rounded text-right">
-                  {serialNumber}
-                </code>
-              </div>
+            {/* Website */}
+            {websiteUrl && <div className="text-xs text-muted-foreground">visit {websiteUrl}</div>}
 
-              <div className="flex justify-between border-t border-border pt-2 items-center">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Date & Time:</span>
-                </div>
-                <span className="text-right">{formatDate(saleDate)}</span>
-              </div>
+            {/* Help Instructions */}
+            {help && <div className="text-xs text-muted-foreground">{help}</div>}
 
-              <div className="flex justify-between border-t border-border pt-2 items-center">
-                <div className="flex items-center gap-1">
-                  <Hash className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Ref Number:</span>
-                </div>
-                <span className="text-sm text-right">{refNumber}</span>
-              </div>
+            {/* Divider */}
+            <div className="my-4 border-t border-border"></div>
+
+            {/* Receipt Details */}
+            <div className="space-y-1 text-left text-xs text-muted-foreground">
+              {serialNumber && <div>Serial number: {serialNumber}</div>}
+              <div>Merchant Id: {merchantId}</div>
+              <div>Date: {formatDate(saleDate)}</div>
+              <div>Ref: {refNumber}</div>
             </div>
           </div>
 
-          <div className="w-full p-2 bg-primary/10 rounded-md text-sm text-primary mb-2">
-            <p className="text-center">
-              🛈 Please save this receipt. It will not be shown again after closing.
-            </p>
+          {/* Important Notice */}
+          <div className="mt-6 rounded border border-yellow-200 bg-yellow-50 p-2 text-center text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+            🛈 Please save this receipt. It will not be shown again after closing.
           </div>
         </div>
 
         {/* Footer - Fixed */}
-        <div className="p-4 pt-2 border-t border-border mt-auto">
-          <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0 justify-end pt-2">
+        <div className="border-t border-border bg-muted/50 p-4">
+          <div className="flex w-full flex-col justify-end space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center justify-center gap-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
             >
               <Printer className="h-4 w-4" />
               Print Receipt

@@ -1,13 +1,20 @@
 // Import and re-export with namespaces to avoid name conflicts
-import * as AdminActions from "./adminActions";
-import * as RetailerActions from "./retailerActions";
-import * as AgentActions from "./agentActions";
-import * as UserActions from "./userActions";
-import * as TerminalActions from "./terminalActions";
-import * as CashierActions from "./cashierActions";
+import * as AdminActions from './adminActions';
+import * as RetailerActions from './retailerActions';
+import * as AgentActions from './agentActions';
+import * as UserActions from './userActions';
+import * as TerminalActions from './terminalActions';
+import * as CashierActions from './cashierActions';
 
 // Export namespaces
-export { AdminActions, RetailerActions, AgentActions, UserActions, TerminalActions, CashierActions };
+export {
+  AdminActions,
+  RetailerActions,
+  AgentActions,
+  UserActions,
+  TerminalActions,
+  CashierActions,
+};
 
 // Alternatively, we can selectively re-export specific items
 // Admin exports
@@ -23,7 +30,7 @@ export type {
   InventoryReport,
   ProfileData,
   RetailerData,
-} from "./adminActions";
+} from './adminActions';
 
 export {
   fetchRetailers,
@@ -41,6 +48,7 @@ export {
   fetchUnassignedRetailers,
   fetchTerminals as fetchAdminTerminals,
   createTerminal,
+  createTerminalWithUser,
   fetchVoucherInventory,
   uploadVouchers,
   disableVoucher,
@@ -52,7 +60,7 @@ export {
   fetchSalesReport,
   fetchEarningsSummary,
   fetchInventoryReport,
-} from "./adminActions";
+} from './adminActions';
 
 // Retailer exports
 export type {
@@ -60,7 +68,7 @@ export type {
   VoucherType,
   Terminal as RetailerTerminal,
   Sale as RetailerSale,
-} from "./retailerActions";
+} from './retailerActions';
 
 export {
   fetchMyRetailer,
@@ -71,13 +79,10 @@ export {
   fetchTerminals as fetchRetailerTerminals,
   fetchCommissionRate,
   fetchRetailerCommissionData,
-} from "./retailerActions";
+} from './retailerActions';
 
 // Terminal exports
-export type {
-  TerminalProfile,
-  VoucherType as TerminalVoucherType,
-} from "./terminalActions";
+export type { TerminalProfile, VoucherType as TerminalVoucherType } from './terminalActions';
 
 export {
   fetchTerminalProfile,
@@ -86,32 +91,19 @@ export {
   fetchRetailerCommissionData as fetchTerminalCommissionData,
   sellVoucher as sellTerminalVoucher,
   fetchSalesHistory as fetchTerminalSalesHistory,
-} from "./terminalActions";
+} from './terminalActions';
 
 // Agent exports
-export type { AgentRetailer, AgentStatement } from "./agentActions";
+export type { AgentRetailer, AgentStatement } from './agentActions';
 
 // User exports
-export type { UserProfile } from "./userActions";
+export type { UserProfile } from './userActions';
 
-export {
-  getUserRole,
-  getUserProfile,
-  signOutUser,
-} from "./userActions";
+export { getUserRole, getUserProfile, signOutUser } from './userActions';
 
-export {
-  fetchMyRetailers,
-  fetchAgentStatements,
-  fetchAgentSummary,
-} from "./agentActions";
+export { fetchMyRetailers, fetchAgentStatements, fetchAgentSummary } from './agentActions';
 
 // Cashier exports
-export type {
-  CashierTerminalProfile,
-} from "./cashierActions";
+export type { CashierTerminalProfile } from './cashierActions';
 
-export {
-  fetchCashierTerminal,
-  fetchCashierSalesHistory,
-} from "./cashierActions";
+export { fetchCashierTerminal, fetchCashierSalesHistory } from './cashierActions';

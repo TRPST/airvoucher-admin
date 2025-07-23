@@ -34,6 +34,9 @@ DECLARE
   product_name TEXT;
   ref_number TEXT;
   sale_timestamp TIMESTAMPTZ;
+  instructions TEXT;
+  help TEXT;
+  website_url TEXT;
   -- Commission override variables
   override_supplier_pct NUMERIC(5,2);
   override_retailer_pct NUMERIC(5,2);
@@ -85,10 +88,21 @@ BEGIN
     FROM terminals
     WHERE id = terminal_id;
 
-  -- Get product name and supplier commission percentage from voucher type
-  SELECT vt.name, vt.supplier_commission_pct INTO product_name, voucher_supplier_commission_pct
-    FROM voucher_types vt
-    WHERE vt.id = in_voucher_type_id;
+  -- Get product name, supplier commission percentage, and receipt fields from voucher type
+  SELECT 
+    vt.name, 
+    vt.supplier_commission_pct,
+    vt.instructions,
+    vt.help,
+    vt.website_url
+  INTO 
+    product_name, 
+    voucher_supplier_commission_pct,
+    instructions,
+    help,
+    website_url
+  FROM voucher_types vt
+  WHERE vt.id = in_voucher_type_id;
 
   -- Check for commission override for this voucher type and amount
   SELECT supplier_pct, retailer_pct, agent_pct 
@@ -128,8 +142,9 @@ BEGIN
     FROM voucher_inventory
     WHERE id = voucher_inventory_id;
 
-  -- Generate reference number
-  ref_number := 'REF-' || EXTRACT(EPOCH FROM NOW())::TEXT || '-' || FLOOR(RANDOM() * 1000)::TEXT;
+  -- Generate reference number in format: yymmdd-XXXXXXXX
+  ref_number := TO_CHAR(NOW(), 'YYMMDD') || '-' || 
+                LPAD((EXTRACT(EPOCH FROM NOW())::BIGINT % 100000000)::TEXT, 8, '0');
   
   -- Start transaction operations
   
@@ -204,6 +219,7 @@ BEGIN
     'serial_number', voucher_serial,
     'ref_number', ref_number,
     'retailer_name', retailer_name,
+    'retailer_id', retailer_id,
     'terminal_name', terminal_name,
     'terminal_id', terminal_id,
     'product_name', product_name,
@@ -212,7 +228,10 @@ BEGIN
     'agent_commission', agent_commission,
     'timestamp', sale_timestamp,
     'amount_from_balance', amount_from_balance,
-    'amount_from_credit', amount_from_credit
+    'amount_from_credit', amount_from_credit,
+    'instructions', instructions,
+    'help', help,
+    'website_url', website_url
   );
   
 END;
