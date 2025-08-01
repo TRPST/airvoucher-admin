@@ -28,6 +28,14 @@ type VoucherAmountRate = {
   hasOverride: boolean;
 };
 
+type EditableVoucherAmountRate = {
+  amount: number;
+  supplier_pct: number | string;
+  retailer_pct: number | string;
+  agent_pct: number | string;
+  hasOverride: boolean;
+};
+
 export default function VoucherAmountCommissions() {
   const router = useRouter();
   const { id: groupId, voucherTypeId } = router.query;
@@ -44,7 +52,7 @@ export default function VoucherAmountCommissions() {
   const [error, setError] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editedRates, setEditedRates] = React.useState<Record<string, VoucherAmountRate>>({});
+  const [editedRates, setEditedRates] = React.useState<Record<string, EditableVoucherAmountRate>>({});
 
   // Fetch data
   React.useEffect(() => {
@@ -166,20 +174,40 @@ export default function VoucherAmountCommissions() {
     setIsEditing(false);
   };
 
+  // Helper function to format numbers to 2 decimal places
+  const formatToTwoDecimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   // Handle rate change
   const handleRateChange = (
     amount: number,
     field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
     value: string
   ) => {
+    // Allow empty values for better user experience
+    if (value === '') {
+      setEditedRates(prev => ({
+        ...prev,
+        [amount.toString()]: {
+          ...prev[amount.toString()],
+          [field]: '' as any, // Store empty string temporarily
+        },
+      }));
+      return;
+    }
+
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
+
+    // Format the value to 2 decimal places to avoid floating point precision issues
+    const formattedValue = field === 'supplier_pct' ? formatToTwoDecimals(numValue) : formatToTwoDecimals(numValue / 100);
 
     setEditedRates(prev => ({
       ...prev,
       [amount.toString()]: {
         ...prev[amount.toString()],
-        [field]: field === 'supplier_pct' ? numValue : numValue / 100, // Supplier is stored as percentage, others as decimal
+        [field]: formattedValue,
       },
     }));
   };
@@ -195,27 +223,35 @@ export default function VoucherAmountCommissions() {
         const originalRate = amountRates.find(r => r.amount === amount);
         if (!originalRate) continue;
 
+        // Convert empty values to 0 before processing
+        const sanitizedRate = {
+          ...editedRate,
+          supplier_pct: (editedRate.supplier_pct === '' || editedRate.supplier_pct === undefined) ? 0 : Number(editedRate.supplier_pct),
+          retailer_pct: (editedRate.retailer_pct === '' || editedRate.retailer_pct === undefined) ? 0 : Number(editedRate.retailer_pct),
+          agent_pct: (editedRate.agent_pct === '' || editedRate.agent_pct === undefined) ? 0 : Number(editedRate.agent_pct),
+        };
+
         // Check if any commission changed from the default
         const hasChanges = 
-          originalRate.supplier_pct !== editedRate.supplier_pct ||
-          originalRate.retailer_pct !== editedRate.retailer_pct ||
-          originalRate.agent_pct !== editedRate.agent_pct;
+          originalRate.supplier_pct !== sanitizedRate.supplier_pct ||
+          originalRate.retailer_pct !== sanitizedRate.retailer_pct ||
+          originalRate.agent_pct !== sanitizedRate.agent_pct;
 
         if (hasChanges) {
           // Check if the edited values match the defaults
           const matchesDefaults = 
-            editedRate.supplier_pct === defaultRates.supplier_pct &&
-            editedRate.retailer_pct === defaultRates.retailer_pct &&
-            editedRate.agent_pct === defaultRates.agent_pct;
+            sanitizedRate.supplier_pct === defaultRates.supplier_pct &&
+            sanitizedRate.retailer_pct === defaultRates.retailer_pct &&
+            sanitizedRate.agent_pct === defaultRates.agent_pct;
 
           if (!matchesDefaults) {
             // Create or update override
             const override: VoucherCommissionOverride = {
               voucher_type_id: voucherTypeId as string,
               amount,
-              supplier_pct: editedRate.supplier_pct,
-              retailer_pct: editedRate.retailer_pct,
-              agent_pct: editedRate.agent_pct,
+              supplier_pct: sanitizedRate.supplier_pct,
+              retailer_pct: sanitizedRate.retailer_pct,
+              agent_pct: sanitizedRate.agent_pct,
               commission_group_id: groupId as string,
             };
 
@@ -243,19 +279,30 @@ export default function VoucherAmountCommissions() {
             }
           }
         }
+
+        // Update the edited rate with sanitized values
+        editedRates[amountStr] = sanitizedRate;
       }
 
-      // Update local state with new values
-      const updatedRates = amountRates.map(rate => {
+      // Update local state with new values - convert to VoucherAmountRate type
+      const updatedRates: VoucherAmountRate[] = amountRates.map(rate => {
         const edited = editedRates[rate.amount.toString()];
         if (edited) {
+          const sanitizedEdited = {
+            amount: edited.amount,
+            supplier_pct: typeof edited.supplier_pct === 'string' ? 0 : edited.supplier_pct,
+            retailer_pct: typeof edited.retailer_pct === 'string' ? 0 : edited.retailer_pct,
+            agent_pct: typeof edited.agent_pct === 'string' ? 0 : edited.agent_pct,
+            hasOverride: edited.hasOverride,
+          };
+
           const matchesDefaults = 
-            edited.supplier_pct === defaultRates.supplier_pct &&
-            edited.retailer_pct === defaultRates.retailer_pct &&
-            edited.agent_pct === defaultRates.agent_pct;
+            sanitizedEdited.supplier_pct === defaultRates.supplier_pct &&
+            sanitizedEdited.retailer_pct === defaultRates.retailer_pct &&
+            sanitizedEdited.agent_pct === defaultRates.agent_pct;
 
           return {
-            ...edited,
+            ...sanitizedEdited,
             hasOverride: !matchesDefaults,
           };
         }
@@ -424,7 +471,7 @@ export default function VoucherAmountCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={editedRate?.supplier_pct || 0}
+                          value={typeof editedRate?.supplier_pct === 'string' ? '' : formatToTwoDecimals(editedRate?.supplier_pct || 0)}
                           onChange={(e) =>
                             handleRateChange(rate.amount, 'supplier_pct', e.target.value)
                           }
@@ -446,7 +493,7 @@ export default function VoucherAmountCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={(editedRate?.retailer_pct || 0) * 100}
+                          value={typeof editedRate?.retailer_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.retailer_pct || 0) * 100)}
                           onChange={(e) =>
                             handleRateChange(rate.amount, 'retailer_pct', e.target.value)
                           }
@@ -468,7 +515,7 @@ export default function VoucherAmountCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={(editedRate?.agent_pct || 0) * 100}
+                          value={typeof editedRate?.agent_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.agent_pct || 0) * 100)}
                           onChange={(e) =>
                             handleRateChange(rate.amount, 'agent_pct', e.target.value)
                           }
@@ -509,31 +556,6 @@ export default function VoucherAmountCommissions() {
         </div>
       </div>
 
-      {/* Fixed save/cancel buttons when editing */}
-      {isEditing && (
-        <div className="fixed bottom-6 right-6 flex gap-2 rounded-lg bg-background p-2 shadow-lg border border-border">
-          <button
-            onClick={saveChanges}
-            disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Save Changes
-          </button>
-          <button
-            onClick={cancelEditing}
-            disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   );
 }

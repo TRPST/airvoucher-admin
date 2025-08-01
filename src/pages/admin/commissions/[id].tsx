@@ -33,6 +33,14 @@ type CommissionRate = {
   agent_pct: number;
 };
 
+type EditableCommissionRate = {
+  voucher_type_id: string;
+  voucher_type_name: string;
+  supplier_pct: number | string;
+  retailer_pct: number | string;
+  agent_pct: number | string;
+};
+
 export default function CommissionGroupDetail() {
   const router = useRouter();
   const { id: groupId } = router.query;
@@ -45,7 +53,7 @@ export default function CommissionGroupDetail() {
   const [error, setError] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editedRates, setEditedRates] = React.useState<Record<string, CommissionRate>>({});
+  const [editedRates, setEditedRates] = React.useState<Record<string, EditableCommissionRate>>({});
 
   // Fetch commission group details and voucher types
   React.useEffect(() => {
@@ -131,20 +139,40 @@ export default function CommissionGroupDetail() {
     setIsEditing(false);
   };
 
+  // Helper function to format numbers to 2 decimal places
+  const formatToTwoDecimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   // Handle rate change
   const handleRateChange = (
     voucherTypeId: string,
     field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
     value: string
   ) => {
+    // Allow empty values for better user experience
+    if (value === '') {
+      setEditedRates(prev => ({
+        ...prev,
+        [voucherTypeId]: {
+          ...prev[voucherTypeId],
+          [field]: '' as any, // Store empty string temporarily
+        },
+      }));
+      return;
+    }
+
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
+
+    // Format the value to 2 decimal places to avoid floating point precision issues
+    const formattedValue = formatToTwoDecimals(numValue);
 
     setEditedRates(prev => ({
       ...prev,
       [voucherTypeId]: {
         ...prev[voucherTypeId],
-        [field]: numValue,
+        [field]: formattedValue,
       },
     }));
   };
@@ -159,16 +187,24 @@ export default function CommissionGroupDetail() {
         const originalRate = commissionRates.find(r => r.voucher_type_id === voucherTypeId);
         if (!originalRate) continue;
 
+        // Convert empty values to 0 before saving
+        const sanitizedRate = {
+          ...rate,
+          supplier_pct: (rate.supplier_pct === '' || rate.supplier_pct === undefined) ? 0 : Number(rate.supplier_pct),
+          retailer_pct: (rate.retailer_pct === '' || rate.retailer_pct === undefined) ? 0 : Number(rate.retailer_pct),
+          agent_pct: (rate.agent_pct === '' || rate.agent_pct === undefined) ? 0 : Number(rate.agent_pct),
+        };
+
         // Check if retailer or agent commission changed
         if (
-          originalRate.retailer_pct !== rate.retailer_pct ||
-          originalRate.agent_pct !== rate.agent_pct
+          originalRate.retailer_pct !== sanitizedRate.retailer_pct ||
+          originalRate.agent_pct !== sanitizedRate.agent_pct
         ) {
           const { error } = await upsertCommissionRate(
             groupId as string,
             voucherTypeId,
-            rate.retailer_pct,
-            rate.agent_pct
+            sanitizedRate.retailer_pct,
+            sanitizedRate.agent_pct
           );
 
           if (error) {
@@ -178,19 +214,29 @@ export default function CommissionGroupDetail() {
         }
 
         // Update supplier commission if changed
-        if (originalRate.supplier_pct !== rate.supplier_pct) {
+        if (originalRate.supplier_pct !== sanitizedRate.supplier_pct) {
           const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
-          const { error } = await updateSupplierCommission(voucherTypeId, rate.supplier_pct);
+          const { error } = await updateSupplierCommission(voucherTypeId, sanitizedRate.supplier_pct);
 
           if (error) {
             console.error(`Error updating supplier commission for ${rate.voucher_type_name}:`, error);
             throw new Error(`Failed to update supplier commission for ${rate.voucher_type_name}`);
           }
         }
+
+        // Update the edited rate with sanitized values
+        editedRates[voucherTypeId] = sanitizedRate;
       }
 
-      // Update local state with new values
-      setCommissionRates(Object.values(editedRates));
+      // Update local state with new values - convert to CommissionRate type
+      const updatedCommissionRates: CommissionRate[] = Object.values(editedRates).map(rate => ({
+        voucher_type_id: rate.voucher_type_id,
+        voucher_type_name: rate.voucher_type_name,
+        supplier_pct: typeof rate.supplier_pct === 'string' ? 0 : rate.supplier_pct,
+        retailer_pct: typeof rate.retailer_pct === 'string' ? 0 : rate.retailer_pct,
+        agent_pct: typeof rate.agent_pct === 'string' ? 0 : rate.agent_pct,
+      }));
+      setCommissionRates(updatedCommissionRates);
       setIsEditing(false);
       setEditedRates({});
     } catch (err) {
@@ -330,7 +376,7 @@ export default function CommissionGroupDetail() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={editedRate?.supplier_pct || 0}
+                          value={typeof editedRate?.supplier_pct === 'string' ? '' : formatToTwoDecimals(editedRate?.supplier_pct || 0)}
                           onChange={(e) =>
                             handleRateChange(rate.voucher_type_id, 'supplier_pct', e.target.value)
                           }
@@ -352,12 +398,12 @@ export default function CommissionGroupDetail() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={(editedRate?.retailer_pct || 0) * 100}
+                          value={typeof editedRate?.retailer_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.retailer_pct || 0) * 100)}
                           onChange={(e) =>
                             handleRateChange(
                               rate.voucher_type_id,
                               'retailer_pct',
-                              (parseFloat(e.target.value) / 100).toString()
+                              e.target.value === '' ? '' : formatToTwoDecimals(parseFloat(e.target.value) / 100).toString()
                             )
                           }
                           className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
@@ -378,12 +424,12 @@ export default function CommissionGroupDetail() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={(editedRate?.agent_pct || 0) * 100}
+                          value={typeof editedRate?.agent_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.agent_pct || 0) * 100)}
                           onChange={(e) =>
                             handleRateChange(
                               rate.voucher_type_id,
                               'agent_pct',
-                              (parseFloat(e.target.value) / 100).toString()
+                              e.target.value === '' ? '' : formatToTwoDecimals(parseFloat(e.target.value) / 100).toString()
                             )
                           }
                           className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
@@ -422,31 +468,6 @@ export default function CommissionGroupDetail() {
         </div>
       </div>
 
-      {/* Fixed save/cancel buttons when editing */}
-      {isEditing && (
-        <div className="fixed bottom-6 right-6 flex gap-2 rounded-lg bg-background p-2 shadow-lg border border-border">
-          <button
-            onClick={saveChanges}
-            disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Save Changes
-          </button>
-          <button
-            onClick={cancelEditing}
-            disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   );
 }
