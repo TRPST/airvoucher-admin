@@ -7,19 +7,30 @@ export type VoucherCommissionOverride = {
   supplier_pct: number;
   retailer_pct: number;
   agent_pct: number;
+  commission_group_id?: string;
 };
 
 export async function getVoucherCommissionOverride(
   voucher_type_id: string,
-  amount: number
+  amount: number,
+  commission_group_id?: string
 ): Promise<ResponseType<VoucherCommissionOverride | null>> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  
+  let query = supabase
     .from('voucher_commission_overrides')
     .select('*')
     .eq('voucher_type_id', voucher_type_id)
-    .eq('amount', amount)
-    .single();
+    .eq('amount', amount);
+  
+  if (commission_group_id) {
+    query = query.eq('commission_group_id', commission_group_id);
+  } else {
+    // For backward compatibility, look for global overrides (where commission_group_id is NULL)
+    query = query.is('commission_group_id', null);
+  }
+  
+  const { data, error } = await query.single();
   return { data, error };
 }
 
@@ -27,21 +38,63 @@ export async function upsertVoucherCommissionOverride(
   override: VoucherCommissionOverride
 ): Promise<ResponseType<VoucherCommissionOverride>> {
   const supabase = createClient();
+  
+  // Determine the conflict resolution based on whether commission_group_id is provided
+  const conflictColumns = override.commission_group_id 
+    ? 'commission_group_id,voucher_type_id,amount'
+    : 'voucher_type_id,amount';
+  
   const { data, error } = await supabase
     .from('voucher_commission_overrides')
-    .upsert([override], { onConflict: 'voucher_type_id,amount' })
+    .upsert([override], { onConflict: conflictColumns })
     .select('*')
     .single();
   return { data, error };
 }
 
 export async function getVoucherCommissionOverridesForType(
-  voucher_type_id: string
+  voucher_type_id: string,
+  commission_group_id?: string
 ): Promise<ResponseType<VoucherCommissionOverride[]>> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  
+  let query = supabase
     .from('voucher_commission_overrides')
     .select('*')
     .eq('voucher_type_id', voucher_type_id);
+  
+  if (commission_group_id) {
+    query = query.eq('commission_group_id', commission_group_id);
+  } else {
+    // For backward compatibility, look for global overrides (where commission_group_id is NULL)
+    query = query.is('commission_group_id', null);
+  }
+  
+  const { data, error } = await query.order('amount', { ascending: true });
   return { data, error };
+}
+
+/**
+ * Get all voucher amounts for a specific voucher type
+ */
+export async function getVoucherAmountsForType(
+  voucher_type_id: string
+): Promise<ResponseType<{ amount: number }[]>> {
+  const supabase = createClient();
+  
+  const { data, error } = await supabase
+    .from('voucher_inventory')
+    .select('amount')
+    .eq('voucher_type_id', voucher_type_id)
+    .order('amount', { ascending: true });
+  
+  if (error) {
+    return { data: null, error };
+  }
+  
+  // Get unique amounts
+  const uniqueAmounts = Array.from(new Set(data?.map(v => v.amount) || []));
+  const result = uniqueAmounts.map(amount => ({ amount }));
+  
+  return { data: result, error: null };
 }

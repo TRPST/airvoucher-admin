@@ -59,6 +59,13 @@ export {
   createCommissionRates,
 } from './admin/commissionActions';
 
+// Re-export commission group actions
+export {
+  fetchCommissionGroupsWithCounts,
+  fetchCommissionGroupById,
+} from './admin/commissionGroupActions';
+export type { CommissionGroupWithCounts } from './admin/commissionGroupActions';
+
 // Re-export report actions
 export {
   fetchSalesReport,
