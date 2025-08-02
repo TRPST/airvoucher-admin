@@ -12,15 +12,16 @@ import {
 
 /**
  * Fetch a single voucher type by ID
+ * Note: This function does NOT filter by is_active to allow access to historical data
  */
 export async function fetchVoucherType(
   id: string
-): Promise<ResponseType<{ id: string; name: string; supplier_commission_pct: number }>> {
+): Promise<ResponseType<{ id: string; name: string; supplier_commission_pct: number; is_active: boolean }>> {
   const supabase = createClient();
 
   const { data, error } = await supabase
     .from('voucher_types')
-    .select('id, name, supplier_commission_pct')
+    .select('id, name, supplier_commission_pct, is_active')
     .eq('id', id)
     .single();
 
@@ -311,68 +312,106 @@ export async function fetchVoucherTypeSummaries(): Promise<ResponseType<VoucherT
 
 /**
  * Fetch all voucher types with categorization info
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
-export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+export async function fetchVoucherTypes(includeInactive: boolean = false): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.from('voucher_types').select('*').order('name');
+  let query = supabase.from('voucher_types').select('*');
+  
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('name');
 
   return { data, error };
 }
 
 /**
  * Fetch voucher types by network provider
+ * @param networkProvider - The network provider to filter by
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
 export async function fetchVoucherTypesByNetwork(
-  networkProvider: NetworkProvider
+  networkProvider: NetworkProvider,
+  includeInactive: boolean = false
 ): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('voucher_types')
     .select('*')
-    .eq('network_provider', networkProvider)
-    .order('category, sub_category, name');
+    .eq('network_provider', networkProvider);
+
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('category, sub_category, name');
 
   return { data, error };
 }
 
 /**
  * Fetch voucher types by network and category
+ * @param networkProvider - The network provider to filter by
+ * @param category - The voucher category to filter by
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
 export async function fetchVoucherTypesByNetworkAndCategory(
   networkProvider: NetworkProvider,
-  category: VoucherCategory
+  category: VoucherCategory,
+  includeInactive: boolean = false
 ): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('voucher_types')
     .select('*')
     .eq('network_provider', networkProvider)
-    .eq('category', category)
-    .order('sub_category, name');
+    .eq('category', category);
+
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('sub_category, name');
 
   return { data, error };
 }
 
 /**
  * Fetch voucher types by network, category, and sub-category
+ * @param networkProvider - The network provider to filter by
+ * @param category - The voucher category to filter by
+ * @param subCategory - The sub-category (duration) to filter by
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
 export async function fetchVoucherTypesByNetworkCategoryAndDuration(
   networkProvider: NetworkProvider,
   category: VoucherCategory,
-  subCategory: DataDuration
+  subCategory: DataDuration,
+  includeInactive: boolean = false
 ): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('voucher_types')
     .select('*')
     .eq('network_provider', networkProvider)
     .eq('category', category)
-    .eq('sub_category', subCategory)
-    .order('name');
+    .eq('sub_category', subCategory);
+
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order('name');
 
   return { data, error };
 }

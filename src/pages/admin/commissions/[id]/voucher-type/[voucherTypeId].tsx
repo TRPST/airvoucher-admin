@@ -480,7 +480,7 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span className={cn(
                           "rounded-md px-2 py-1",
-                          rate.supplier_pct > 0 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : ""
+                          rate.supplier_pct !== defaultRates.supplier_pct ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : ""
                         )}>
                           {rate.supplier_pct.toFixed(2)}%
                         </span>
@@ -502,7 +502,7 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span className={cn(
                           "rounded-md px-2 py-1",
-                          rate.retailer_pct > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : ""
+                          rate.retailer_pct !== defaultRates.retailer_pct ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : ""
                         )}>
                           {(rate.retailer_pct * 100).toFixed(2)}%
                         </span>
@@ -524,7 +524,7 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span className={cn(
                           "rounded-md px-2 py-1",
-                          rate.agent_pct > 0 ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : ""
+                          rate.agent_pct !== defaultRates.agent_pct ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : ""
                         )}>
                           {(rate.agent_pct * 100).toFixed(2)}%
                         </span>

@@ -78,14 +78,21 @@ export async function fetchCommissionGroups(): Promise<
 
 /**
  * Fetch all voucher types from the database
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
-export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+export async function fetchVoucherTypes(includeInactive: boolean = false): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
   
-  const { data, error } = await supabase
+  let query = supabase
     .from("voucher_types")
-    .select("id, name, supplier_commission_pct")
-    .order("name");
+    .select("id, name, supplier_commission_pct");
+
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order("name");
 
   return { data, error };
 }

@@ -39,14 +39,11 @@ export async function upsertVoucherCommissionOverride(
 ): Promise<ResponseType<VoucherCommissionOverride>> {
   const supabase = createClient();
   
-  // Determine the conflict resolution based on whether commission_group_id is provided
-  const conflictColumns = override.commission_group_id 
-    ? 'commission_group_id,voucher_type_id,amount'
-    : 'voucher_type_id,amount';
-  
+  // Always use the full unique constraint columns since the database constraint is
+  // (commission_group_id, voucher_type_id, amount) which includes NULL values
   const { data, error } = await supabase
     .from('voucher_commission_overrides')
-    .upsert([override], { onConflict: conflictColumns })
+    .upsert([override], { onConflict: 'commission_group_id,voucher_type_id,amount' })
     .select('*')
     .single();
   return { data, error };

@@ -87,8 +87,8 @@ export default function CommissionGroupDetail() {
           throw new Error('Commission group not found in list');
         }
 
-        // Fetch voucher types to get supplier commission
-        const { data: voucherTypesData, error: voucherTypesError } = await fetchVoucherTypes();
+        // Fetch voucher types to get supplier commission (only active ones)
+        const { data: voucherTypesData, error: voucherTypesError } = await fetchVoucherTypes(false);
         if (voucherTypesError) {
           throw new Error(`Failed to load voucher types: ${voucherTypesError.message}`);
         }
@@ -96,17 +96,22 @@ export default function CommissionGroupDetail() {
         const typedVoucherTypes = voucherTypesData as VoucherTypeWithCommission[] || [];
         setVoucherTypes(typedVoucherTypes);
 
-        // Combine commission rates with voucher type info
-        const rates: CommissionRate[] = currentGroup.rates.map(rate => {
-          const voucherType = typedVoucherTypes.find(vt => vt.id === rate.voucher_type_id);
-          return {
-            voucher_type_id: rate.voucher_type_id,
-            voucher_type_name: rate.voucher_type_name || '',
-            supplier_pct: voucherType?.supplier_commission_pct || 0,
-            retailer_pct: rate.retailer_pct,
-            agent_pct: rate.agent_pct,
-          };
-        });
+        // Combine commission rates with voucher type info, but only for active voucher types
+        const rates: CommissionRate[] = currentGroup.rates
+          .filter(rate => {
+            // Only include rates for voucher types that are active (exist in typedVoucherTypes)
+            return typedVoucherTypes.some(vt => vt.id === rate.voucher_type_id);
+          })
+          .map(rate => {
+            const voucherType = typedVoucherTypes.find(vt => vt.id === rate.voucher_type_id);
+            return {
+              voucher_type_id: rate.voucher_type_id,
+              voucher_type_name: rate.voucher_type_name || '',
+              supplier_pct: voucherType?.supplier_commission_pct || 0,
+              retailer_pct: rate.retailer_pct,
+              agent_pct: rate.agent_pct,
+            };
+          });
 
         // Sort rates by voucher type name
         rates.sort((a, b) => a.voucher_type_name.localeCompare(b.voucher_type_name));

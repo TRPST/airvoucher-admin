@@ -60,6 +60,7 @@ export type VoucherType = {
   category: 'airtime' | 'data' | 'other' | null;
   sub_category: 'daily' | 'weekly' | 'monthly' | null;
   network_provider: 'cellc' | 'mtn' | 'vodacom' | 'telkom' | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
