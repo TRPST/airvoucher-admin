@@ -8,21 +8,30 @@ export type CommissionGroupWithCounts = {
   created_at: string;
   retailer_count: number;
   agent_count: number;
+  is_active: boolean;
 };
 
 /**
  * Fetch all commission groups with retailer and agent counts
+ * @param includeInactive - Whether to include inactive commission groups (default: false)
  */
-export async function fetchCommissionGroupsWithCounts(): Promise<
-  ResponseType<CommissionGroupWithCounts[]>
-> {
+export async function fetchCommissionGroupsWithCounts(
+  includeInactive: boolean = false
+): Promise<ResponseType<CommissionGroupWithCounts[]>> {
   const supabase = createClient();
   
   try {
-    // Fetch all commission groups
-    const { data: groups, error: groupsError } = await supabase
+    // Fetch commission groups with optional filtering by is_active
+    let query = supabase
       .from("commission_groups")
-      .select("id, name, description, created_at")
+      .select("id, name, description, created_at, is_active");
+
+    // Filter by active status unless explicitly including inactive groups
+    if (!includeInactive) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data: groups, error: groupsError } = await query
       .order("created_at", { ascending: false });
 
     if (groupsError) {
@@ -65,6 +74,7 @@ export async function fetchCommissionGroupsWithCounts(): Promise<
         created_at: group.created_at,
         retailer_count: retailerCount || 0,
         agent_count: agentCount,
+        is_active: group.is_active,
       });
     }
 
@@ -89,6 +99,24 @@ export async function fetchCommissionGroupById(
     .from("commission_groups")
     .select("id, name, description")
     .eq("id", groupId)
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Archive a commission group (soft delete by setting is_active to false)
+ */
+export async function archiveCommissionGroup(
+  groupId: string
+): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
+  const { data, error } = await supabase
+    .from("commission_groups")
+    .update({ is_active: false })
+    .eq("id", groupId)
+    .select("id")
     .single();
 
   return { data, error };

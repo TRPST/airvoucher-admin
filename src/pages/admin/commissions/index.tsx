@@ -35,6 +35,32 @@ export default function AdminCommissions() {
     rates: {} as Record<string, {retailerPct: number, agentPct: number, supplierPct: number}>,
   });
 
+  // Function to refresh commission groups data
+  const refreshCommissionGroups = React.useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await fetchCommissionGroupsWithCounts();
+
+      if (fetchError) {
+        throw new Error(
+          `Failed to load commission groups: ${fetchError.message}`
+        );
+      }
+
+      if (!data) {
+        throw new Error("No data returned from fetchCommissionGroupsWithCounts");
+      }
+
+      setCommissionGroups(data);
+    } catch (err) {
+      console.error("Error refreshing commission groups:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to refresh commission groups"
+      );
+    }
+  }, []);
+
   // Fetch commission groups and voucher types
   React.useEffect(() => {
     async function loadData() {
@@ -298,7 +324,11 @@ export default function AdminCommissions() {
       {/* Commission Groups Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {commissionGroups.map((group) => (
-          <CommissionGroupOverviewCard key={group.id} group={group} />
+          <CommissionGroupOverviewCard 
+            key={group.id} 
+            group={group} 
+            onArchive={refreshCommissionGroups}
+          />
         ))}
 
         {commissionGroups.length === 0 && (

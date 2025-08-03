@@ -63,6 +63,7 @@ export {
 export {
   fetchCommissionGroupsWithCounts,
   fetchCommissionGroupById,
+  archiveCommissionGroup,
 } from './admin/commissionGroupActions';
 export type { CommissionGroupWithCounts } from './admin/commissionGroupActions';
 

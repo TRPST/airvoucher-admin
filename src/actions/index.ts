@@ -63,6 +63,7 @@ export {
   fetchInventoryReport,
   fetchCommissionGroupsWithCounts,
   fetchCommissionGroupById,
+  archiveCommissionGroup,
 } from './adminActions';
 
 // Commission override exports
