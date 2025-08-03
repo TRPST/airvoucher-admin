@@ -18,7 +18,7 @@ export default function AdminCommissions() {
     CommissionGroupWithCounts[]
   >([]);
   const [voucherTypes, setVoucherTypes] = React.useState<
-    {id: string; name: string}[]
+    {id: string; name: string; supplier_commission_pct?: number}[]
   >([]);
   const [categorizedVoucherTypes, setCategorizedVoucherTypes] = React.useState<
     VoucherTypeCategory[]
@@ -32,7 +32,7 @@ export default function AdminCommissions() {
   const [formData, setFormData] = React.useState({
     groupName: "",
     description: "",
-    rates: {} as Record<string, {retailerPct: number, agentPct: number}>,
+    rates: {} as Record<string, {retailerPct: number, agentPct: number, supplierPct: number}>,
   });
 
   // Fetch commission groups and voucher types
@@ -95,11 +95,19 @@ export default function AdminCommissions() {
   };
   
   // Handle rate input changes in the form
-  const handleRateInputChange = (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent') => {
+  const handleRateInputChange = (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent' | 'supplier') => {
+    // Get the voucher type to access its supplier commission
+    const voucherType = voucherTypes.find(vt => vt.id === voucherTypeId);
+    const defaultSupplierPct = voucherType?.supplier_commission_pct || 0;
+    
     // Use -1 as a special placeholder for empty values during editing
     if (value === '') {
       setFormData((prev) => {
-        const existingRates = prev.rates[voucherTypeId] || { retailerPct: 5, agentPct: 0 };
+        const existingRates = prev.rates[voucherTypeId] || { 
+          retailerPct: 5, 
+          agentPct: 0, 
+          supplierPct: defaultSupplierPct 
+        };
         
         return {
           ...prev,
@@ -107,7 +115,7 @@ export default function AdminCommissions() {
             ...prev.rates,
             [voucherTypeId]: {
               ...existingRates,
-              [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: -1
+              [rateType === 'retailer' ? 'retailerPct' : rateType === 'agent' ? 'agentPct' : 'supplierPct']: -1
             },
           },
         };
@@ -126,7 +134,11 @@ export default function AdminCommissions() {
     
     setFormData((prev) => {
       // Get existing rates for this voucher type or initialize defaults
-      const existingRates = prev.rates[voucherTypeId] || { retailerPct: 5, agentPct: 0 };
+      const existingRates = prev.rates[voucherTypeId] || { 
+        retailerPct: 5, 
+        agentPct: 0, 
+        supplierPct: defaultSupplierPct 
+      };
       
       return {
         ...prev,
@@ -134,7 +146,7 @@ export default function AdminCommissions() {
           ...prev.rates,
           [voucherTypeId]: {
             ...existingRates,
-            [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: clampedValue
+            [rateType === 'retailer' ? 'retailerPct' : rateType === 'agent' ? 'agentPct' : 'supplierPct']: clampedValue
           },
         },
       };
@@ -180,18 +192,27 @@ export default function AdminCommissions() {
       
       // Step 2: Create commission rates for all voucher types
       const rates = voucherTypes.map(type => {
-        // Get rates from form data or use defaults
-        const rateData = formData.rates[type.id] || { retailerPct: 5, agentPct: 0 };
+        // Get rates from form data or use defaults (including supplier commission from voucher_types)
+        const defaultSupplierPct = type.supplier_commission_pct || 0;
+        const rateData = formData.rates[type.id] || { 
+          retailerPct: 5, 
+          agentPct: 0, 
+          supplierPct: defaultSupplierPct 
+        };
         
-        // Handle -1 values (treat as 0) and convert to decimal with precision
+        // Handle -1 values (treat as 0) and convert to appropriate format
+        // Retailer and agent are stored as decimals (divide by 100)
+        // Supplier is stored as whole number (no division)
         const retailerPct = rateData.retailerPct === -1 ? 0 : Number((rateData.retailerPct / 100));
         const agentPct = rateData.agentPct === -1 ? 0 : Number((rateData.agentPct / 100));
+        const supplierPct = rateData.supplierPct === -1 ? 0 : Number(rateData.supplierPct);
         
         return {
           commission_group_id: groupId,
           voucher_type_id: type.id,
           retailer_pct: retailerPct,
           agent_pct: agentPct,
+          supplier_pct: supplierPct,
         };
       });
       

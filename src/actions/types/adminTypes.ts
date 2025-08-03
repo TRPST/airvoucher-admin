@@ -104,6 +104,7 @@ export type CommissionRate = {
   voucher_type_id: string;
   retailer_pct: number;
   agent_pct: number;
+  supplier_pct: number;
   voucher_type_name?: string;
 };
 
