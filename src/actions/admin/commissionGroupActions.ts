@@ -5,6 +5,7 @@ export type CommissionGroupWithCounts = {
   id: string;
   name: string;
   description: string | null;
+  created_at: string;
   retailer_count: number;
   agent_count: number;
 };
@@ -21,8 +22,8 @@ export async function fetchCommissionGroupsWithCounts(): Promise<
     // Fetch all commission groups
     const { data: groups, error: groupsError } = await supabase
       .from("commission_groups")
-      .select("id, name, description")
-      .order("name");
+      .select("id, name, description, created_at")
+      .order("created_at", { ascending: false });
 
     if (groupsError) {
       return { data: null, error: groupsError };
@@ -61,6 +62,7 @@ export async function fetchCommissionGroupsWithCounts(): Promise<
         id: group.id,
         name: group.name,
         description: group.description,
+        created_at: group.created_at,
         retailer_count: retailerCount || 0,
         agent_count: agentCount,
       });

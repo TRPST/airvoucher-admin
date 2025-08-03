@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
-import { Users, Store, Percent } from 'lucide-react';
+import { Users, Store, Percent, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import type { CommissionGroupWithCounts } from '@/actions';
@@ -15,6 +15,16 @@ export function CommissionGroupOverviewCard({ group }: CommissionGroupOverviewCa
   const handleClick = React.useCallback(() => {
     router.push(`/admin/commissions/${group.id}`);
   }, [router, group.id]);
+
+  // Format creation date
+  const formattedDate = React.useMemo(() => {
+    const date = new Date(group.created_at);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }, [group.created_at]);
 
   // Determine color based on group name
   const colorClass = React.useMemo(() => {
@@ -66,6 +76,15 @@ export function CommissionGroupOverviewCard({ group }: CommissionGroupOverviewCa
             <span>Sales Agents:</span>
           </div>
           <span className="font-medium">{group.agent_count.toLocaleString()}</span>
+        </div>
+
+        {/* Creation date */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Created:</span>
+          </div>
+          <span className="font-medium">{formattedDate}</span>
         </div>
       </div>
 
