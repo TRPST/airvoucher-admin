@@ -35,6 +35,7 @@ export async function fetchCommissionGroups(): Promise<
         voucher_type_id,
         retailer_pct,
         agent_pct,
+        supplier_pct,
         voucher_types:voucher_type_id (name)
       `
       )
@@ -61,6 +62,7 @@ export async function fetchCommissionGroups(): Promise<
         voucher_type_id: rate.voucher_type_id,
         retailer_pct: rate.retailer_pct,
         agent_pct: rate.agent_pct,
+        supplier_pct: rate.supplier_pct,
         voucher_type_name: voucherTypeName,
       };
     });
@@ -78,14 +80,21 @@ export async function fetchCommissionGroups(): Promise<
 
 /**
  * Fetch all voucher types from the database
+ * @param includeInactive - Whether to include inactive voucher types (default: false)
  */
-export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+export async function fetchVoucherTypes(includeInactive: boolean = false): Promise<ResponseType<VoucherType[]>> {
   const supabase = createClient();
   
-  const { data, error } = await supabase
+  let query = supabase
     .from("voucher_types")
-    .select("id, name, supplier_commission_pct")
-    .order("name");
+    .select("id, name, supplier_commission_pct, category, sub_category, network_provider");
+
+  // Filter by active status unless explicitly including inactive types
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query.order("name");
 
   return { data, error };
 }
@@ -117,6 +126,7 @@ export async function createCommissionRates(
     voucher_type_id: string;
     retailer_pct: number;
     agent_pct: number;
+    supplier_pct: number;
   }[]
 ): Promise<ResponseType<{ count: number }>> {
   const supabase = createClient();

@@ -119,6 +119,7 @@ export async function fetchTerminalProfile(userId: string): Promise<{
 
 /**
  * Fetch all available voucher type names for the terminal
+ * Only returns active voucher types for sale operations
  */
 export async function fetchAvailableVoucherTypes(): Promise<{
   data: string[] | null;
@@ -130,6 +131,7 @@ export async function fetchAvailableVoucherTypes(): Promise<{
     const { data, error } = await supabase
       .from("voucher_types")
       .select("name")
+      .eq("is_active", true)  // Only fetch active voucher types for sales
       .order("name");
       
     if (error) {
@@ -518,4 +520,4 @@ export async function fetchSalesHistory(terminalId: string): Promise<{
       error: err instanceof Error ? err : new Error(String(err)),
     };
   }
-} 
+}

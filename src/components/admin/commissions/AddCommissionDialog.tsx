@@ -8,16 +8,16 @@ interface AddCommissionDialogProps {
   formData: {
     groupName: string;
     description: string;
-    rates: Record<string, {retailerPct: number, agentPct: number}>;
+    rates: Record<string, {retailerPct: number, agentPct: number, supplierPct: number}>;
   };
   handleFormInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRateInputChange: (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent') => void;
+  handleRateInputChange: (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent' | 'supplier') => void;
   handleCreateGroup: () => void;
   resetFormData: () => void;
   isCreating: boolean;
   categorizedVoucherTypes: {
     category: string;
-    types: { id: string; name: string }[];
+    types: { id: string; name: string; supplier_commission_pct?: number }[];
   }[];
 }
 
@@ -41,7 +41,7 @@ export function AddCommissionDialog({
         className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
         onClick={() => setShowAddDialog(false)}
       />
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Add Commission Group</h2>
           <button
@@ -115,6 +115,30 @@ export function AddCommissionDialog({
                       >
                         <span className="text-sm flex-grow truncate sm:overflow-visible min-w-0" title={type.name}>{type.name}</span>
                         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                          {/* Supplier Commission */}
+                          <div className="flex flex-col text-right">
+                            <span className="text-xs text-muted-foreground mb-1">Supplier</span>
+                            <div className="relative w-16 sm:w-20">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={(() => {
+                                  const storedValue = (formData.rates[type.id]?.supplierPct) ?? (type.supplier_commission_pct || 0);
+                                  if (storedValue === -1) return '';
+                                  // Allow free-form typing without forcing decimal formatting
+                                  return storedValue.toFixed(0);
+                                })()}
+                                onChange={(e) => handleRateInputChange(type.id, e.target.value, 'supplier')}
+                                className="w-full rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 pl-1 sm:pl-2 pr-4 sm:pr-5 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                              />
+                              <div className="pointer-events-none absolute inset-y-0 right-1 sm:right-2 flex items-center text-xs text-orange-500 dark:text-orange-400">
+                                %
+                              </div>
+                            </div>
+                          </div>
+
                           {/* Retailer Commission */}
                           <div className="flex flex-col text-right">
                             <span className="text-xs text-muted-foreground mb-1">Retailer</span>

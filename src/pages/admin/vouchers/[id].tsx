@@ -17,13 +17,6 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-  getVoucherCommissionOverride,
-  upsertVoucherCommissionOverride,
-  getVoucherCommissionOverridesForType,
-} from '@/actions/admin/commissionOverrideActions';
-import { ManageVoucherCommissionModal } from '@/components/admin/vouchers/ManageVoucherCommissionModal';
-import { Tooltip } from '@/components/ui/tooltip';
 
 import { TablePlaceholder } from '@/components/ui/table-placeholder';
 import { cn } from '@/utils/cn';
@@ -53,13 +46,6 @@ export default function VoucherTypeDetail() {
   const [newCommission, setNewCommission] = React.useState<string>('');
   const [savingCommission, setSavingCommission] = React.useState(false);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
-  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
-  const [commissionModalLoading, setCommissionModalLoading] = useState(false);
-  const [commissionModalDefault, setCommissionModalDefault] = useState<any>(null);
-  const [commissionModalVoucher, setCommissionModalVoucher] = useState<{
-    amount: number;
-  } | null>(null);
-  const [commissionOverrides, setCommissionOverrides] = useState<Record<string, any>>({}); // key: amount as string
 
   // Fetch voucher type details including supplier commission
   React.useEffect(() => {
@@ -157,24 +143,6 @@ export default function VoucherTypeDetail() {
     return Array.from(groups.values());
   }, [vouchers]);
 
-  // Fetch all overrides for this voucher_type_id on load and after save
-  useEffect(() => {
-    async function fetchOverrides() {
-      if (!typeId || typeof typeId !== 'string') return;
-      const { data, error } = await getVoucherCommissionOverridesForType(typeId);
-      if (error || !data) {
-        setCommissionOverrides({});
-        return;
-      }
-      // Map: amount (as string) -> override
-      const overrides: Record<string, any> = {};
-      data.forEach((row: any) => {
-        overrides[row.amount.toString()] = row;
-      });
-      setCommissionOverrides(overrides);
-    }
-    fetchOverrides();
-  }, [typeId, vouchers]);
 
   // Handle upload success - fetch new vouchers and wait for completion
   const handleUploadSuccess = async (): Promise<void> => {
@@ -261,10 +229,7 @@ export default function VoucherTypeDetail() {
 
   // Format data for table
   const tableData = filteredVouchers.map(voucher => {
-    const group = groupedVouchers.find(g => g.amount === voucher.amount);
-    const amount = voucher.amount;
     const stockStatus = voucher.available < 10 ? 'Low' : voucher.available < 50 ? 'Medium' : 'High';
-    const override = commissionOverrides[amount.toString()];
     const soldValue = voucher.amount * voucher.sold;
     const commissionsEarned = (supplierCommission / 100) * soldValue;
 
@@ -292,40 +257,6 @@ export default function VoucherTypeDetail() {
       'Sold Value': `R ${soldValue.toFixed(2)}`,
       'Commissions Earned': `R ${commissionsEarned.toFixed(2)}`,
       Disabled: voucher.disabled.toLocaleString(),
-      Manage: (
-        <div className="flex items-center gap-2">
-          <button
-            className="inline-flex items-center rounded border border-primary/20 bg-primary/10 px-2 py-1 text-xs text-primary hover:bg-primary/20"
-            onClick={async () => {
-              setCommissionModalVoucher({ amount });
-              setCommissionModalLoading(true);
-              const { data } = await getVoucherCommissionOverride(typeId as string, amount);
-              setCommissionModalDefault(
-                data
-                  ? {
-                      supplier_pct: data.supplier_pct,
-                      retailer_pct: data.retailer_pct,
-                      agent_pct: data.agent_pct,
-                    }
-                  : undefined
-              );
-              setCommissionModalLoading(false);
-              setCommissionModalOpen(true);
-            }}
-            disabled={commissionModalLoading}
-            type="button"
-          >
-            Specify Commissions
-          </button>
-          {override && (
-            <Tooltip content="This voucher has custom commission overrides.">
-              <span className="ml-1 text-lg" role="img" aria-label="Override">
-                ⚙️
-              </span>
-            </Tooltip>
-          )}
-        </div>
-      ),
     };
   });
 
@@ -599,7 +530,6 @@ export default function VoucherTypeDetail() {
           Disabled <SortIndicator field="disabled" />
         </span>
       </th>
-      <th className="whitespace-nowrap px-4 py-3 text-left">Manage</th>
     </tr>
   );
 
@@ -813,7 +743,7 @@ export default function VoucherTypeDetail() {
               {tableData.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="whitespace-nowrap p-8 text-center text-muted-foreground"
                   >
                     No vouchers found. Try adjusting your search or upload new vouchers.
@@ -832,38 +762,6 @@ export default function VoucherTypeDetail() {
         onSuccess={handleUploadSuccess}
         voucherTypeId={typeId as string}
         voucherTypeName={typeName}
-      />
-      <ManageVoucherCommissionModal
-        open={commissionModalOpen}
-        onClose={() => setCommissionModalOpen(false)}
-        amount={commissionModalVoucher?.amount || 0}
-        voucherTypeId={typeId as string}
-        defaultValues={commissionModalDefault}
-        onSave={async values => {
-          if (!commissionModalVoucher) return;
-          setCommissionModalLoading(true);
-          const { error } = await upsertVoucherCommissionOverride({
-            voucher_type_id: typeId as string,
-            amount: commissionModalVoucher.amount,
-            ...values,
-          });
-          setCommissionModalLoading(false);
-          if (error) {
-            toast.error(
-              'Failed to save commission override: ' + (error.message || 'Unknown error')
-            );
-          } else {
-            toast.success('Commission override saved!');
-            setCommissionModalOpen(false);
-            // Refresh overrides
-            const { data } = await getVoucherCommissionOverridesForType(typeId as string);
-            const overrides: Record<string, any> = {};
-            (data || []).forEach((row: any) => {
-              overrides[row.amount.toString()] = row;
-            });
-            setCommissionOverrides(overrides);
-          }
-        }}
       />
     </div>
   );

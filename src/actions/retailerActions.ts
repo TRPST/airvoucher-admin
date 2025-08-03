@@ -119,6 +119,7 @@ export async function fetchMyRetailer(userId: string): Promise<{
 
 /**
  * Fetch all available voucher type names
+ * Only returns active voucher types for sale operations
  */
 export async function fetchAvailableVoucherTypes(): Promise<{
   data: string[] | null;
@@ -129,10 +130,11 @@ export async function fetchAvailableVoucherTypes(): Promise<{
   try {
     console.log("Fetching available voucher type names");
 
-    // Get all voucher types 
+    // Get all active voucher types 
     const { data: voucherTypes, error: voucherTypesError } = await supabase
       .from("voucher_types")
       .select("name")
+      .eq("is_active", true)  // Only fetch active voucher types for sales
       .order("name");
       
     if (voucherTypesError) {
@@ -141,14 +143,14 @@ export async function fetchAvailableVoucherTypes(): Promise<{
     }
     
     if (!voucherTypes || voucherTypes.length === 0) {
-      console.log("No voucher types found");
+      console.log("No active voucher types found");
       return { data: [], error: null };
     }
     
     // Extract unique voucher type names
     const uniqueNames = [...new Set(voucherTypes.map(type => type.name))];
     
-    console.log(`Found ${uniqueNames.length} unique voucher types`);
+    console.log(`Found ${uniqueNames.length} unique active voucher types`);
     return { data: uniqueNames, error: null };
   } catch (err) {
     console.error("Unexpected error in fetchAvailableVoucherTypes:", err);
