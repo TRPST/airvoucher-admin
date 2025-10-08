@@ -8,7 +8,7 @@ import {
   type CommissionGroupWithCounts,
 } from "@/actions";
 
-import { CommissionGroupOverviewCard } from "@/components/admin/commissions/CommissionGroupOverviewCard";
+import { CommissionGroupsTable } from "@/components/admin/commissions/CommissionGroupsTable";
 import { AddCommissionDialog } from "@/components/admin/commissions/AddCommissionDialog";
 import { categorizeVoucherTypes, type VoucherTypeCategory } from "@/components/admin/commissions/utils";
 
@@ -321,24 +321,11 @@ export default function AdminCommissions() {
         </button>
       </div>
       
-      {/* Commission Groups Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {commissionGroups.map((group) => (
-          <CommissionGroupOverviewCard 
-            key={group.id} 
-            group={group} 
-            onArchive={refreshCommissionGroups}
-          />
-        ))}
-
-        {commissionGroups.length === 0 && (
-          <div className="col-span-full rounded-lg border border-border bg-card p-8 text-center">
-            <p className="text-muted-foreground">
-              No commission groups found. Create your first group to get started.
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Commission Groups Table */}
+      <CommissionGroupsTable
+        groups={commissionGroups}
+        onArchive={refreshCommissionGroups}
+      />
 
       <AddCommissionDialog
         showAddDialog={showAddDialog}

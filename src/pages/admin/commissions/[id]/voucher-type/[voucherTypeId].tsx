@@ -197,11 +197,15 @@ export default function VoucherAmountCommissions() {
       return;
     }
 
-    const numValue = parseFloat(value);
+    const normalized = value.replace(',', '.').trim();
+    const numValue = parseFloat(normalized);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
 
-    // Format the value to 2 decimal places to avoid floating point precision issues
-    const formattedValue = field === 'supplier_pct' ? formatToTwoDecimals(numValue) : formatToTwoDecimals(numValue / 100);
+    // Use 2 decimals for supplier (percent value) and 4 decimals for retailer/agent (fractional)
+    const formattedValue =
+      field === 'supplier_pct'
+        ? formatToTwoDecimals(numValue)
+        : Math.round((numValue / 100) * 10000) / 10000;
 
     setEditedRates(prev => ({
       ...prev,
