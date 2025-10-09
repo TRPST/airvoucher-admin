@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   const { isLoading: isAuthLoading } = useRequireRole('admin');
 
   // Fetch dashboard data
-  const { retailers, todaySales, salesData30Days, isDataLoading, error } =
+  const { retailers, todaySales, salesData30Days, isDataLoading, isPrimed, error } =
     useDashboardData(isAuthLoading);
 
   // Get unique voucher types for filter dropdown
@@ -41,18 +41,18 @@ export default function AdminDashboard() {
   // We don't have agents data yet, let's estimate based on the retailers
   const agentsCount = new Set(retailers.map(r => r.agent_profile_id).filter(Boolean)).size;
 
-  // Show loading state while checking authentication
-  if (isAuthLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="ml-2">Loading authentication...</span>
-      </div>
-    );
-  }
+  // Show loading state while checking authentication only if cache not primed
+  // if (isAuthLoading && !isPrimed) {
+  //   return (
+  //     <div className="flex h-full w-full items-center justify-center">
+  //       <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+  //       <span className="ml-2">Verifying access...</span>
+  //     </div>
+  //   );
+  // }
 
-  // Show loading state while fetching data
-  if (isDataLoading) {
+  // Initial load only: show while cache is not primed yet
+  if (!isPrimed) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -93,7 +93,7 @@ export default function AdminDashboard() {
       <DashboardCharts
         timeSeriesData={processTimeSeriesData(salesData30Days)}
         voucherTypeData={processVoucherTypeData(salesData30Days)}
-        isLoading={isDataLoading}
+        isLoading={!isPrimed}
       />
 
       {/* Sales Table Section */}

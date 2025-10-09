@@ -11,13 +11,10 @@ import {
   Pencil,
 } from 'lucide-react';
 import {
-  fetchCommissionGroupById,
-  fetchCommissionGroups,
-  fetchVoucherTypes,
   upsertCommissionRate,
   updateCommissionGroup,
-  type CommissionGroup,
 } from '@/actions';
+import { updateSupplierCommission } from '@/actions/admin/voucherActions';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import {
@@ -28,6 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import useSWR, { useSWRConfig } from 'swr';
+import { SwrKeys } from '@/lib/swr/keys';
+import {
+  commissionGroupByIdFetcher,
+  commissionGroupsFetcher,
+  voucherTypesFetcher,
+} from '@/lib/swr/fetchers';
 
 type VoucherTypeWithCommission = {
   id: string;
@@ -53,14 +57,12 @@ type EditableCommissionRate = {
 
 export default function CommissionGroupDetail() {
   const router = useRouter();
-  const { id: groupId } = router.query;
+  const { id: groupIdParam } = router.query;
+  const groupId = typeof groupIdParam === 'string' ? groupIdParam : undefined;
+  const { mutate } = useSWRConfig();
 
   const [groupName, setGroupName] = React.useState<string>('');
   const [groupDescription, setGroupDescription] = React.useState<string>('');
-  const [commissionRates, setCommissionRates] = React.useState<CommissionRate[]>([]);
-  const [voucherTypes, setVoucherTypes] = React.useState<VoucherTypeWithCommission[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
 
   // Per-row editing state
   const [editingRowId, setEditingRowId] = React.useState<string | null>(null);
@@ -75,78 +77,66 @@ export default function CommissionGroupDetail() {
     description: '',
   });
 
-  // Fetch commission group details and voucher types
+  // SWR: fetch group meta by id
+  const {
+    data: group,
+    error: groupError,
+    isLoading: groupLoading,
+  } = useSWR(groupId ? SwrKeys.commissionGroup(groupId) : null, commissionGroupByIdFetcher);
+
+  // SWR: fetch all groups (contains rates)
+  const {
+    data: allGroups,
+    error: groupsError,
+    isLoading: allGroupsLoading,
+  } = useSWR(SwrKeys.commissionGroups(), commissionGroupsFetcher);
+
+  // SWR: fetch voucher types (include inactive = true, per existing logic)
+  const {
+    data: voucherTypesData,
+    error: voucherTypesError,
+    isLoading: voucherTypesLoading,
+  } = useSWR(SwrKeys.voucherTypes('all'), voucherTypesFetcher);
+
+  // Initialize header fields when group data is available
   React.useEffect(() => {
-    async function loadData() {
-      try {
-        if (!groupId || typeof groupId !== 'string') return;
-
-        setIsLoading(true);
-
-        // Fetch commission group details
-        const { data: groupData, error: groupError } = await fetchCommissionGroupById(groupId);
-        if (groupError) {
-          throw new Error(`Failed to load commission group: ${groupError.message}`);
-        }
-
-        if (!groupData) {
-          throw new Error('Commission group not found');
-        }
-
-        setGroupName(groupData.name);
-        setGroupDescription(groupData.description || '');
-
-        // Fetch all commission groups to get the rates for this specific group
-        const { data: allGroups, error: groupsError } = await fetchCommissionGroups();
-        if (groupsError) {
-          throw new Error(`Failed to load commission rates: ${groupsError.message}`);
-        }
-
-        const currentGroup = allGroups?.find((g) => g.id === groupId);
-        if (!currentGroup) {
-          throw new Error('Commission group not found in list');
-        }
-
-        // Fetch voucher types to get supplier commission (only active ones)
-        const { data: voucherTypesData, error: voucherTypesError } = await fetchVoucherTypes(false);
-        if (voucherTypesError) {
-          throw new Error(`Failed to load voucher types: ${voucherTypesError.message}`);
-        }
-
-        const typedVoucherTypes = (voucherTypesData as VoucherTypeWithCommission[]) || [];
-        setVoucherTypes(typedVoucherTypes);
-
-        // Combine commission rates with voucher type info, but only for active voucher types
-        const rates: CommissionRate[] = currentGroup.rates
-          .filter((rate) => {
-            // Only include rates for voucher types that are active (exist in typedVoucherTypes)
-            return typedVoucherTypes.some((vt) => vt.id === rate.voucher_type_id);
-          })
-          .map((rate) => {
-            const voucherType = typedVoucherTypes.find((vt) => vt.id === rate.voucher_type_id);
-            return {
-              voucher_type_id: rate.voucher_type_id,
-              voucher_type_name: rate.voucher_type_name || '',
-              supplier_pct: voucherType?.supplier_commission_pct || 0,
-              retailer_pct: rate.retailer_pct,
-              agent_pct: rate.agent_pct,
-            };
-          });
-
-        // Sort rates by voucher type name
-        rates.sort((a, b) => a.voucher_type_name.localeCompare(b.voucher_type_name));
-
-        setCommissionRates(rates);
-      } catch (err) {
-        console.error('Error loading commission group data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load commission group');
-      } finally {
-        setIsLoading(false);
-      }
+    if (group) {
+      setGroupName(group.name);
+      setGroupDescription(group.description || '');
     }
+  }, [group]);
 
-    loadData();
-  }, [groupId]);
+  // Build derived commission rates
+  const typedVoucherTypes = (voucherTypesData as VoucherTypeWithCommission[]) || [];
+  const currentGroup = React.useMemo(
+    () => (allGroups ?? []).find((g) => g.id === groupId),
+    [allGroups, groupId]
+  );
+
+  const commissionRates: CommissionRate[] = React.useMemo(() => {
+    if (!currentGroup) return [];
+    const rates: CommissionRate[] = currentGroup.rates
+      .filter((rate) => typedVoucherTypes.some((vt) => vt.id === rate.voucher_type_id))
+      .map((rate) => {
+        const voucherType = typedVoucherTypes.find((vt) => vt.id === rate.voucher_type_id);
+        return {
+          voucher_type_id: rate.voucher_type_id,
+          voucher_type_name: rate.voucher_type_name || '',
+          supplier_pct: voucherType?.supplier_commission_pct || 0,
+          retailer_pct: rate.retailer_pct,
+          agent_pct: rate.agent_pct,
+        };
+      })
+      .sort((a, b) => a.voucher_type_name.localeCompare(b.voucher_type_name));
+    return rates;
+  }, [currentGroup, typedVoucherTypes]);
+
+  const isLoading = groupLoading || allGroupsLoading || voucherTypesLoading;
+  const errorMsg =
+    (groupError as any)?.message ||
+    (groupsError as any)?.message ||
+    (voucherTypesError as any)?.message ||
+    null;
 
   // Helper function to format numbers to 2 decimal places
   const formatToTwoDecimals = (value: number): number => {
@@ -181,7 +171,7 @@ export default function CommissionGroupDetail() {
     if (!editingRowId) return;
     setRowDrafts((prev) => {
       const copy = { ...prev };
-      delete copy[editingRowId];
+      delete copy[editingRowId!];
       return copy;
     });
     setEditingRowId(null);
@@ -228,7 +218,7 @@ export default function CommissionGroupDetail() {
 
   // Save a single row
   const saveRowEdit = async () => {
-    if (!editingRowId) return;
+    if (!editingRowId || !groupId) return;
     const draft = rowDrafts[editingRowId];
     if (!draft) return;
 
@@ -241,50 +231,55 @@ export default function CommissionGroupDetail() {
       // Convert empty values to 0 before saving
       const sanitizedRate = {
         ...draft,
-        supplier_pct: draft.supplier_pct === '' || draft.supplier_pct === undefined ? 0 : Number(draft.supplier_pct),
-        retailer_pct: draft.retailer_pct === '' || draft.retailer_pct === undefined ? 0 : Number(draft.retailer_pct),
+        supplier_pct:
+          draft.supplier_pct === '' || draft.supplier_pct === undefined ? 0 : Number(draft.supplier_pct),
+        retailer_pct:
+          draft.retailer_pct === '' || draft.retailer_pct === undefined ? 0 : Number(draft.retailer_pct),
         agent_pct: draft.agent_pct === '' || draft.agent_pct === undefined ? 0 : Number(draft.agent_pct),
       };
 
+      const retailerChanged = originalRate.retailer_pct !== sanitizedRate.retailer_pct;
+      const agentChanged = originalRate.agent_pct !== sanitizedRate.agent_pct;
+      const supplierChanged = originalRate.supplier_pct !== sanitizedRate.supplier_pct;
+
       // Update retailer/agent defaults if changed
-      if (originalRate.retailer_pct !== sanitizedRate.retailer_pct || originalRate.agent_pct !== sanitizedRate.agent_pct) {
+      if (retailerChanged || agentChanged) {
         const { error } = await upsertCommissionRate(
-          groupId as string,
+          groupId,
           editingRowId,
           sanitizedRate.retailer_pct,
           sanitizedRate.agent_pct
         );
-
         if (error) {
+          // eslint-disable-next-line no-console
           console.error(`Error updating commission for ${draft.voucher_type_name}:`, error);
           throw new Error(`Failed to update commission for ${draft.voucher_type_name}`);
         }
       }
 
       // Update supplier commission if changed
-      if (originalRate.supplier_pct !== sanitizedRate.supplier_pct) {
-        const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
+      if (supplierChanged) {
         const { error } = await updateSupplierCommission(editingRowId, sanitizedRate.supplier_pct);
-
         if (error) {
+          // eslint-disable-next-line no-console
           console.error(`Error updating supplier commission for ${draft.voucher_type_name}:`, error);
           throw new Error(`Failed to update supplier commission for ${draft.voucher_type_name}`);
         }
       }
 
-      // Update local state
-      const updatedRates: CommissionRate[] = commissionRates.map((r) => {
-        if (r.voucher_type_id !== editingRowId) return r;
-        return {
-          voucher_type_id: r.voucher_type_id,
-          voucher_type_name: r.voucher_type_name,
-          supplier_pct: typeof sanitizedRate.supplier_pct === 'string' ? 0 : sanitizedRate.supplier_pct,
-          retailer_pct: typeof sanitizedRate.retailer_pct === 'string' ? 0 : sanitizedRate.retailer_pct,
-          agent_pct: typeof sanitizedRate.agent_pct === 'string' ? 0 : sanitizedRate.agent_pct,
-        };
-      });
-
-      setCommissionRates(updatedRates);
+      // Revalidate caches
+      const tasks: Array<Promise<any>> = [];
+      // Rates live in commissionGroups
+      if (retailerChanged || agentChanged) {
+        tasks.push(mutate(SwrKeys.commissionGroups()));
+      }
+      // Supplier lives on voucher types
+      if (supplierChanged) {
+        tasks.push(mutate(SwrKeys.voucherTypes('all')));
+      }
+      // Group header data (name/description) stays the same here, but ensure fresh
+      tasks.push(mutate(SwrKeys.commissionGroup(groupId)));
+      await Promise.all(tasks);
 
       // Clear editing state
       setRowDrafts((prev) => {
@@ -294,15 +289,17 @@ export default function CommissionGroupDetail() {
       });
       setEditingRowId(null);
 
+      toast.success('Commission updated');
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error saving commission rate:', err);
-      alert(err instanceof Error ? err.message : 'Failed to save commission rate');
+      toast.error(err instanceof Error ? err.message : 'Failed to save commission rate');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Edit Group modal state and handlers
+  // Edit Group modal handlers
   const openEditGroup = () => {
     setGroupForm({ name: groupName, description: groupDescription || '' });
     setIsGroupModalOpen(true);
@@ -318,7 +315,7 @@ export default function CommissionGroupDetail() {
     (groupForm.description || '').trim() === (groupDescription || '').trim();
 
   const saveGroupDetails = async () => {
-    if (!groupId || typeof groupId !== 'string') return;
+    if (!groupId) return;
     const name = groupForm.name.trim();
     const description = (groupForm.description ?? '').trim();
 
@@ -336,6 +333,7 @@ export default function CommissionGroupDetail() {
       setIsUpdatingGroup(true);
       const { data, error } = await updateCommissionGroup(groupId, { name, description });
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Error updating commission group:', error);
         toast.error(error.message || 'Failed to update group');
         return;
@@ -344,7 +342,11 @@ export default function CommissionGroupDetail() {
       setGroupDescription(data?.description ?? description);
       toast.success('Group updated');
       setIsGroupModalOpen(false);
+
+      // Revalidate group cache
+      await mutate(SwrKeys.commissionGroup(groupId));
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error updating commission group:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update group');
     } finally {
@@ -370,13 +372,13 @@ export default function CommissionGroupDetail() {
   }
 
   // Error state
-  if (error) {
+  if (errorMsg) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold">Error</h2>
-          <p className="mb-4 text-muted-foreground">{error}</p>
+          <p className="mb-4 text-muted-foreground">{errorMsg}</p>
           <button
             onClick={() => router.back()}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
@@ -405,9 +407,7 @@ export default function CommissionGroupDetail() {
           <p className="text-muted-foreground">
             {groupDescription || 'Manage commission rates for this group'}
           </p>
-          <p className="text-sm font-semibold text-foreground mt-5">
-            Default commissions
-          </p>
+          <p className="text-sm font-semibold text-foreground mt-5">Default commissions</p>
         </div>
         <div>
           <button
@@ -622,7 +622,9 @@ export default function CommissionGroupDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Commission Group</DialogTitle>
-            <DialogDescription>Update the name and description of this commission group.</DialogDescription>
+            <DialogDescription>
+              Update the name and description of this commission group.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -640,7 +642,9 @@ export default function CommissionGroupDetail() {
               <label className="text-sm text-muted-foreground">Description</label>
               <textarea
                 value={groupForm.description}
-                onChange={(e) => setGroupForm((prev) => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setGroupForm((prev) => ({ ...prev, description: e.target.value }))
+                }
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 placeholder="Optional description"
                 rows={3}
@@ -666,7 +670,6 @@ export default function CommissionGroupDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

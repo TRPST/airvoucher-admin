@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   Plus,
   Users,
-  MoreHorizontal,
   Loader2,
   AlertCircle,
   X,
@@ -13,7 +12,6 @@ import Link from "next/link";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import {
-  fetchAllAgents,
   createAgent,
   fetchUnassignedRetailers,
   assignRetailerToAgent,
@@ -21,20 +19,41 @@ import {
 } from "@/actions";
 import useRequireRole from "@/hooks/useRequireRole";
 
+import useSWR, { useSWRConfig } from "swr";
+import { SwrKeys } from "@/lib/swr/keys";
+import { agentsFetcher, unassignedRetailersFetcher } from "@/lib/swr/fetchers";
+
 export default function AdminAgents() {
   // Protect this route - only allow admin role
   const { isLoading: isRoleLoading } = useRequireRole("admin");
+  const { mutate } = useSWRConfig();
 
-  // States for data
-  const [agents, setAgents] = React.useState<Agent[]>([]);
-  const [unassignedRetailers, setUnassignedRetailers] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [formError, setFormError] = React.useState<string | null>(null);
+  // SWR: agents list
+  const {
+    data: agentsData,
+    error: agentsError,
+    isLoading: agentsLoading,
+  } = useSWR(SwrKeys.agents(), agentsFetcher);
+
+  // SWR: unassigned retailers for assignment
+  const {
+    data: unassignedRetailers,
+    error: unassignedError,
+    isLoading: unassignedLoading,
+  } = useSWR(SwrKeys.unassignedRetailers(), unassignedRetailersFetcher);
+
+  // Derived loading/error state (use cache presence only to gate initial loader)
+  const primed = agentsData !== undefined && unassignedRetailers !== undefined;
+  const isLoading = !primed;
+  const error =
+    (agentsError as any)?.message ||
+    (unassignedError as any)?.message ||
+    null;
 
   // Form state for adding a new agent
   const [showAddDialog, setShowAddDialog] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [formData, setFormData] = React.useState<{
     fullName: string;
     email: string;
@@ -50,49 +69,6 @@ export default function AdminAgents() {
     autoGeneratePassword: false,
     assignedRetailers: [],
   });
-
-  // Load agents and unassigned retailers data
-  React.useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Fetch agents
-        const { data: agentsData, error: agentsError } = await fetchAllAgents();
-
-        if (agentsError) {
-          setError(`Failed to load agents: ${agentsError.message}`);
-          return;
-        }
-
-        setAgents(agentsData || []);
-
-        // Fetch unassigned retailers
-        const { data: retailersData, error: retailersError } =
-          await fetchUnassignedRetailers();
-
-        if (retailersError) {
-          console.warn("Failed to load unassigned retailers:", retailersError);
-          // Don't fail the whole page for this
-        } else {
-          setUnassignedRetailers(retailersData || []);
-        }
-      } catch (err) {
-        setError(
-          `Unexpected error: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (!isRoleLoading) {
-      loadData();
-    }
-  }, [isRoleLoading]);
 
   // Handler for input changes in the form
   const handleInputChange = (
@@ -172,8 +148,6 @@ export default function AdminAgents() {
 
     setIsSubmitting(true);
     setFormError(null);
-    setError(null);
-
     try {
       // Create agent
       const { data, error } = await createAgent({
@@ -197,13 +171,12 @@ export default function AdminAgents() {
           await assignRetailerToAgent(retailerId, data.id);
         }
 
-        // Refresh the data
-        const { data: refreshedAgents } = await fetchAllAgents();
-        const { data: refreshedRetailers } = await fetchUnassignedRetailers();
-        
-        if (refreshedAgents) setAgents(refreshedAgents);
-        if (refreshedRetailers) setUnassignedRetailers(refreshedRetailers);
-        
+        // Revalidate agents and unassigned retailers lists
+        await Promise.all([
+          mutate(SwrKeys.agents()),
+          mutate(SwrKeys.unassignedRetailers()),
+        ]);
+
         setShowAddDialog(false);
 
         // Reset form data
@@ -217,27 +190,15 @@ export default function AdminAgents() {
         });
       }
     } catch (err) {
-      setError(
-        `Error creating agent: ${
-          err instanceof Error ? err.message : String(err)
-        }`
+      setFormError(
+        `Error creating agent: ${err instanceof Error ? err.message : String(err)}`
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Show loading state while checking authentication
-  if (isRoleLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="ml-2">Loading authentication...</span>
-      </div>
-    );
-  }
-
-  // Show loading state
+  // Initial load only (no cache yet)
   if (isLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -257,6 +218,9 @@ export default function AdminAgents() {
       </div>
     );
   }
+
+  const agents = (agentsData as Agent[]) ?? [];
+  const unassigned = (unassignedRetailers as any[]) ?? [];
 
   // Format data for the table
   const tableData = agents.map((agent) => {
@@ -347,7 +311,7 @@ export default function AdminAgents() {
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="text-muted-foreground">Unassigned Retailers</div>
           <div className="mt-1 text-2xl font-semibold text-amber-600">
-            {unassignedRetailers.length}
+            {unassigned.length}
           </div>
         </div>
       </div>
@@ -471,13 +435,13 @@ export default function AdminAgents() {
                 </div>
                 
                 {/* Retailer Assignment Section */}
-                {unassignedRetailers.length > 0 && (
+                {unassigned.length > 0 && (
                   <div className="space-y-2 mb-6">
                     <label className="text-sm font-medium">
                       Assign Retailers (Optional)
                     </label>
                     <div className="border border-input rounded-md max-h-40 overflow-y-auto p-2">
-                      {unassignedRetailers.map((retailer) => (
+                      {unassigned.map((retailer: any) => (
                         <div
                           key={retailer.id}
                           className="flex items-center space-x-2 py-1"
@@ -540,4 +504,4 @@ export default function AdminAgents() {
       </Dialog.Root>
     </div>
   );
-} 
+}

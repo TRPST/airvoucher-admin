@@ -1,14 +1,11 @@
 import * as React from 'react';
-import { Plus, Store, MoreHorizontal, Loader2, AlertCircle, X } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import Link from 'next/link';
 
 import { TablePlaceholder } from '@/components/ui/table-placeholder';
 import { cn } from '@/utils/cn';
 import {
-  fetchRetailers,
-  fetchCommissionGroups,
-  fetchAllAgents,
   createRetailer,
   type AdminRetailer,
   type CommissionGroup,
@@ -18,23 +15,58 @@ import {
 } from '@/actions';
 import useRequireRole from '@/hooks/useRequireRole';
 import { RetailerTable } from '@/components/admin/retailers/RetailerTable';
-import { AddRetailerDialog } from '@/components/admin/retailers/AddRetailerDialog';
+import useSWR, { useSWRConfig } from 'swr';
+import { SwrKeys } from '@/lib/swr/keys';
+import {
+  retailersFetcher,
+  agentsFetcher,
+  commissionGroupsFetcher,
+} from '@/lib/swr/fetchers';
 
 export default function AdminRetailers() {
   // Protect this route - only allow admin role
   const { isLoading: isRoleLoading } = useRequireRole('admin');
+  const { mutate } = useSWRConfig();
 
-  // States for data
-  const [retailers, setRetailers] = React.useState<AdminRetailer[]>([]);
-  const [agents, setAgents] = React.useState<Agent[]>([]);
-  const [commissionGroups, setCommissionGroups] = React.useState<CommissionGroup[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  // SWR data
+  const {
+    data: retailers,
+    error: retailersError,
+    isLoading: retailersLoading,
+  } = useSWR(SwrKeys.retailers(), retailersFetcher);
+
+  const {
+    data: commissionGroups,
+    error: groupsError,
+    isLoading: groupsLoading,
+  } = useSWR(SwrKeys.commissionGroups(), commissionGroupsFetcher);
+
+  const {
+    data: agents,
+    error: agentsError,
+    isLoading: agentsLoading,
+  } = useSWR(SwrKeys.agents(), agentsFetcher);
+
+  // Derived loading and error states
+  const primed =
+    retailers !== undefined &&
+    commissionGroups !== undefined &&
+    agents !== undefined;
+
+  const isLoading = !primed;
+
+  const error =
+    (retailersError as any)?.message ||
+    (groupsError as any)?.message ||
+    (agentsError as any)?.message ||
+    null;
+
+  // Form UI state
+  const [showAddDialog, setShowAddDialog] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   // Form state for adding a new retailer
-  const [showAddDialog, setShowAddDialog] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formData, setFormData] = React.useState<{
     businessName: string;
     contactName: string;
@@ -58,52 +90,6 @@ export default function AdminRetailers() {
     password: '',
     autoGeneratePassword: false,
   });
-
-  // Load retailers and commission groups data
-  React.useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Fetch retailers
-        const { data: retailersData, error: retailersError } = await fetchRetailers();
-
-        if (retailersError) {
-          setError(`Failed to load retailers: ${retailersError.message}`);
-          return;
-        }
-
-        setRetailers(retailersData || []);
-
-        // Fetch commission groups
-        const { data: groupsData, error: groupsError } = await fetchCommissionGroups();
-
-        if (groupsError) {
-          setError(`Failed to load commission groups: ${groupsError.message}`);
-          return;
-        }
-
-        setCommissionGroups(groupsData || []);
-
-        // Fetch agents
-        const { data: agentsData, error: agentsError } = await fetchAllAgents();
-
-        if (agentsError) {
-          setError(`Failed to load agents: ${agentsError.message}`);
-          return;
-        }
-
-        setAgents(agentsData || []);
-      } catch (err) {
-        setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   // Handler for input changes in the form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -170,7 +156,6 @@ export default function AdminRetailers() {
 
     setIsSubmitting(true);
     setFormError(null); // Clear any previous form errors
-    setError(null); // Clear any previous page errors
 
     try {
       // Create profile data
@@ -206,13 +191,10 @@ export default function AdminRetailers() {
         return;
       }
 
-      // Add the new retailer to the list and close the dialog
       if (data) {
-        // Refresh the retailer list instead of trying to add incomplete data
-        const { data: refreshedData } = await fetchRetailers();
-        if (refreshedData) {
-          setRetailers(refreshedData);
-        }
+        // Revalidate retailer list
+        await mutate(SwrKeys.retailers());
+
         setShowAddDialog(false);
 
         // Reset form data
@@ -230,14 +212,14 @@ export default function AdminRetailers() {
         });
       }
     } catch (err) {
-      setError(`Error creating retailer: ${err instanceof Error ? err.message : String(err)}`);
+      setFormError(`Error creating retailer: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Show loading state
-  if (isRoleLoading || isLoading) {
+  // Initial load only (no cache yet)
+  if (isLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -259,6 +241,10 @@ export default function AdminRetailers() {
     );
   }
 
+  const retailerList = (retailers as AdminRetailer[]) ?? [];
+  const agentList = (agents as Agent[]) ?? [];
+  const groupList = (commissionGroups as CommissionGroup[]) ?? [];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -275,20 +261,204 @@ export default function AdminRetailers() {
         </button>
       </div>
 
-      <RetailerTable retailers={retailers} />
+      <RetailerTable retailers={retailerList} />
 
-      <AddRetailerDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        formData={formData}
-        agents={agents}
-        commissionGroups={commissionGroups}
-        formError={formError}
-        isSubmitting={isSubmitting}
-        onInputChange={handleInputChange}
-        onRegeneratePassword={handleRegeneratePassword}
-        onSubmit={handleSubmit}
-      />
+      <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+            <div className="flex items-center justify-between">
+              <Dialog.Title className="text-lg font-semibold">
+                Add New Retailer
+              </Dialog.Title>
+              <Dialog.Close className="rounded-full p-2 hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Dialog.Close>
+            </div>
+            <div className="mt-2 space-y-6">
+              {formError && (
+                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {formError}
+                  </div>
+                </div>
+              )}
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Business Name</label>
+                    <input
+                      type="text"
+                      name="businessName"
+                      value={formData.businessName}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Enter business name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Contact Name</label>
+                    <input
+                      type="text"
+                      name="contactName"
+                      value={formData.contactName}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Enter contact name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Contact email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="e.g. Cape Town"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Agent</label>
+                    <select
+                      name="agentId"
+                      value={formData.agentId}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {agentList.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Commission Group</label>
+                    <select
+                      name="commissionGroupId"
+                      value={formData.commissionGroupId}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Default</option>
+                      {groupList.map(g => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Initial Balance</label>
+                    <input
+                      type="number"
+                      name="initialBalance"
+                      value={formData.initialBalance}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Credit Limit</label>
+                    <input
+                      type="number"
+                      name="creditLimit"
+                      value={formData.creditLimit}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Password</label>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="autoGeneratePassword"
+                          name="autoGeneratePassword"
+                          checked={formData.autoGeneratePassword}
+                          onChange={handleInputChange}
+                          className="mr-2 h-4 w-4 rounded border-gray-300"
+                        />
+                        <label htmlFor="autoGeneratePassword" className="text-sm text-muted-foreground">
+                          Auto-generate password
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <input
+                        type="text"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        disabled={formData.autoGeneratePassword}
+                        className="w-full rounded-md rounded-r-none border border-input bg-background px-3 py-2 text-sm"
+                        placeholder={formData.autoGeneratePassword ? 'Auto-generated password' : 'Set password'}
+                        required
+                      />
+                      {formData.autoGeneratePassword && (
+                        <button
+                          type="button"
+                          onClick={handleRegeneratePassword}
+                          className="flex items-center justify-center rounded-md rounded-l-none border border-l-0 border-input bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/90"
+                        >
+                          Regenerate
+                        </button>
+                      )}
+                    </div>
+                    {formData.autoGeneratePassword && (
+                      <p className="text-xs text-muted-foreground">This password will be used for the retailer's login account.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end space-x-2">
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Add Retailer'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

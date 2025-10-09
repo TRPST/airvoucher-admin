@@ -1,147 +1,104 @@
 import * as React from "react";
-import { Loader2, AlertCircle, Plus } from 'lucide-react';
+import { Loader2, AlertCircle, Plus } from "lucide-react";
 import {
-  fetchCommissionGroupsWithCounts,
-  fetchVoucherTypes,
   createCommissionGroup,
   createCommissionRates,
-  type CommissionGroupWithCounts,
 } from "@/actions";
+
+import useSWR from "swr";
+import { useSWRConfig } from "swr";
+import { SwrKeys } from "@/lib/swr/keys";
+import {
+  commissionGroupsWithCountsFetcher,
+  voucherTypesFetcher,
+} from "@/lib/swr/fetchers";
 
 import { CommissionGroupsTable } from "@/components/admin/commissions/CommissionGroupsTable";
 import { AddCommissionDialog } from "@/components/admin/commissions/AddCommissionDialog";
-import { categorizeVoucherTypes, type VoucherTypeCategory } from "@/components/admin/commissions/utils";
+import {
+  categorizeVoucherTypes,
+  type VoucherTypeCategory,
+} from "@/components/admin/commissions/utils";
 
 export default function AdminCommissions() {
   const [showAddDialog, setShowAddDialog] = React.useState(false);
-  const [commissionGroups, setCommissionGroups] = React.useState<
-    CommissionGroupWithCounts[]
-  >([]);
-  const [voucherTypes, setVoucherTypes] = React.useState<
-    {id: string; name: string; supplier_commission_pct?: number}[]
-  >([]);
-  const [categorizedVoucherTypes, setCategorizedVoucherTypes] = React.useState<
-    VoucherTypeCategory[]
-  >([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
-  
+
   // Form state for adding a new commission group
   const [formData, setFormData] = React.useState({
     groupName: "",
     description: "",
-    rates: {} as Record<string, {retailerPct: number, agentPct: number, supplierPct: number}>,
+    rates: {} as Record<
+      string,
+      { retailerPct: number; agentPct: number; supplierPct: number }
+    >,
   });
 
-  // Function to refresh commission groups data
+  // SWR: commission groups with counts
+  const {
+    data: groups,
+    error: groupsError,
+    isLoading: groupsLoading,
+    mutate: mutateGroups,
+  } = useSWR(SwrKeys.commissionGroupsWithCounts(), commissionGroupsWithCountsFetcher);
+
+  // SWR: voucher types (default active set)
+  const {
+    data: voucherTypesData,
+    error: voucherTypesError,
+    isLoading: voucherTypesLoading,
+  } = useSWR(SwrKeys.voucherTypes(), voucherTypesFetcher);
+
+  const voucherTypes =
+    (voucherTypesData as { id: string; name: string; supplier_commission_pct?: number }[]) || [];
+
+  // Derived categorized voucher types
+  const categorizedVoucherTypes: VoucherTypeCategory[] = React.useMemo(() => {
+    return categorizeVoucherTypes(voucherTypes || []);
+  }, [voucherTypes]);
+
+  // Function to refresh commission groups data (revalidate SWR cache)
   const refreshCommissionGroups = React.useCallback(async () => {
-    try {
-      const { data, error: fetchError } = await fetchCommissionGroupsWithCounts();
+    await mutateGroups();
+  }, [mutateGroups]);
 
-      if (fetchError) {
-        throw new Error(
-          `Failed to load commission groups: ${fetchError.message}`
-        );
-      }
-
-      if (!data) {
-        throw new Error("No data returned from fetchCommissionGroupsWithCounts");
-      }
-
-      setCommissionGroups(data);
-    } catch (err) {
-      console.error("Error refreshing commission groups:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to refresh commission groups"
-      );
-    }
-  }, []);
-
-  // Fetch commission groups and voucher types
-  React.useEffect(() => {
-    async function loadData() {
-      try {
-        setIsLoading(true);
-
-        // Fetch commission groups with counts
-        const { data, error: fetchError } = await fetchCommissionGroupsWithCounts();
-
-        if (fetchError) {
-          throw new Error(
-            `Failed to load commission groups: ${fetchError.message}`
-          );
-        }
-
-        if (!data) {
-          throw new Error("No data returned from fetchCommissionGroupsWithCounts");
-        }
-
-        setCommissionGroups(data);
-        
-        // Fetch voucher types
-        const { data: voucherTypesData, error: voucherTypesError } = await fetchVoucherTypes();
-        
-        if (voucherTypesError) {
-          console.error("Error loading voucher types:", voucherTypesError);
-          // Continue loading the page even if voucher types fail to load
-        } else {
-          const types = voucherTypesData || [];
-          setVoucherTypes(types);
-          
-          // Categorize voucher types
-          const categorized = categorizeVoucherTypes(types);
-          setCategorizedVoucherTypes(categorized);
-        }
-      } catch (err) {
-        console.error("Error loading commission data:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load commission groups"
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
-  
   // Handle form input changes
-  const handleFormInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   // Handle rate input changes in the form
-  const handleRateInputChange = (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent' | 'supplier') => {
+  const handleRateInputChange = (
+    voucherTypeId: string,
+    value: string,
+    rateType: "retailer" | "agent" | "supplier"
+  ) => {
     // Get the voucher type to access its supplier commission
-    const voucherType = voucherTypes.find(vt => vt.id === voucherTypeId);
+    const voucherType = voucherTypes.find((vt) => vt.id === voucherTypeId);
     const defaultSupplierPct = voucherType?.supplier_commission_pct || 0;
-    
+
     // Use -1 as a special placeholder for empty values during editing
-    if (value === '') {
+    if (value === "") {
       setFormData((prev) => {
-        const existingRates = prev.rates[voucherTypeId] || { 
-          retailerPct: 5, 
-          agentPct: 0, 
-          supplierPct: defaultSupplierPct 
+        const existingRates = prev.rates[voucherTypeId] || {
+          retailerPct: 5,
+          agentPct: 0,
+          supplierPct: defaultSupplierPct,
         };
-        
+
         return {
           ...prev,
           rates: {
             ...prev.rates,
             [voucherTypeId]: {
               ...existingRates,
-              [rateType === 'retailer' ? 'retailerPct' : rateType === 'agent' ? 'agentPct' : 'supplierPct']: -1
+              [rateType === "retailer"
+                ? "retailerPct"
+                : rateType === "agent"
+                ? "agentPct"
+                : "supplierPct"]: -1,
             },
           },
         };
@@ -151,34 +108,38 @@ export default function AdminCommissions() {
 
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
-    
+
     // Check if input has more than 2 decimal places
-    if (value.includes('.') && value.split('.')[1].length > 2) return;
-    
+    if (value.includes(".") && value.split(".")[1].length > 2) return;
+
     // Clamp between 0-100 without any decimal manipulation
     const clampedValue = Math.min(100, Math.max(0, numValue));
-    
+
     setFormData((prev) => {
       // Get existing rates for this voucher type or initialize defaults
-      const existingRates = prev.rates[voucherTypeId] || { 
-        retailerPct: 5, 
-        agentPct: 0, 
-        supplierPct: defaultSupplierPct 
+      const existingRates = prev.rates[voucherTypeId] || {
+        retailerPct: 5,
+        agentPct: 0,
+        supplierPct: defaultSupplierPct,
       };
-      
+
       return {
         ...prev,
         rates: {
           ...prev.rates,
           [voucherTypeId]: {
             ...existingRates,
-            [rateType === 'retailer' ? 'retailerPct' : rateType === 'agent' ? 'agentPct' : 'supplierPct']: clampedValue
+            [rateType === "retailer"
+              ? "retailerPct"
+              : rateType === "agent"
+              ? "agentPct"
+              : "supplierPct"]: clampedValue,
           },
         },
       };
     });
   };
-  
+
   // Reset form data
   const resetFormData = () => {
     setFormData({
@@ -188,7 +149,7 @@ export default function AdminCommissions() {
     });
     setFormError(null);
   };
-  
+
   // Create new commission group
   const handleCreateGroup = async () => {
     // Validate form
@@ -196,43 +157,49 @@ export default function AdminCommissions() {
       setFormError("Please enter a group name");
       return;
     }
-    
+
     setIsCreating(true);
     setFormError(null);
-    
+
     try {
       // Step 1: Create the commission group
       const { data: groupData, error: groupError } = await createCommissionGroup(
         formData.groupName,
         formData.description
       );
-      
+
       if (groupError) {
-        throw new Error(`Failed to create commission group: ${groupError.message}`);
+        throw new Error(
+          `Failed to create commission group: ${groupError.message}`
+        );
       }
-      
+
       const groupId = groupData?.id;
       if (!groupId) {
         throw new Error("Failed to get the new group ID");
       }
-      
+
       // Step 2: Create commission rates for all voucher types
-      const rates = voucherTypes.map(type => {
+      const rates = voucherTypes.map((type) => {
         // Get rates from form data or use defaults (including supplier commission from voucher_types)
         const defaultSupplierPct = type.supplier_commission_pct || 0;
-        const rateData = formData.rates[type.id] || { 
-          retailerPct: 5, 
-          agentPct: 0, 
-          supplierPct: defaultSupplierPct 
-        };
-        
+        const rateData =
+          formData.rates[type.id] || {
+            retailerPct: 5,
+            agentPct: 0,
+            supplierPct: defaultSupplierPct,
+          };
+
         // Handle -1 values (treat as 0) and convert to appropriate format
         // Retailer and agent are stored as decimals (divide by 100)
         // Supplier is stored as whole number (no division)
-        const retailerPct = rateData.retailerPct === -1 ? 0 : Number((rateData.retailerPct / 100));
-        const agentPct = rateData.agentPct === -1 ? 0 : Number((rateData.agentPct / 100));
-        const supplierPct = rateData.supplierPct === -1 ? 0 : Number(rateData.supplierPct);
-        
+        const retailerPct =
+          rateData.retailerPct === -1 ? 0 : Number(rateData.retailerPct / 100);
+        const agentPct =
+          rateData.agentPct === -1 ? 0 : Number(rateData.agentPct / 100);
+        const supplierPct =
+          rateData.supplierPct === -1 ? 0 : Number(rateData.supplierPct);
+
         return {
           commission_group_id: groupId,
           voucher_type_id: type.id,
@@ -241,26 +208,25 @@ export default function AdminCommissions() {
           supplier_pct: supplierPct,
         };
       });
-      
+
       if (rates.length > 0) {
         const { error: ratesError } = await createCommissionRates(rates);
-        
+
         if (ratesError) {
-          throw new Error(`Failed to create commission rates: ${ratesError.message}`);
+          throw new Error(
+            `Failed to create commission rates: ${ratesError.message}`
+          );
         }
       }
-      
-      // Step 3: Refresh the commission groups list
-      const { data: refreshedData } = await fetchCommissionGroupsWithCounts();
-      if (refreshedData) {
-        setCommissionGroups(refreshedData);
-      }
-      
+
+      // Step 3: Revalidate the commission groups list
+      await mutateGroups();
+
       // Step 4: Close dialog and reset form
       setShowAddDialog(false);
       resetFormData();
-      
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Error creating commission group:", err);
       setFormError(
         err instanceof Error ? err.message : "Failed to create commission group"
@@ -270,9 +236,8 @@ export default function AdminCommissions() {
     }
   };
 
-
-  // Loading state
-  if (isLoading) {
+  // Loading state (use groups loading as primary gate)
+  if (groupsLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
@@ -283,14 +248,16 @@ export default function AdminCommissions() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state for groups
+  if (groupsError) {
+    const message =
+      groupsError instanceof Error ? groupsError.message : "Failed to load commission groups";
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold">Error</h2>
-          <p className="mb-4 text-muted-foreground">{error}</p>
+          <p className="mb-4 text-muted-foreground">{message}</p>
           <button
             onClick={() => window.location.reload()}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
@@ -307,7 +274,9 @@ export default function AdminCommissions() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Commission Groups</h1>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Commission Groups
+          </h1>
           <p className="text-muted-foreground">
             Manage commission rates for retailers and sales agents across different voucher types.
           </p>
@@ -320,10 +289,10 @@ export default function AdminCommissions() {
           Add Group
         </button>
       </div>
-      
+
       {/* Commission Groups Table */}
       <CommissionGroupsTable
-        groups={commissionGroups}
+        groups={groups ?? []}
         onArchive={refreshCommissionGroups}
       />
 
