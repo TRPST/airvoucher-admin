@@ -1,14 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import {
-  ChevronLeft,
-  Loader2,
-  AlertCircle,
-  Check,
-  X,
-  Pencil,
-} from 'lucide-react';
+import { ChevronLeft, Loader2, AlertCircle, Check, X, Pencil } from 'lucide-react';
 import {
   fetchCommissionGroupById,
   fetchVoucherTypes,
@@ -19,20 +12,28 @@ import {
 } from '@/actions';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type VoucherAmountRate = {
   amount: number;
-  supplier_pct: number;
-  retailer_pct: number;
-  agent_pct: number;
+  supplier_pct: number; // stored as percentage e.g. 3.5
+  retailer_pct: number; // stored as fraction e.g. 0.05 (5%)
+  agent_pct: number; // stored as fraction e.g. 0.05 (5%)
   hasOverride: boolean;
 };
 
 type EditableVoucherAmountRate = {
   amount: number;
-  supplier_pct: number | string;
-  retailer_pct: number | string;
-  agent_pct: number | string;
+  supplier_pct: number | string; // supplier kept as percentage
+  retailer_pct: number | string; // fraction (0-1) internally, but inputs as percent
+  agent_pct: number | string; // fraction (0-1) internally, but inputs as percent
   hasOverride: boolean;
 };
 
@@ -50,9 +51,21 @@ export default function VoucherAmountCommissions() {
   const [amountRates, setAmountRates] = React.useState<VoucherAmountRate[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isEditing, setIsEditing] = React.useState(false);
+
+  // Per-row editing state
+  const [editingRowAmount, setEditingRowAmount] = React.useState<number | null>(null);
+  const [rowDrafts, setRowDrafts] = React.useState<Record<string, EditableVoucherAmountRate>>({});
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editedRates, setEditedRates] = React.useState<Record<string, EditableVoucherAmountRate>>({});
+
+  // Multi-select and bulk edit
+  const [selectedAmounts, setSelectedAmounts] = React.useState<Set<number>>(new Set());
+  const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
+  const [isBulkSaving, setIsBulkSaving] = React.useState(false);
+  const [bulkDraft, setBulkDraft] = React.useState<{ supplier_pct: string; retailer_pct: string; agent_pct: string }>({
+    supplier_pct: '',
+    retailer_pct: '',
+    agent_pct: '',
+  });
 
   // Fetch data
   React.useEffect(() => {
@@ -75,7 +88,7 @@ export default function VoucherAmountCommissions() {
           throw new Error(`Failed to load voucher types: ${voucherTypesError.message}`);
         }
 
-        const voucherType = voucherTypes?.find(vt => vt.id === voucherTypeId);
+        const voucherType = voucherTypes?.find((vt) => vt.id === voucherTypeId);
         if (!voucherType) {
           throw new Error('Voucher type not found');
         }
@@ -88,9 +101,9 @@ export default function VoucherAmountCommissions() {
           throw new Error(`Failed to load commission rates: ${groupsError.message}`);
         }
 
-        const currentGroup = allGroups?.find(g => g.id === groupId);
-        const defaultRate = currentGroup?.rates.find(r => r.voucher_type_id === voucherTypeId);
-        
+        const currentGroup = allGroups?.find((g) => g.id === groupId);
+        const defaultRate = currentGroup?.rates.find((r) => r.voucher_type_id === voucherTypeId);
+
         if (defaultRate) {
           setDefaultRates({
             supplier_pct: voucherType.supplier_commission_pct || 0,
@@ -116,7 +129,7 @@ export default function VoucherAmountCommissions() {
 
         // Create a map of overrides by amount
         const overrideMap = new Map<number, VoucherCommissionOverride>();
-        overrides?.forEach(override => {
+        overrides?.forEach((override) => {
           overrideMap.set(override.amount, override);
         });
 
@@ -158,40 +171,60 @@ export default function VoucherAmountCommissions() {
     loadData();
   }, [groupId, voucherTypeId, defaultRates.supplier_pct, defaultRates.retailer_pct, defaultRates.agent_pct]);
 
-  // Start editing
-  const startEditing = () => {
-    const initialEditedRates: Record<string, VoucherAmountRate> = {};
-    amountRates.forEach(rate => {
-      initialEditedRates[rate.amount.toString()] = { ...rate };
-    });
-    setEditedRates(initialEditedRates);
-    setIsEditing(true);
-  };
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditedRates({});
-    setIsEditing(false);
-  };
-
   // Helper function to format numbers to 2 decimal places
   const formatToTwoDecimals = (value: number): number => {
     return Math.round(value * 100) / 100;
   };
 
-  // Handle rate change
-  const handleRateChange = (
+  // Row editing controls
+  const startRowEdit = (amount: number) => {
+    if (editingRowAmount !== null && editingRowAmount !== amount) {
+      toast.message('Finish or cancel the current row edit first');
+      return;
+    }
+    const current = amountRates.find((r) => r.amount === amount);
+    if (!current) return;
+
+    const draft: EditableVoucherAmountRate = {
+      amount: current.amount,
+      supplier_pct: current.supplier_pct,
+      retailer_pct: current.retailer_pct,
+      agent_pct: current.agent_pct,
+      hasOverride: current.hasOverride,
+    };
+
+    setRowDrafts((prev) => ({
+      ...prev,
+      [amount.toString()]: draft,
+    }));
+    setEditingRowAmount(amount);
+  };
+
+  const cancelRowEdit = () => {
+    if (editingRowAmount === null) return;
+    setRowDrafts((prev) => {
+      const copy = { ...prev };
+      delete copy[editingRowAmount.toString()];
+      return copy;
+    });
+    setEditingRowAmount(null);
+  };
+
+  // Per-row input change
+  const handleRowRateChange = (
     amount: number,
     field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
     value: string
   ) => {
-    // Allow empty values for better user experience
+    if (editingRowAmount !== amount) return;
+
+    // Allow empty values for better UX
     if (value === '') {
-      setEditedRates(prev => ({
+      setRowDrafts((prev) => ({
         ...prev,
         [amount.toString()]: {
           ...prev[amount.toString()],
-          [field]: '' as any, // Store empty string temporarily
+          [field]: '' as any,
         },
       }));
       return;
@@ -201,13 +234,12 @@ export default function VoucherAmountCommissions() {
     const numValue = parseFloat(normalized);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
 
-    // Use 2 decimals for supplier (percent value) and 4 decimals for retailer/agent (fractional)
     const formattedValue =
       field === 'supplier_pct'
-        ? formatToTwoDecimals(numValue)
-        : Math.round((numValue / 100) * 10000) / 10000;
+        ? formatToTwoDecimals(numValue) // keep as percent (e.g., 3.5)
+        : Math.round((numValue / 100) * 10000) / 10000; // store fraction to 4 dp
 
-    setEditedRates(prev => ({
+    setRowDrafts((prev) => ({
       ...prev,
       [amount.toString()]: {
         ...prev[amount.toString()],
@@ -216,112 +248,247 @@ export default function VoucherAmountCommissions() {
     }));
   };
 
-  // Save changes
-  const saveChanges = async () => {
+  const saveRowEdit = async () => {
+    if (editingRowAmount === null) return;
+    const amount = editingRowAmount;
+    const draft = rowDrafts[amount.toString()];
+    if (!draft) return;
+
     try {
       setIsSaving(true);
 
-      // Update each rate that has changed
-      for (const [amountStr, editedRate] of Object.entries(editedRates)) {
-        const amount = parseFloat(amountStr);
-        const originalRate = amountRates.find(r => r.amount === amount);
-        if (!originalRate) continue;
+      const originalRate = amountRates.find((r) => r.amount === amount);
+      if (!originalRate) return;
 
-        // Convert empty values to 0 before processing
-        const sanitizedRate = {
-          ...editedRate,
-          supplier_pct: (editedRate.supplier_pct === '' || editedRate.supplier_pct === undefined) ? 0 : Number(editedRate.supplier_pct),
-          retailer_pct: (editedRate.retailer_pct === '' || editedRate.retailer_pct === undefined) ? 0 : Number(editedRate.retailer_pct),
-          agent_pct: (editedRate.agent_pct === '' || editedRate.agent_pct === undefined) ? 0 : Number(editedRate.agent_pct),
-        };
+      // Convert empty values to 0 before processing
+      const sanitizedRate = {
+        ...draft,
+        supplier_pct: draft.supplier_pct === '' || draft.supplier_pct === undefined ? 0 : Number(draft.supplier_pct),
+        retailer_pct: draft.retailer_pct === '' || draft.retailer_pct === undefined ? 0 : Number(draft.retailer_pct),
+        agent_pct: draft.agent_pct === '' || draft.agent_pct === undefined ? 0 : Number(draft.agent_pct),
+      };
 
-        // Check if any commission changed from the default
-        const hasChanges = 
-          originalRate.supplier_pct !== sanitizedRate.supplier_pct ||
-          originalRate.retailer_pct !== sanitizedRate.retailer_pct ||
-          originalRate.agent_pct !== sanitizedRate.agent_pct;
+      const hasChanges =
+        originalRate.supplier_pct !== sanitizedRate.supplier_pct ||
+        originalRate.retailer_pct !== sanitizedRate.retailer_pct ||
+        originalRate.agent_pct !== sanitizedRate.agent_pct;
 
-        if (hasChanges) {
-          // Check if the edited values match the defaults
-          const matchesDefaults = 
-            sanitizedRate.supplier_pct === defaultRates.supplier_pct &&
-            sanitizedRate.retailer_pct === defaultRates.retailer_pct &&
-            sanitizedRate.agent_pct === defaultRates.agent_pct;
+      if (hasChanges) {
+        const matchesDefaults =
+          sanitizedRate.supplier_pct === defaultRates.supplier_pct &&
+          sanitizedRate.retailer_pct === defaultRates.retailer_pct &&
+          sanitizedRate.agent_pct === defaultRates.agent_pct;
 
-          if (!matchesDefaults) {
-            // Create or update override
-            const override: VoucherCommissionOverride = {
-              voucher_type_id: voucherTypeId as string,
-              amount,
-              supplier_pct: sanitizedRate.supplier_pct,
-              retailer_pct: sanitizedRate.retailer_pct,
-              agent_pct: sanitizedRate.agent_pct,
-              commission_group_id: groupId as string,
-            };
-
-            const { error } = await upsertVoucherCommissionOverride(override);
-            if (error) {
-              console.error(`Error updating override for R${amount}:`, error);
-              throw new Error(`Failed to update commission for R${amount}`);
-            }
-          } else if (originalRate.hasOverride) {
-            // If it matches defaults and had an override, we should delete the override
-            // For now, we'll just set it to match defaults
-            const override: VoucherCommissionOverride = {
-              voucher_type_id: voucherTypeId as string,
-              amount,
-              supplier_pct: defaultRates.supplier_pct,
-              retailer_pct: defaultRates.retailer_pct,
-              agent_pct: defaultRates.agent_pct,
-              commission_group_id: groupId as string,
-            };
-
-            const { error } = await upsertVoucherCommissionOverride(override);
-            if (error) {
-              console.error(`Error resetting override for R${amount}:`, error);
-              throw new Error(`Failed to reset commission for R${amount}`);
-            }
+        if (!matchesDefaults) {
+          const override: VoucherCommissionOverride = {
+            voucher_type_id: voucherTypeId as string,
+            amount,
+            supplier_pct: sanitizedRate.supplier_pct,
+            retailer_pct: sanitizedRate.retailer_pct,
+            agent_pct: sanitizedRate.agent_pct,
+            commission_group_id: groupId as string,
+          };
+          const { error } = await upsertVoucherCommissionOverride(override);
+          if (error) {
+            console.error(`Error updating override for R${amount}:`, error);
+            throw new Error(`Failed to update commission for R${amount}`);
+          }
+        } else if (originalRate.hasOverride) {
+          // Reset to defaults (same pattern used previously)
+          const override: VoucherCommissionOverride = {
+            voucher_type_id: voucherTypeId as string,
+            amount,
+            supplier_pct: defaultRates.supplier_pct,
+            retailer_pct: defaultRates.retailer_pct,
+            agent_pct: defaultRates.agent_pct,
+            commission_group_id: groupId as string,
+          };
+          const { error } = await upsertVoucherCommissionOverride(override);
+          if (error) {
+            console.error(`Error resetting override for R${amount}:`, error);
+            throw new Error(`Failed to reset commission for R${amount}`);
           }
         }
-
-        // Update the edited rate with sanitized values
-        editedRates[amountStr] = sanitizedRate;
       }
 
-      // Update local state with new values - convert to VoucherAmountRate type
-      const updatedRates: VoucherAmountRate[] = amountRates.map(rate => {
-        const edited = editedRates[rate.amount.toString()];
-        if (edited) {
-          const sanitizedEdited = {
-            amount: edited.amount,
-            supplier_pct: typeof edited.supplier_pct === 'string' ? 0 : edited.supplier_pct,
-            retailer_pct: typeof edited.retailer_pct === 'string' ? 0 : edited.retailer_pct,
-            agent_pct: typeof edited.agent_pct === 'string' ? 0 : edited.agent_pct,
-            hasOverride: edited.hasOverride,
-          };
+      // Update local state
+      const updatedRates: VoucherAmountRate[] = amountRates.map((rate) => {
+        if (rate.amount !== amount) return rate;
 
-          const matchesDefaults = 
-            sanitizedEdited.supplier_pct === defaultRates.supplier_pct &&
-            sanitizedEdited.retailer_pct === defaultRates.retailer_pct &&
-            sanitizedEdited.agent_pct === defaultRates.agent_pct;
+        const sanitizedEdited = {
+          amount: amount,
+          supplier_pct: typeof sanitizedRate.supplier_pct === 'string' ? 0 : sanitizedRate.supplier_pct,
+          retailer_pct: typeof sanitizedRate.retailer_pct === 'string' ? 0 : sanitizedRate.retailer_pct,
+          agent_pct: typeof sanitizedRate.agent_pct === 'string' ? 0 : sanitizedRate.agent_pct,
+          hasOverride: rate.hasOverride,
+        };
 
-          return {
-            ...sanitizedEdited,
-            hasOverride: !matchesDefaults,
-          };
-        }
-        return rate;
+        const matchesDefaults =
+          sanitizedEdited.supplier_pct === defaultRates.supplier_pct &&
+          sanitizedEdited.retailer_pct === defaultRates.retailer_pct &&
+          sanitizedEdited.agent_pct === defaultRates.agent_pct;
+
+        return {
+          ...sanitizedEdited,
+          hasOverride: !matchesDefaults,
+        };
       });
 
       setAmountRates(updatedRates);
-      setIsEditing(false);
-      setEditedRates({});
-      toast.success('Commission overrides saved successfully');
+      // Clear edit state
+      setRowDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[amount.toString()];
+        return copy;
+      });
+      setEditingRowAmount(null);
+
+      toast.success('Commission override saved');
     } catch (err) {
-      console.error('Error saving commission overrides:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save commission overrides');
+      console.error('Error saving commission override:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save commission override');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Selection handlers
+  const toggleSelectAmount = (amount: number) => {
+    setSelectedAmounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(amount)) {
+        next.delete(amount);
+      } else {
+        next.add(amount);
+      }
+      return next;
+    });
+  };
+
+  const allSelected = amountRates.length > 0 && selectedAmounts.size === amountRates.length;
+
+  const toggleSelectAll = () => {
+    setSelectedAmounts((prev) => {
+      if (allSelected) return new Set();
+      return new Set(amountRates.map((r) => r.amount));
+    });
+  };
+
+  const clearSelection = () => setSelectedAmounts(new Set());
+
+  // Bulk edit input handlers (keep as percent strings; convert on apply)
+  const handleBulkInputChange = (field: 'supplier_pct' | 'retailer_pct' | 'agent_pct', value: string) => {
+    if (value === '') {
+      setBulkDraft((prev) => ({ ...prev, [field]: '' }));
+      return;
+    }
+    const normalized = value.replace(',', '.').trim();
+    const numValue = parseFloat(normalized);
+    if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
+    // Keep as string to preserve user formatting; we'll convert on apply
+    setBulkDraft((prev) => ({ ...prev, [field]: normalized }));
+  };
+
+  const applyBulkEdits = async () => {
+    if (selectedAmounts.size === 0) return;
+
+    // Ensure at least one field has a non-empty value
+    if (bulkDraft.supplier_pct === '' && bulkDraft.retailer_pct === '' && bulkDraft.agent_pct === '') {
+      toast.message('Enter at least one commission value to apply');
+      return;
+    }
+
+    try {
+      setIsBulkSaving(true);
+
+      const updatedMap = new Map<number, VoucherAmountRate>(amountRates.map((r) => [r.amount, { ...r }]));
+
+      // Helper to convert percent string to stored number for fields
+      const parseSupplier = (s: string) => formatToTwoDecimals(parseFloat(s));
+      const parseFraction = (s: string) => {
+        const n = parseFloat(s);
+        return Math.round((n / 100) * 10000) / 10000;
+      };
+
+      for (const amount of selectedAmounts) {
+        const originalRate = updatedMap.get(amount);
+        if (!originalRate) continue;
+
+        const nextSupplier =
+          bulkDraft.supplier_pct === '' ? originalRate.supplier_pct : parseSupplier(bulkDraft.supplier_pct);
+        const nextRetailer =
+          bulkDraft.retailer_pct === '' ? originalRate.retailer_pct : parseFraction(bulkDraft.retailer_pct);
+        const nextAgent =
+          bulkDraft.agent_pct === '' ? originalRate.agent_pct : parseFraction(bulkDraft.agent_pct);
+
+        const hasChanges =
+          originalRate.supplier_pct !== nextSupplier ||
+          originalRate.retailer_pct !== nextRetailer ||
+          originalRate.agent_pct !== nextAgent;
+
+        if (!hasChanges) continue;
+
+        const matchesDefaults =
+          nextSupplier === defaultRates.supplier_pct &&
+          nextRetailer === defaultRates.retailer_pct &&
+          nextAgent === defaultRates.agent_pct;
+
+        if (!matchesDefaults) {
+          const override: VoucherCommissionOverride = {
+            voucher_type_id: voucherTypeId as string,
+            amount,
+            supplier_pct: nextSupplier,
+            retailer_pct: nextRetailer,
+            agent_pct: nextAgent,
+            commission_group_id: groupId as string,
+          };
+
+          const { error } = await upsertVoucherCommissionOverride(override);
+          if (error) {
+            console.error(`Error updating override for R${amount}:`, error);
+            throw new Error(`Failed to update commission for R${amount}`);
+          }
+        } else if (originalRate.hasOverride) {
+          const override: VoucherCommissionOverride = {
+            voucher_type_id: voucherTypeId as string,
+            amount,
+            supplier_pct: defaultRates.supplier_pct,
+            retailer_pct: defaultRates.retailer_pct,
+            agent_pct: defaultRates.agent_pct,
+            commission_group_id: groupId as string,
+          };
+
+          const { error } = await upsertVoucherCommissionOverride(override);
+          if (error) {
+            console.error(`Error resetting override for R${amount}:`, error);
+            throw new Error(`Failed to reset commission for R${amount}`);
+          }
+        }
+
+        // Update local copy
+        updatedMap.set(amount, {
+          amount,
+          supplier_pct: nextSupplier,
+          retailer_pct: nextRetailer,
+          agent_pct: nextAgent,
+          hasOverride:
+            nextSupplier !== defaultRates.supplier_pct ||
+            nextRetailer !== defaultRates.retailer_pct ||
+            nextAgent !== defaultRates.agent_pct,
+        });
+      }
+
+      setAmountRates(Array.from(updatedMap.values()).sort((a, b) => a.amount - b.amount));
+      setIsBulkModalOpen(false);
+      setBulkDraft({ supplier_pct: '', retailer_pct: '', agent_pct: '' });
+      clearSelection();
+
+      toast.success('Bulk commission overrides applied');
+    } catch (err) {
+      console.error('Error applying bulk commission overrides:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to apply bulk commission overrides');
+    } finally {
+      setIsBulkSaving(false);
     }
   };
 
@@ -331,7 +498,6 @@ export default function VoucherAmountCommissions() {
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
           <Loader2 className="mb-2 h-8 w-8 animate-spin text-primary" />
-          <p>Loading voucher amounts...</p>
         </div>
       </div>
     );
@@ -369,45 +535,9 @@ export default function VoucherAmountCommissions() {
       {/* Page header */}
       <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            {voucherTypeName} Commission Overrides
-          </h1>
-          <p className="text-muted-foreground">
-            Manage commission rates for specific voucher amounts in {groupName}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{voucherTypeName} Commission Overrides</h1>
+          <p className="text-muted-foreground">Manage commission rates for specific voucher amounts in {groupName}</p>
         </div>
-        {!isEditing ? (
-          <button
-            onClick={startEditing}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Overrides
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={saveChanges}
-              disabled={isSaving}
-              className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
-            >
-              {isSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              Save Changes
-            </button>
-            <button
-              onClick={cancelEditing}
-              disabled={isSaving}
-              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Default rates info */}
@@ -427,10 +557,32 @@ export default function VoucherAmountCommissions() {
             <span className="font-medium">{(defaultRates.agent_pct * 100).toFixed(2)}%</span>
           </div>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          These are the default rates. You can override them for specific voucher amounts below.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">These are the default rates. You can override them below.</p>
       </div>
+
+      {/* Bulk actions bar */}
+      {selectedAmounts.size > 0 && (
+        <div className="flex items-center justify-between rounded-md border border-border bg-muted/50 p-3">
+          <div className="text-sm text-muted-foreground">
+            Selected {selectedAmounts.size} voucher{selectedAmounts.size > 1 ? 's' : ''}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+              disabled={editingRowAmount !== null}
+            >
+              Bulk Edit
+            </button>
+            <button
+              onClick={clearSelection}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Voucher amounts table */}
       <div className="rounded-lg border border-border">
@@ -439,101 +591,143 @@ export default function VoucherAmountCommissions() {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Voucher Amount
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
                 </th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Supplier Commission %
-                </th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Retailer Commission %
-                </th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Agent Commission %
-                </th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Status
-                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Voucher Amount</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Supplier Commission %</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Retailer Commission %</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Agent Commission %</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Status</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Edit</th>
               </tr>
             </thead>
             <tbody>
               {amountRates.map((rate) => {
-                const editedRate = isEditing ? editedRates[rate.amount.toString()] : rate;
-                const isOverridden = editedRate?.hasOverride || rate.hasOverride;
-                
+                const isRowEditing = editingRowAmount === rate.amount;
+                const draft = isRowEditing ? rowDrafts[rate.amount.toString()] : null;
+
+                // Values to display in inputs when editing
+                const draftSupplier =
+                  isRowEditing && typeof draft?.supplier_pct !== 'string' ? draft?.supplier_pct ?? 0 : 0;
+                const draftRetailer =
+                  isRowEditing && typeof draft?.retailer_pct !== 'string' ? draft?.retailer_pct ?? 0 : 0;
+                const draftAgent =
+                  isRowEditing && typeof draft?.agent_pct !== 'string' ? draft?.agent_pct ?? 0 : 0;
+
+                const isOverridden =
+                  rate.supplier_pct !== defaultRates.supplier_pct ||
+                  rate.retailer_pct !== defaultRates.retailer_pct ||
+                  rate.agent_pct !== defaultRates.agent_pct ||
+                  (draft?.hasOverride ?? false);
+
                 return (
-                  <tr
-                    key={rate.amount}
-                    className="border-b border-border transition-colors hover:bg-muted/50"
-                  >
+                  <tr key={rate.amount} className="border-b border-border transition-colors hover:bg-muted/50">
+                    {/* Select */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedAmounts.has(rate.amount)}
+                        onChange={() => toggleSelectAmount(rate.amount)}
+                        aria-label={`Select R ${rate.amount.toFixed(2)}`}
+                        disabled={editingRowAmount !== null && editingRowAmount !== rate.amount}
+                      />
+                    </td>
+
+                    {/* Amount */}
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="font-medium">R {rate.amount.toFixed(2)}</span>
                     </td>
+
+                    {/* Supplier */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.supplier_pct === 'string' ? '' : formatToTwoDecimals(editedRate?.supplier_pct || 0)}
-                          onChange={(e) =>
-                            handleRateChange(rate.amount, 'supplier_pct', e.target.value)
-                          }
-                          className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier)}
+                          onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
+                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.supplier_pct !== defaultRates.supplier_pct ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.supplier_pct !== defaultRates.supplier_pct
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : ''
+                          )}
+                        >
                           {rate.supplier_pct.toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Retailer */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.retailer_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.retailer_pct || 0) * 100)}
-                          onChange={(e) =>
-                            handleRateChange(rate.amount, 'retailer_pct', e.target.value)
+                          value={
+                            typeof draft?.retailer_pct === 'string'
+                              ? ''
+                              : formatToTwoDecimals(draftRetailer * 100)
                           }
-                          className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          onChange={(e) => handleRowRateChange(rate.amount, 'retailer_pct', e.target.value)}
+                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.retailer_pct !== defaultRates.retailer_pct ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.retailer_pct !== defaultRates.retailer_pct
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                              : ''
+                          )}
+                        >
                           {(rate.retailer_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Agent */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.agent_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.agent_pct || 0) * 100)}
-                          onChange={(e) =>
-                            handleRateChange(rate.amount, 'agent_pct', e.target.value)
+                          value={
+                            typeof draft?.agent_pct === 'string' ? '' : formatToTwoDecimals(draftAgent * 100)
                           }
-                          className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          onChange={(e) => handleRowRateChange(rate.amount, 'agent_pct', e.target.value)}
+                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.agent_pct !== defaultRates.agent_pct ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.agent_pct !== defaultRates.agent_pct
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              : ''
+                          )}
+                        >
                           {(rate.agent_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Status */}
                     <td className="whitespace-nowrap px-4 py-3">
                       {isOverridden ? (
                         <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
@@ -545,12 +739,49 @@ export default function VoucherAmountCommissions() {
                         </span>
                       )}
                     </td>
+
+                    {/* Edit actions */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {isRowEditing ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={saveRowEdit}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="mr-2 h-4 w-4" />
+                            )}
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelRowEdit}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startRowEdit(rate.amount)}
+                          disabled={editingRowAmount !== null}
+                          className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {amountRates.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                     No voucher amounts found for this voucher type.
                   </td>
                 </tr>
@@ -560,6 +791,86 @@ export default function VoucherAmountCommissions() {
         </div>
       </div>
 
+      {/* Bulk Edit Modal */}
+      <Dialog open={isBulkModalOpen} onOpenChange={setIsBulkModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Edit Commission Overrides</DialogTitle>
+            <DialogDescription>Apply these changes to all selected vouchers.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <div className="mb-1 text-sm font-medium">Vouchers to update</div>
+              <div className="text-sm text-muted-foreground">
+                {Array.from(selectedAmounts)
+                  .sort((a, b) => a - b)
+                  .map((a) => `R ${a.toFixed(2)}`)
+                  .join(', ')}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Supplier Com %</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={bulkDraft.supplier_pct}
+                  placeholder="e.g. 3.5"
+                  onChange={(e) => handleBulkInputChange('supplier_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Retailer Com %</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={bulkDraft.retailer_pct}
+                  placeholder="e.g. 5"
+                  onChange={(e) => handleBulkInputChange('retailer_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Agent Com %</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={bulkDraft.agent_pct}
+                  placeholder="e.g. 1.25"
+                  onChange={(e) => handleBulkInputChange('agent_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <button
+              onClick={() => setIsBulkModalOpen(false)}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={applyBulkEdits}
+              disabled={isBulkSaving || selectedAmounts.size === 0}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isBulkSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Apply to {selectedAmounts.size} {selectedAmounts.size === 1 ? 'voucher' : 'vouchers'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -28,17 +28,17 @@ type VoucherTypeWithCommission = {
 type CommissionRate = {
   voucher_type_id: string;
   voucher_type_name: string;
-  supplier_pct: number;
-  retailer_pct: number;
-  agent_pct: number;
+  supplier_pct: number; // supplier stored as percent e.g. 3.5
+  retailer_pct: number; // stored as fraction e.g. 0.05 (5%)
+  agent_pct: number; // stored as fraction e.g. 0.05 (5%)
 };
 
 type EditableCommissionRate = {
   voucher_type_id: string;
   voucher_type_name: string;
-  supplier_pct: number | string;
-  retailer_pct: number | string;
-  agent_pct: number | string;
+  supplier_pct: number | string; // supplier kept as percent
+  retailer_pct: number | string; // fraction internally (0-1), but edit UI is percent
+  agent_pct: number | string; // fraction internally (0-1), but edit UI is percent
 };
 
 export default function CommissionGroupDetail() {
@@ -51,9 +51,11 @@ export default function CommissionGroupDetail() {
   const [voucherTypes, setVoucherTypes] = React.useState<VoucherTypeWithCommission[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isEditing, setIsEditing] = React.useState(false);
+
+  // Per-row editing state
+  const [editingRowId, setEditingRowId] = React.useState<string | null>(null);
+  const [rowDrafts, setRowDrafts] = React.useState<Record<string, EditableCommissionRate>>({});
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editedRates, setEditedRates] = React.useState<Record<string, EditableCommissionRate>>({});
 
   // Fetch commission group details and voucher types
   React.useEffect(() => {
@@ -82,7 +84,7 @@ export default function CommissionGroupDetail() {
           throw new Error(`Failed to load commission rates: ${groupsError.message}`);
         }
 
-        const currentGroup = allGroups?.find(g => g.id === groupId);
+        const currentGroup = allGroups?.find((g) => g.id === groupId);
         if (!currentGroup) {
           throw new Error('Commission group not found in list');
         }
@@ -93,17 +95,17 @@ export default function CommissionGroupDetail() {
           throw new Error(`Failed to load voucher types: ${voucherTypesError.message}`);
         }
 
-        const typedVoucherTypes = voucherTypesData as VoucherTypeWithCommission[] || [];
+        const typedVoucherTypes = (voucherTypesData as VoucherTypeWithCommission[]) || [];
         setVoucherTypes(typedVoucherTypes);
 
         // Combine commission rates with voucher type info, but only for active voucher types
         const rates: CommissionRate[] = currentGroup.rates
-          .filter(rate => {
+          .filter((rate) => {
             // Only include rates for voucher types that are active (exist in typedVoucherTypes)
-            return typedVoucherTypes.some(vt => vt.id === rate.voucher_type_id);
+            return typedVoucherTypes.some((vt) => vt.id === rate.voucher_type_id);
           })
-          .map(rate => {
-            const voucherType = typedVoucherTypes.find(vt => vt.id === rate.voucher_type_id);
+          .map((rate) => {
+            const voucherType = typedVoucherTypes.find((vt) => vt.id === rate.voucher_type_id);
             return {
               voucher_type_id: rate.voucher_type_id,
               voucher_type_name: rate.voucher_type_name || '',
@@ -128,52 +130,76 @@ export default function CommissionGroupDetail() {
     loadData();
   }, [groupId]);
 
-  // Start editing
-  const startEditing = () => {
-    const initialEditedRates: Record<string, CommissionRate> = {};
-    commissionRates.forEach(rate => {
-      initialEditedRates[rate.voucher_type_id] = { ...rate };
-    });
-    setEditedRates(initialEditedRates);
-    setIsEditing(true);
-  };
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditedRates({});
-    setIsEditing(false);
-  };
-
   // Helper function to format numbers to 2 decimal places
   const formatToTwoDecimals = (value: number): number => {
     return Math.round(value * 100) / 100;
   };
 
-  // Handle rate change
-  const handleRateChange = (
+  // Per-row editing controls
+  const startRowEdit = (voucherTypeId: string) => {
+    if (editingRowId && editingRowId !== voucherTypeId) {
+      // Require finishing current edit before switching
+      return;
+    }
+    const current = commissionRates.find((r) => r.voucher_type_id === voucherTypeId);
+    if (!current) return;
+
+    const draft: EditableCommissionRate = {
+      voucher_type_id: current.voucher_type_id,
+      voucher_type_name: current.voucher_type_name,
+      supplier_pct: current.supplier_pct,
+      retailer_pct: current.retailer_pct,
+      agent_pct: current.agent_pct,
+    };
+
+    setRowDrafts((prev) => ({
+      ...prev,
+      [voucherTypeId]: draft,
+    }));
+    setEditingRowId(voucherTypeId);
+  };
+
+  const cancelRowEdit = () => {
+    if (!editingRowId) return;
+    setRowDrafts((prev) => {
+      const copy = { ...prev };
+      delete copy[editingRowId];
+      return copy;
+    });
+    setEditingRowId(null);
+  };
+
+  // Handle per-row input change
+  const handleRowRateChange = (
     voucherTypeId: string,
     field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
     value: string
   ) => {
+    if (editingRowId !== voucherTypeId) return;
+
     // Allow empty values for better user experience
     if (value === '') {
-      setEditedRates(prev => ({
+      setRowDrafts((prev) => ({
         ...prev,
         [voucherTypeId]: {
           ...prev[voucherTypeId],
-          [field]: '' as any, // Store empty string temporarily
+          [field]: '' as any,
         },
       }));
       return;
     }
 
-    const numValue = parseFloat(value);
+    const normalized = value.replace(',', '.').trim();
+    const numValue = parseFloat(normalized);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
 
-    // Format the value to 2 decimal places to avoid floating point precision issues
-    const formattedValue = formatToTwoDecimals(numValue);
+    // Supplier is kept as percent; retailer/agent are stored as fraction (0-1) with 4 decimals precision
+    const formattedValue =
+      field === 'supplier_pct'
+        ? formatToTwoDecimals(numValue)
+        : Math.round((numValue / 100) * 10000) / 10000;
 
-    setEditedRates(prev => ({
+    setRowDrafts((prev) => ({
       ...prev,
       [voucherTypeId]: {
         ...prev[voucherTypeId],
@@ -182,71 +208,77 @@ export default function CommissionGroupDetail() {
     }));
   };
 
-  // Save changes
-  const saveChanges = async () => {
+  // Save a single row
+  const saveRowEdit = async () => {
+    if (!editingRowId) return;
+    const draft = rowDrafts[editingRowId];
+    if (!draft) return;
+
     try {
       setIsSaving(true);
 
-      // Update each rate
-      for (const [voucherTypeId, rate] of Object.entries(editedRates)) {
-        const originalRate = commissionRates.find(r => r.voucher_type_id === voucherTypeId);
-        if (!originalRate) continue;
+      const originalRate = commissionRates.find((r) => r.voucher_type_id === editingRowId);
+      if (!originalRate) return;
 
-        // Convert empty values to 0 before saving
-        const sanitizedRate = {
-          ...rate,
-          supplier_pct: (rate.supplier_pct === '' || rate.supplier_pct === undefined) ? 0 : Number(rate.supplier_pct),
-          retailer_pct: (rate.retailer_pct === '' || rate.retailer_pct === undefined) ? 0 : Number(rate.retailer_pct),
-          agent_pct: (rate.agent_pct === '' || rate.agent_pct === undefined) ? 0 : Number(rate.agent_pct),
-        };
+      // Convert empty values to 0 before saving
+      const sanitizedRate = {
+        ...draft,
+        supplier_pct: draft.supplier_pct === '' || draft.supplier_pct === undefined ? 0 : Number(draft.supplier_pct),
+        retailer_pct: draft.retailer_pct === '' || draft.retailer_pct === undefined ? 0 : Number(draft.retailer_pct),
+        agent_pct: draft.agent_pct === '' || draft.agent_pct === undefined ? 0 : Number(draft.agent_pct),
+      };
 
-        // Check if retailer or agent commission changed
-        if (
-          originalRate.retailer_pct !== sanitizedRate.retailer_pct ||
-          originalRate.agent_pct !== sanitizedRate.agent_pct
-        ) {
-          const { error } = await upsertCommissionRate(
-            groupId as string,
-            voucherTypeId,
-            sanitizedRate.retailer_pct,
-            sanitizedRate.agent_pct
-          );
+      // Update retailer/agent defaults if changed
+      if (originalRate.retailer_pct !== sanitizedRate.retailer_pct || originalRate.agent_pct !== sanitizedRate.agent_pct) {
+        const { error } = await upsertCommissionRate(
+          groupId as string,
+          editingRowId,
+          sanitizedRate.retailer_pct,
+          sanitizedRate.agent_pct
+        );
 
-          if (error) {
-            console.error(`Error updating rate for ${rate.voucher_type_name}:`, error);
-            throw new Error(`Failed to update commission for ${rate.voucher_type_name}`);
-          }
+        if (error) {
+          console.error(`Error updating commission for ${draft.voucher_type_name}:`, error);
+          throw new Error(`Failed to update commission for ${draft.voucher_type_name}`);
         }
-
-        // Update supplier commission if changed
-        if (originalRate.supplier_pct !== sanitizedRate.supplier_pct) {
-          const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
-          const { error } = await updateSupplierCommission(voucherTypeId, sanitizedRate.supplier_pct);
-
-          if (error) {
-            console.error(`Error updating supplier commission for ${rate.voucher_type_name}:`, error);
-            throw new Error(`Failed to update supplier commission for ${rate.voucher_type_name}`);
-          }
-        }
-
-        // Update the edited rate with sanitized values
-        editedRates[voucherTypeId] = sanitizedRate;
       }
 
-      // Update local state with new values - convert to CommissionRate type
-      const updatedCommissionRates: CommissionRate[] = Object.values(editedRates).map(rate => ({
-        voucher_type_id: rate.voucher_type_id,
-        voucher_type_name: rate.voucher_type_name,
-        supplier_pct: typeof rate.supplier_pct === 'string' ? 0 : rate.supplier_pct,
-        retailer_pct: typeof rate.retailer_pct === 'string' ? 0 : rate.retailer_pct,
-        agent_pct: typeof rate.agent_pct === 'string' ? 0 : rate.agent_pct,
-      }));
-      setCommissionRates(updatedCommissionRates);
-      setIsEditing(false);
-      setEditedRates({});
+      // Update supplier commission if changed
+      if (originalRate.supplier_pct !== sanitizedRate.supplier_pct) {
+        const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
+        const { error } = await updateSupplierCommission(editingRowId, sanitizedRate.supplier_pct);
+
+        if (error) {
+          console.error(`Error updating supplier commission for ${draft.voucher_type_name}:`, error);
+          throw new Error(`Failed to update supplier commission for ${draft.voucher_type_name}`);
+        }
+      }
+
+      // Update local state
+      const updatedRates: CommissionRate[] = commissionRates.map((r) => {
+        if (r.voucher_type_id !== editingRowId) return r;
+        return {
+          voucher_type_id: r.voucher_type_id,
+          voucher_type_name: r.voucher_type_name,
+          supplier_pct: typeof sanitizedRate.supplier_pct === 'string' ? 0 : sanitizedRate.supplier_pct,
+          retailer_pct: typeof sanitizedRate.retailer_pct === 'string' ? 0 : sanitizedRate.retailer_pct,
+          agent_pct: typeof sanitizedRate.agent_pct === 'string' ? 0 : sanitizedRate.agent_pct,
+        };
+      });
+
+      setCommissionRates(updatedRates);
+
+      // Clear editing state
+      setRowDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[editingRowId];
+        return copy;
+      });
+      setEditingRowId(null);
+
     } catch (err) {
-      console.error('Error saving commission rates:', err);
-      alert(err instanceof Error ? err.message : 'Failed to save commission rates');
+      console.error('Error saving commission rate:', err);
+      alert(err instanceof Error ? err.message : 'Failed to save commission rate');
     } finally {
       setIsSaving(false);
     }
@@ -305,39 +337,10 @@ export default function CommissionGroupDetail() {
           <p className="text-muted-foreground">
             {groupDescription || 'Manage commission rates for this group'}
           </p>
+          <p className="text-sm font-semibold text-foreground mt-5">
+            Default commissions
+          </p>
         </div>
-        {!isEditing ? (
-          <button
-            onClick={startEditing}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Rates
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={saveChanges}
-              disabled={isSaving}
-              className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
-            >
-              {isSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              Save Changes
-            </button>
-            <button
-              onClick={cancelEditing}
-              disabled={isSaving}
-              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Commission rates table */}
@@ -350,22 +353,35 @@ export default function CommissionGroupDetail() {
                   Voucher Type
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Supplier Commission %
+                  Supplier Com. %
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Retailer Commission %
+                  Retailer Com. %
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
-                  Agent Commission %
+                  Agent Com. %
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
                   Actions
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">
+                  Edit
                 </th>
               </tr>
             </thead>
             <tbody>
               {commissionRates.map((rate) => {
-                const editedRate = isEditing ? editedRates[rate.voucher_type_id] : rate;
+                const isRowEditing = editingRowId === rate.voucher_type_id;
+                const draft = isRowEditing ? rowDrafts[rate.voucher_type_id] : null;
+
+                // Draft numeric values for display
+                const draftSupplier =
+                  isRowEditing && typeof draft?.supplier_pct !== 'string' ? draft?.supplier_pct ?? 0 : 0;
+                const draftRetailer =
+                  isRowEditing && typeof draft?.retailer_pct !== 'string' ? draft?.retailer_pct ?? 0 : 0;
+                const draftAgent =
+                  isRowEditing && typeof draft?.agent_pct !== 'string' ? draft?.agent_pct ?? 0 : 0;
+
                 return (
                   <tr
                     key={rate.voucher_type_id}
@@ -374,96 +390,147 @@ export default function CommissionGroupDetail() {
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="font-medium">{rate.voucher_type_name}</span>
                     </td>
+
+                    {/* Supplier */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.supplier_pct === 'string' ? '' : formatToTwoDecimals(editedRate?.supplier_pct || 0)}
+                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier)}
                           onChange={(e) =>
-                            handleRateChange(rate.voucher_type_id, 'supplier_pct', e.target.value)
+                            handleRowRateChange(rate.voucher_type_id, 'supplier_pct', e.target.value)
                           }
                           className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.supplier_pct > 0 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.supplier_pct > 0
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : ''
+                          )}
+                        >
                           {rate.supplier_pct.toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Retailer */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.retailer_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.retailer_pct || 0) * 100)}
+                          value={
+                            typeof draft?.retailer_pct === 'string' ? '' : formatToTwoDecimals(draftRetailer * 100)
+                          }
                           onChange={(e) =>
-                            handleRateChange(
-                              rate.voucher_type_id,
-                              'retailer_pct',
-                              e.target.value === '' ? '' : formatToTwoDecimals(parseFloat(e.target.value) / 100).toString()
-                            )
+                            handleRowRateChange(rate.voucher_type_id, 'retailer_pct', e.target.value)
                           }
                           className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.retailer_pct > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.retailer_pct > 0
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                              : ''
+                          )}
+                        >
                           {(rate.retailer_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Agent */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {isEditing ? (
+                      {isRowEditing ? (
                         <input
                           type="number"
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof editedRate?.agent_pct === 'string' ? '' : formatToTwoDecimals((editedRate?.agent_pct || 0) * 100)}
+                          value={typeof draft?.agent_pct === 'string' ? '' : formatToTwoDecimals(draftAgent * 100)}
                           onChange={(e) =>
-                            handleRateChange(
-                              rate.voucher_type_id,
-                              'agent_pct',
-                              e.target.value === '' ? '' : formatToTwoDecimals(parseFloat(e.target.value) / 100).toString()
-                            )
+                            handleRowRateChange(rate.voucher_type_id, 'agent_pct', e.target.value)
                           }
                           className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className={cn(
-                          "rounded-md px-2 py-1",
-                          rate.agent_pct > 0 ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : ""
-                        )}>
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1',
+                            rate.agent_pct > 0
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              : ''
+                          )}
+                        >
                           {(rate.agent_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>
+
+                    {/* Actions */}
                     <td className="whitespace-nowrap px-4 py-3">
                       <button
                         onClick={() => navigateToAmountOverrides(rate.voucher_type_id)}
                         className="inline-flex items-center text-sm text-primary hover:text-primary/80"
-                        disabled={isEditing}
+                        disabled={!!editingRowId && editingRowId !== rate.voucher_type_id}
                       >
                         <span>Manage Amounts</span>
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </button>
+                    </td>
+
+                    {/* Edit per row */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {isRowEditing ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={saveRowEdit}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="mr-2 h-4 w-4" />
+                            )}
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelRowEdit}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startRowEdit(rate.voucher_type_id)}
+                          disabled={!!editingRowId}
+                          className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
               })}
               {commissionRates.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                     No commission rates found for this group.
                   </td>
                 </tr>
@@ -472,7 +539,6 @@ export default function CommissionGroupDetail() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }
