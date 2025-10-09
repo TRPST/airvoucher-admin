@@ -1,17 +1,13 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { CreditCard, Phone, Film, Zap, Loader2, AlertCircle, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { CreditCard, Phone, Film, Zap, Loader2, AlertCircle } from 'lucide-react';
 import useRequireRole from '@/hooks/useRequireRole';
 import { cn } from '@/utils/cn';
-import {
-  fetchVoucherTypeSummaries,
-  fetchNetworkVoucherSummaries,
-  type VoucherTypeSummary,
-  type NetworkVoucherSummary,
-} from '@/actions/adminActions';
-import type { GetStaticProps } from 'next';
+import { SwrKeys } from '@/lib/swr/keys';
+import useSWR from 'swr';
+import { networkVoucherSummariesFetcher } from '@/lib/swr/fetchers';
+import type { VoucherTypeSummary, NetworkVoucherSummary } from '@/actions/adminActions';
 
 // SafeComponent wrapper to catch rendering errors
 function SafeComponent({ children }: { children: React.ReactNode }) {
@@ -19,7 +15,7 @@ function SafeComponent({ children }: { children: React.ReactNode }) {
   const [errorDetails, setErrorDetails] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    console.log('SafeComponent mounted');
+    // no-op
   }, []);
 
   if (hasError) {
@@ -71,44 +67,18 @@ const VOUCHER_DISPLAY_ORDER = [
 
 // Main component separated to handle errors properly
 function VouchersPageContent() {
-  const [networkSummaries, setNetworkSummaries] = React.useState<NetworkVoucherSummary[]>([]);
-  const [otherVouchers, setOtherVouchers] = React.useState<VoucherTypeSummary[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  // SWR: fetch enhanced voucher summaries with network categorization
+  const {
+    data,
+    error,
+  } = useSWR(SwrKeys.networkVoucherSummaries(), networkVoucherSummariesFetcher, {
+    revalidateOnFocus: true,
+  });
 
-  // Fetch enhanced voucher summaries with network categorization
-  React.useEffect(() => {
-    let isMounted = true;
+  const primed = data !== undefined;
 
-    async function loadData() {
-      try {
-        const { data, error: fetchError } = await fetchNetworkVoucherSummaries();
-
-        if (!isMounted) return;
-
-        if (fetchError) {
-          throw new Error(`Failed to load voucher types: ${fetchError.message}`);
-        }
-
-        setNetworkSummaries(data?.networks || []);
-        setOtherVouchers(data?.other || []);
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load voucher types');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const networkSummaries: NetworkVoucherSummary[] = data?.networks ?? [];
+  const otherVouchers: VoucherTypeSummary[] = data?.other ?? [];
 
   // Sort other vouchers based on predefined order
   const sortedOtherVouchers = React.useMemo(() => {
@@ -170,8 +140,8 @@ function VouchersPageContent() {
     };
   }, [networkSummaries, sortedOtherVouchers]);
 
-  // Loading state
-  if (isLoading) {
+  // Initial load only: show while cache is not primed yet
+  if (!primed) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
@@ -189,7 +159,9 @@ function VouchersPageContent() {
         <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
           <h2 className="mb-2 text-xl font-semibold">Error</h2>
-          <p className="mb-4 text-muted-foreground">{error}</p>
+          <p className="mb-4 text-muted-foreground">
+            {error instanceof Error ? error.message : 'Failed to load voucher types'}
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
@@ -471,18 +443,22 @@ NetworkCard.displayName = 'NetworkCard';
 // Main exported component that adds auth protection
 export default function AdminVouchers() {
   // Check if user is authorized as admin
-  const { isLoading: isAuthLoading } = useRequireRole('admin');
+  // const { isLoading: isAuthLoading } = useRequireRole('admin');
 
-  if (isAuthLoading) {
-    return (
-      <div className="flex h-full items-center justify-center pt-10">
-        <div className="flex flex-col items-center">
-          <Loader2 className="mb-2 h-8 w-8 animate-spin text-primary" />
-          <p>Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isAuthLoading) {
+  //   return (
+  //     <div className="flex h-full items-center justify-center pt-10">
+  //       <div className="flex flex-col items-center">
+  //         <Loader2 className="mb-2 h-8 w-8 animate-spin text-primary" />
+  //         <p>Verifying access...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
-  return <VouchersPageContent />;
+  return (
+    <SafeComponent>
+      <VouchersPageContent />
+    </SafeComponent>
+  );
 }

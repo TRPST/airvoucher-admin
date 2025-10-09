@@ -121,3 +121,29 @@ export async function archiveCommissionGroup(
 
   return { data, error };
 }
+
+/**
+ * Update a commission group's name/description
+ */
+export async function updateCommissionGroup(
+  groupId: string,
+  changes: { name: string; description?: string | null }
+): Promise<ResponseType<{ id: string; name: string; description: string | null }>> {
+  const supabase = createClient();
+
+  const payload: { name: string; description?: string | null } = {
+    name: changes.name.trim(),
+  };
+  if (changes.description !== undefined) {
+    payload.description = changes.description;
+  }
+
+  const { data, error } = await supabase
+    .from("commission_groups")
+    .update(payload)
+    .eq("id", groupId)
+    .select("id, name, description")
+    .single();
+
+  return { data, error };
+}

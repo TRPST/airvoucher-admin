@@ -1,128 +1,98 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
+import useSWR from 'swr';
 import {
-  fetchRetailers,
-  fetchSalesReport,
-  fetchEarningsSummary,
-  type Retailer,
-  type SalesReport,
-} from '@/actions/adminActions';
+  retailersFetcher,
+  salesReportFetcher,
+  earningsSummaryFetcher,
+} from '@/lib/swr/fetchers';
+import { SwrKeys } from '@/lib/swr/keys';
+import type { Retailer, SalesReport } from '@/actions/adminActions';
 
 interface UseDashboardDataReturn {
   retailers: Retailer[];
   todaySales: SalesReport[];
   salesData30Days: SalesReport[];
   platformCommission: number;
-  isDataLoading: boolean;
+  isDataLoading: boolean; // background revalidation/loading
+  isPrimed: boolean;      // true once cache has initial data
   error: string | null;
 }
 
 export function useDashboardData(isAuthLoading: boolean): UseDashboardDataReturn {
-  // State for dashboard data
-  const [retailers, setRetailers] = useState<Retailer[]>([]);
-  const [todaySales, setTodaySales] = useState<SalesReport[]>([]);
-  const [platformCommission, setPlatformCommission] = useState(0);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [salesData30Days, setSalesData30Days] = useState<SalesReport[]>([]);
+  // Stable end-of-day timestamp so SWR keys remain consistent within a day
+  const endOfTodayISO = React.useMemo(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d.toISOString();
+  }, []);
 
-  // Fetch dashboard data
-  useEffect(() => {
-    async function loadDashboardData() {
-      setIsDataLoading(true);
-      try {
-        console.log('Loading admin dashboard data...');
+  // Stable date ranges
+  const { todayStr, thirtyDaysAgoStr } = React.useMemo(() => {
+    const todayDate = new Date();
+    const today = todayDate.toISOString().split('T')[0];
 
-        // Get retailers
-        const { data: retailersData, error: retailersError } = await fetchRetailers();
-        if (retailersError) {
-          throw new Error(`Error fetching retailers: ${retailersError.message}`);
-        }
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirty = thirtyDaysAgo.toISOString().split('T')[0];
 
-        // Get today's sales
-        const today = new Date().toISOString().split('T')[0];
-        const { data: salesData, error: salesError } = await fetchSalesReport({
-          startDate: today,
-          endDate: new Date().toISOString(),
-        });
-        if (salesError) {
-          throw new Error(`Error fetching sales: ${salesError.message}`);
-        }
+    return { todayStr: today, thirtyDaysAgoStr: thirty };
+  }, []);
 
-        // Get sales for past 30 days
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+  // Always provide keys so SWR can return cached data instantly across navigations
+  const retailersKey = SwrKeys.retailers();
+  const todaySalesKey = SwrKeys.salesReport(todayStr, endOfTodayISO);
+  const sales30Key = SwrKeys.salesReport(thirtyDaysAgoStr, endOfTodayISO);
+  const earningsKey = SwrKeys.earningsSummary(todayStr, endOfTodayISO);
 
-        const { data: salesData30Days, error: salesError30Days } = await fetchSalesReport({
-          startDate: thirtyDaysAgoStr,
-          endDate: new Date().toISOString(),
-        });
-        if (salesError30Days) {
-          throw new Error(`Error fetching 30-day sales: ${salesError30Days.message}`);
-        }
+  // SWR hooks
+  const {
+    data: retailersData,
+    error: retailersError,
+    isLoading: retailersLoading,
+  } = useSWR(retailersKey, retailersFetcher);
 
-        // Get earnings summary
-        const { data: earningsData, error: earningsError } = await fetchEarningsSummary({
-          startDate: today,
-          endDate: new Date().toISOString(),
-        });
-        if (earningsError) {
-          throw new Error(`Error fetching earnings: ${earningsError.message}`);
-        }
+  const {
+    data: todaySalesData,
+    error: todaySalesError,
+    isLoading: todaySalesLoading,
+  } = useSWR(todaySalesKey, salesReportFetcher);
 
-        console.log('salesData30Days: ', salesData30Days);
+  const {
+    data: salesData30DaysData,
+    error: sales30Error,
+    isLoading: sales30Loading,
+  } = useSWR(sales30Key, salesReportFetcher);
 
-        // Debug: Display profit values from database
-        if (salesData30Days && salesData30Days.length > 0) {
-          console.log('DEBUG: Profit values from database by voucher type:');
+  const {
+    data: earningsData,
+    error: earningsError,
+    isLoading: earningsLoading,
+  } = useSWR(earningsKey, earningsSummaryFetcher);
 
-          // Group by voucher type to see the pattern
-          const voucherTypeMap = new Map();
-          salesData30Days.forEach(sale => {
-            const key = sale.voucher_type;
-            if (!voucherTypeMap.has(key)) {
-              const retailerPct = ((sale.retailer_commission / sale.amount) * 100).toFixed(2);
-              const agentPct = ((sale.agent_commission / sale.amount) * 100).toFixed(2);
+  // Background (re)loading indicator only, do not block UI when cache is primed
+  const isDataLoading =
+    retailersLoading || todaySalesLoading || sales30Loading || earningsLoading;
 
-              voucherTypeMap.set(key, {
-                voucher_type: sale.voucher_type,
-                amount: sale.amount,
-                supplier_commission_pct: sale.supplier_commission_pct,
-                retailer_commission: sale.retailer_commission,
-                agent_commission: sale.agent_commission,
-                profit_from_db: sale.profit || 0,
-                retailer_pct_calculated: retailerPct + '%',
-                agent_pct_calculated: agentPct + '%',
-              });
-            }
-          });
+  // Consider cache primed once all datasets have resolved at least once
+  const isPrimed =
+    retailersData !== undefined &&
+    todaySalesData !== undefined &&
+    salesData30DaysData !== undefined &&
+    earningsData !== undefined;
 
-          console.table(Array.from(voucherTypeMap.values()));
-        }
+  const error =
+    (retailersError as any)?.message ||
+    (todaySalesError as any)?.message ||
+    (sales30Error as any)?.message ||
+    (earningsError as any)?.message ||
+    null;
 
-        // Update state with fetched data
-        setRetailers(retailersData || []);
-        setTodaySales(salesData || []);
-        setSalesData30Days(salesData30Days || []);
+  const retailers = (retailersData as Retailer[]) || [];
+  const todaySales = (todaySalesData as SalesReport[]) || [];
+  const salesData30Days = (salesData30DaysData as SalesReport[]) || [];
 
-        // Calculate platform commission
-        const commission =
-          earningsData?.reduce((sum, item) => sum + item.platform_commission, 0) || 0;
-        setPlatformCommission(commission);
-
-        console.log('Dashboard data loaded successfully');
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setIsDataLoading(false);
-      }
-    }
-
-    if (!isAuthLoading) {
-      loadDashboardData();
-    }
-  }, [isAuthLoading]);
+  const platformCommission =
+    (earningsData || []).reduce((sum: number, item: any) => sum + (item.platform_commission || 0), 0) || 0;
 
   return {
     retailers,
@@ -130,6 +100,7 @@ export function useDashboardData(isAuthLoading: boolean): UseDashboardDataReturn
     salesData30Days,
     platformCommission,
     isDataLoading,
+    isPrimed,
     error,
   };
 }

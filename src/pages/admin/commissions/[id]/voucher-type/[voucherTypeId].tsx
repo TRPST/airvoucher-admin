@@ -3,10 +3,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ChevronLeft, Loader2, AlertCircle, Check, X, Pencil } from 'lucide-react';
 import {
-  fetchCommissionGroupById,
-  fetchVoucherTypes,
-  getVoucherAmountsForType,
-  getVoucherCommissionOverridesForType,
   upsertVoucherCommissionOverride,
   type VoucherCommissionOverride,
 } from '@/actions';
@@ -20,6 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import useSWR, { useSWRConfig } from 'swr';
+import { SwrKeys } from '@/lib/swr/keys';
+import {
+  commissionGroupByIdFetcher,
+  commissionGroupsFetcher,
+  voucherTypesFetcher,
+  voucherAmountsFetcher,
+  commissionOverridesFetcher,
+} from '@/lib/swr/fetchers';
 
 type VoucherAmountRate = {
   amount: number;
@@ -39,18 +44,10 @@ type EditableVoucherAmountRate = {
 
 export default function VoucherAmountCommissions() {
   const router = useRouter();
-  const { id: groupId, voucherTypeId } = router.query;
-
-  const [groupName, setGroupName] = React.useState<string>('');
-  const [voucherTypeName, setVoucherTypeName] = React.useState<string>('');
-  const [defaultRates, setDefaultRates] = React.useState({
-    supplier_pct: 0,
-    retailer_pct: 0,
-    agent_pct: 0,
-  });
-  const [amountRates, setAmountRates] = React.useState<VoucherAmountRate[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const { mutate } = useSWRConfig();
+  const { id: groupIdParam, voucherTypeId: voucherTypeIdParam } = router.query;
+  const groupId = typeof groupIdParam === 'string' ? groupIdParam : undefined;
+  const voucherTypeId = typeof voucherTypeIdParam === 'string' ? voucherTypeIdParam : undefined;
 
   // Per-row editing state
   const [editingRowAmount, setEditingRowAmount] = React.useState<number | null>(null);
@@ -67,109 +64,98 @@ export default function VoucherAmountCommissions() {
     agent_pct: '',
   });
 
-  // Fetch data
-  React.useEffect(() => {
-    async function loadData() {
-      try {
-        if (!groupId || !voucherTypeId || typeof groupId !== 'string' || typeof voucherTypeId !== 'string') return;
+  // SWR: group header info
+  const {
+    data: group,
+    error: groupError,
+    isLoading: groupLoading,
+  } = useSWR(groupId ? SwrKeys.commissionGroup(groupId) : null, commissionGroupByIdFetcher);
 
-        setIsLoading(true);
+  // SWR: all groups with rates (for defaults)
+  const {
+    data: allGroups,
+    error: allGroupsError,
+    isLoading: allGroupsLoading,
+  } = useSWR(SwrKeys.commissionGroups(), commissionGroupsFetcher);
 
-        // Fetch commission group details
-        const { data: groupData, error: groupError } = await fetchCommissionGroupById(groupId);
-        if (groupError) {
-          throw new Error(`Failed to load commission group: ${groupError.message}`);
-        }
-        setGroupName(groupData?.name || '');
+  // SWR: voucher types to display name and supplier default
+  const {
+    data: voucherTypes,
+    error: voucherTypesError,
+    isLoading: voucherTypesLoading,
+  } = useSWR(SwrKeys.voucherTypes('all'), voucherTypesFetcher);
 
-        // Fetch voucher type details
-        const { data: voucherTypes, error: voucherTypesError } = await fetchVoucherTypes();
-        if (voucherTypesError) {
-          throw new Error(`Failed to load voucher types: ${voucherTypesError.message}`);
-        }
+  // SWR: voucher amounts list for this voucher type
+  const {
+    data: amounts,
+    error: amountsError,
+    isLoading: amountsLoading,
+  } = useSWR(voucherTypeId ? SwrKeys.voucherAmounts(voucherTypeId) : null, voucherAmountsFetcher);
 
-        const voucherType = voucherTypes?.find((vt) => vt.id === voucherTypeId);
-        if (!voucherType) {
-          throw new Error('Voucher type not found');
-        }
-        setVoucherTypeName(voucherType.name);
+  // SWR: commission overrides for this group + voucher type
+  const {
+    data: overrides,
+    error: overridesError,
+    isLoading: overridesLoading,
+  } = useSWR(groupId && voucherTypeId ? SwrKeys.commissionOverrides(groupId, voucherTypeId) : null, commissionOverridesFetcher);
 
-        // Fetch default commission rates for this voucher type in this group
-        const { fetchCommissionGroups } = await import('@/actions');
-        const { data: allGroups, error: groupsError } = await fetchCommissionGroups();
-        if (groupsError) {
-          throw new Error(`Failed to load commission rates: ${groupsError.message}`);
-        }
+  // Derived names
+  const groupName = group?.name ?? '';
+  const voucherType = React.useMemo(
+    () => (voucherTypes ?? []).find((vt: any) => vt.id === voucherTypeId),
+    [voucherTypes, voucherTypeId]
+  );
+  const voucherTypeName = voucherType?.name ?? '';
 
-        const currentGroup = allGroups?.find((g) => g.id === groupId);
-        const defaultRate = currentGroup?.rates.find((r) => r.voucher_type_id === voucherTypeId);
+  // Derived default rates (supplier percent from voucher type, retailer/agent fractions from group rate)
+  const defaultRates = React.useMemo(() => {
+    const currentGroup = (allGroups ?? []).find((g: any) => g.id === groupId);
+    const rate = currentGroup?.rates?.find((r: any) => r.voucher_type_id === voucherTypeId);
+    return {
+      supplier_pct: voucherType?.supplier_commission_pct || 0,
+      retailer_pct: rate?.retailer_pct || 0,
+      agent_pct: rate?.agent_pct || 0,
+    };
+  }, [allGroups, groupId, voucherType, voucherTypeId]);
 
-        if (defaultRate) {
-          setDefaultRates({
-            supplier_pct: voucherType.supplier_commission_pct || 0,
-            retailer_pct: defaultRate.retailer_pct,
-            agent_pct: defaultRate.agent_pct,
-          });
-        }
-
-        // Fetch voucher amounts for this type
-        const { data: amounts, error: amountsError } = await getVoucherAmountsForType(voucherTypeId);
-        if (amountsError) {
-          throw new Error(`Failed to load voucher amounts: ${amountsError.message}`);
-        }
-
-        // Fetch commission overrides for this voucher type and commission group
-        const { data: overrides, error: overridesError } = await getVoucherCommissionOverridesForType(
-          voucherTypeId,
-          groupId
-        );
-        if (overridesError) {
-          console.error('Error loading commission overrides:', overridesError);
-        }
-
-        // Create a map of overrides by amount
-        const overrideMap = new Map<number, VoucherCommissionOverride>();
-        overrides?.forEach((override) => {
-          overrideMap.set(override.amount, override);
-        });
-
-        // Combine amounts with overrides
-        const rates: VoucherAmountRate[] = (amounts || []).map(({ amount }) => {
-          const override = overrideMap.get(amount);
-          if (override) {
-            return {
-              amount,
-              supplier_pct: override.supplier_pct,
-              retailer_pct: override.retailer_pct,
-              agent_pct: override.agent_pct,
-              hasOverride: true,
-            };
-          } else {
-            // Use default rates
-            return {
-              amount,
-              supplier_pct: defaultRates.supplier_pct,
-              retailer_pct: defaultRates.retailer_pct,
-              agent_pct: defaultRates.agent_pct,
-              hasOverride: false,
-            };
-          }
-        });
-
-        // Sort by amount
-        rates.sort((a, b) => a.amount - b.amount);
-
-        setAmountRates(rates);
-      } catch (err) {
-        console.error('Error loading voucher amount data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load voucher amount data');
-      } finally {
-        setIsLoading(false);
+  // Derived combined table rows
+  const amountRates: VoucherAmountRate[] = React.useMemo(() => {
+    const overrideMap = new Map<number, VoucherCommissionOverride>();
+    (overrides ?? []).forEach((o: VoucherCommissionOverride) => overrideMap.set(o.amount, o));
+    const base = (amounts ?? []).map((a: any) => a.amount as number);
+    const rows = base.map((amount) => {
+      const override = overrideMap.get(amount);
+      if (override) {
+        return {
+          amount,
+          supplier_pct: override.supplier_pct,
+          retailer_pct: override.retailer_pct,
+          agent_pct: override.agent_pct,
+          hasOverride: true,
+        };
       }
-    }
+      return {
+        amount,
+        supplier_pct: defaultRates.supplier_pct,
+        retailer_pct: defaultRates.retailer_pct,
+        agent_pct: defaultRates.agent_pct,
+        hasOverride: false,
+      };
+    });
+    rows.sort((a, b) => a.amount - b.amount);
+    return rows;
+  }, [amounts, overrides, defaultRates]);
 
-    loadData();
-  }, [groupId, voucherTypeId, defaultRates.supplier_pct, defaultRates.retailer_pct, defaultRates.agent_pct]);
+  const isLoading =
+    groupLoading || allGroupsLoading || voucherTypesLoading || amountsLoading || overridesLoading;
+
+  const error =
+    (groupError as any)?.message ||
+    (allGroupsError as any)?.message ||
+    (voucherTypesError as any)?.message ||
+    (amountsError as any)?.message ||
+    (overridesError as any)?.message ||
+    null;
 
   // Helper function to format numbers to 2 decimal places
   const formatToTwoDecimals = (value: number): number => {
@@ -249,7 +235,7 @@ export default function VoucherAmountCommissions() {
   };
 
   const saveRowEdit = async () => {
-    if (editingRowAmount === null) return;
+    if (editingRowAmount === null || !groupId || !voucherTypeId) return;
     const amount = editingRowAmount;
     const draft = rowDrafts[amount.toString()];
     if (!draft) return;
@@ -281,60 +267,41 @@ export default function VoucherAmountCommissions() {
 
         if (!matchesDefaults) {
           const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId as string,
+            voucher_type_id: voucherTypeId,
             amount,
             supplier_pct: sanitizedRate.supplier_pct,
             retailer_pct: sanitizedRate.retailer_pct,
             agent_pct: sanitizedRate.agent_pct,
-            commission_group_id: groupId as string,
+            commission_group_id: groupId,
           };
           const { error } = await upsertVoucherCommissionOverride(override);
           if (error) {
+            // eslint-disable-next-line no-console
             console.error(`Error updating override for R${amount}:`, error);
             throw new Error(`Failed to update commission for R${amount}`);
           }
         } else if (originalRate.hasOverride) {
-          // Reset to defaults (same pattern used previously)
+          // Reset to defaults (set override equal to defaults)
           const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId as string,
+            voucher_type_id: voucherTypeId,
             amount,
             supplier_pct: defaultRates.supplier_pct,
             retailer_pct: defaultRates.retailer_pct,
             agent_pct: defaultRates.agent_pct,
-            commission_group_id: groupId as string,
+            commission_group_id: groupId,
           };
           const { error } = await upsertVoucherCommissionOverride(override);
           if (error) {
+            // eslint-disable-next-line no-console
             console.error(`Error resetting override for R${amount}:`, error);
             throw new Error(`Failed to reset commission for R${amount}`);
           }
         }
       }
 
-      // Update local state
-      const updatedRates: VoucherAmountRate[] = amountRates.map((rate) => {
-        if (rate.amount !== amount) return rate;
+      // Revalidate overrides cache so derived rows refresh
+      await mutate(SwrKeys.commissionOverrides(groupId, voucherTypeId));
 
-        const sanitizedEdited = {
-          amount: amount,
-          supplier_pct: typeof sanitizedRate.supplier_pct === 'string' ? 0 : sanitizedRate.supplier_pct,
-          retailer_pct: typeof sanitizedRate.retailer_pct === 'string' ? 0 : sanitizedRate.retailer_pct,
-          agent_pct: typeof sanitizedRate.agent_pct === 'string' ? 0 : sanitizedRate.agent_pct,
-          hasOverride: rate.hasOverride,
-        };
-
-        const matchesDefaults =
-          sanitizedEdited.supplier_pct === defaultRates.supplier_pct &&
-          sanitizedEdited.retailer_pct === defaultRates.retailer_pct &&
-          sanitizedEdited.agent_pct === defaultRates.agent_pct;
-
-        return {
-          ...sanitizedEdited,
-          hasOverride: !matchesDefaults,
-        };
-      });
-
-      setAmountRates(updatedRates);
       // Clear edit state
       setRowDrafts((prev) => {
         const copy = { ...prev };
@@ -345,6 +312,7 @@ export default function VoucherAmountCommissions() {
 
       toast.success('Commission override saved');
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error saving commission override:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to save commission override');
     } finally {
@@ -390,7 +358,7 @@ export default function VoucherAmountCommissions() {
   };
 
   const applyBulkEdits = async () => {
-    if (selectedAmounts.size === 0) return;
+    if (selectedAmounts.size === 0 || !groupId || !voucherTypeId) return;
 
     // Ensure at least one field has a non-empty value
     if (bulkDraft.supplier_pct === '' && bulkDraft.retailer_pct === '' && bulkDraft.agent_pct === '') {
@@ -401,8 +369,6 @@ export default function VoucherAmountCommissions() {
     try {
       setIsBulkSaving(true);
 
-      const updatedMap = new Map<number, VoucherAmountRate>(amountRates.map((r) => [r.amount, { ...r }]));
-
       // Helper to convert percent string to stored number for fields
       const parseSupplier = (s: string) => formatToTwoDecimals(parseFloat(s));
       const parseFraction = (s: string) => {
@@ -411,7 +377,7 @@ export default function VoucherAmountCommissions() {
       };
 
       for (const amount of selectedAmounts) {
-        const originalRate = updatedMap.get(amount);
+        const originalRate = amountRates.find((r) => r.amount === amount);
         if (!originalRate) continue;
 
         const nextSupplier =
@@ -435,56 +401,49 @@ export default function VoucherAmountCommissions() {
 
         if (!matchesDefaults) {
           const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId as string,
+            voucher_type_id: voucherTypeId,
             amount,
             supplier_pct: nextSupplier,
             retailer_pct: nextRetailer,
             agent_pct: nextAgent,
-            commission_group_id: groupId as string,
+            commission_group_id: groupId,
           };
 
           const { error } = await upsertVoucherCommissionOverride(override);
           if (error) {
+            // eslint-disable-next-line no-console
             console.error(`Error updating override for R${amount}:`, error);
             throw new Error(`Failed to update commission for R${amount}`);
           }
         } else if (originalRate.hasOverride) {
           const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId as string,
+            voucher_type_id: voucherTypeId,
             amount,
             supplier_pct: defaultRates.supplier_pct,
             retailer_pct: defaultRates.retailer_pct,
             agent_pct: defaultRates.agent_pct,
-            commission_group_id: groupId as string,
+            commission_group_id: groupId,
           };
 
           const { error } = await upsertVoucherCommissionOverride(override);
           if (error) {
+            // eslint-disable-next-line no-console
             console.error(`Error resetting override for R${amount}:`, error);
             throw new Error(`Failed to reset commission for R${amount}`);
           }
         }
-
-        // Update local copy
-        updatedMap.set(amount, {
-          amount,
-          supplier_pct: nextSupplier,
-          retailer_pct: nextRetailer,
-          agent_pct: nextAgent,
-          hasOverride:
-            nextSupplier !== defaultRates.supplier_pct ||
-            nextRetailer !== defaultRates.retailer_pct ||
-            nextAgent !== defaultRates.agent_pct,
-        });
       }
 
-      setAmountRates(Array.from(updatedMap.values()).sort((a, b) => a.amount - b.amount));
+      // Revalidate overrides after bulk apply
+      await mutate(SwrKeys.commissionOverrides(groupId, voucherTypeId));
+
       setIsBulkModalOpen(false);
       setBulkDraft({ supplier_pct: '', retailer_pct: '', agent_pct: '' });
       clearSelection();
 
       toast.success('Bulk commission overrides applied');
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error applying bulk commission overrides:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to apply bulk commission overrides');
     } finally {
