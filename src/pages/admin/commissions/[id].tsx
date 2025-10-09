@@ -15,9 +15,19 @@ import {
   fetchCommissionGroups,
   fetchVoucherTypes,
   upsertCommissionRate,
+  updateCommissionGroup,
   type CommissionGroup,
 } from '@/actions';
 import { cn } from '@/utils/cn';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type VoucherTypeWithCommission = {
   id: string;
@@ -56,6 +66,14 @@ export default function CommissionGroupDetail() {
   const [editingRowId, setEditingRowId] = React.useState<string | null>(null);
   const [rowDrafts, setRowDrafts] = React.useState<Record<string, EditableCommissionRate>>({});
   const [isSaving, setIsSaving] = React.useState(false);
+
+  // Edit group modal state
+  const [isGroupModalOpen, setIsGroupModalOpen] = React.useState(false);
+  const [isUpdatingGroup, setIsUpdatingGroup] = React.useState(false);
+  const [groupForm, setGroupForm] = React.useState<{ name: string; description: string }>({
+    name: '',
+    description: '',
+  });
 
   // Fetch commission group details and voucher types
   React.useEffect(() => {
@@ -284,6 +302,56 @@ export default function CommissionGroupDetail() {
     }
   };
 
+  // Edit Group modal state and handlers
+  const openEditGroup = () => {
+    setGroupForm({ name: groupName, description: groupDescription || '' });
+    setIsGroupModalOpen(true);
+  };
+
+  const isNameValid = (name: string) => {
+    const t = name.trim();
+    return t.length >= 2 && t.length <= 80;
+  };
+
+  const isUnchanged =
+    groupForm.name.trim() === groupName.trim() &&
+    (groupForm.description || '').trim() === (groupDescription || '').trim();
+
+  const saveGroupDetails = async () => {
+    if (!groupId || typeof groupId !== 'string') return;
+    const name = groupForm.name.trim();
+    const description = (groupForm.description ?? '').trim();
+
+    if (!isNameValid(name)) {
+      toast.error('Name must be between 2 and 80 characters');
+      return;
+    }
+
+    if (isUnchanged) {
+      setIsGroupModalOpen(false);
+      return;
+    }
+
+    try {
+      setIsUpdatingGroup(true);
+      const { data, error } = await updateCommissionGroup(groupId, { name, description });
+      if (error) {
+        console.error('Error updating commission group:', error);
+        toast.error(error.message || 'Failed to update group');
+        return;
+      }
+      setGroupName(data?.name ?? name);
+      setGroupDescription(data?.description ?? description);
+      toast.success('Group updated');
+      setIsGroupModalOpen(false);
+    } catch (err) {
+      console.error('Error updating commission group:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update group');
+    } finally {
+      setIsUpdatingGroup(false);
+    }
+  };
+
   // Navigate to voucher amount overrides
   const navigateToAmountOverrides = (voucherTypeId: string) => {
     router.push(`/admin/commissions/${groupId}/voucher-type/${voucherTypeId}`);
@@ -340,6 +408,15 @@ export default function CommissionGroupDetail() {
           <p className="text-sm font-semibold text-foreground mt-5">
             Default commissions
           </p>
+        </div>
+        <div>
+          <button
+            onClick={openEditGroup}
+            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit Group
+          </button>
         </div>
       </div>
 
@@ -539,6 +616,57 @@ export default function CommissionGroupDetail() {
           </table>
         </div>
       </div>
+
+      {/* Edit Group Modal */}
+      <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Commission Group</DialogTitle>
+            <DialogDescription>Update the name and description of this commission group.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm text-muted-foreground">Group name</label>
+              <input
+                type="text"
+                value={groupForm.name}
+                onChange={(e) => setGroupForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Enter group name"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm text-muted-foreground">Description</label>
+              <textarea
+                value={groupForm.description}
+                onChange={(e) => setGroupForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Optional description"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <button
+              onClick={() => setIsGroupModalOpen(false)}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveGroupDetails}
+              disabled={isUpdatingGroup || !groupForm.name.trim() || groupForm.name.trim().length < 2}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isUpdatingGroup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
