@@ -8,3 +8,4 @@ export { CommissionGroupModal } from "./CommissionGroupModal";
 export { SalesAgentModal } from "./SalesAgentModal";
 export { BalanceUpdateModal } from "./BalanceUpdateModal";
 export * from "./types";
+export { RetailerUpdateModal } from "./RetailerUpdateModal";
