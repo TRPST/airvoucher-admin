@@ -15,6 +15,7 @@ import {
   CommissionGroupModal,
   SalesAgentModal,
   BalanceUpdateModal,
+  RetailerUpdateModal,
 } from "@/components/admin/retailers";
 
 import {
@@ -43,6 +44,7 @@ export default function RetailerDetails() {
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Load retailer data
   useEffect(() => {
@@ -184,14 +186,25 @@ export default function RetailerDetails() {
         </button>
       </Link>
       
-      <div style={{ marginTop: 10 }}>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Retailer Details
-        </h1>
-        <p className="text-muted-foreground">
-          View and manage retailer information.
-        </p>
+      <div style={{ marginTop: 10 }} className="flex items-center justify-between">
+        <div className="flex-col items-center">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Retailer Details
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage retailer information.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowUpdateModal(true)}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+        >
+          Update
+        </button>
+
       </div>
+
+      
 
       {/* Profile Card */}
       <RetailerProfileCard
@@ -253,6 +266,13 @@ export default function RetailerDetails() {
         onClose={() => setShowBalanceModal(false)}
         retailer={retailer}
         onUpdate={handleBalanceUpdate}
+      />
+
+      <RetailerUpdateModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        retailer={retailer}
+        onUpdated={handleRetailerUpdate}
       />
     </div>
   );

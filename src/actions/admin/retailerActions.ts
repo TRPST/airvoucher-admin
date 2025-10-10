@@ -65,9 +65,9 @@ export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
       credit_used: retailer.credit_used || 0,
       commission_balance: retailer.commission_balance || 0,
       status: retailer.status as "active" | "suspended" | "inactive",
-      full_name: retailer.profiles?.[0]?.full_name || "",
-      email: retailer.profiles?.[0]?.email || "",
-      agent_name: retailer.agent_profiles?.[0]?.full_name,
+      full_name: retailer.profiles?.full_name || "",
+      email: retailer.profiles?.email || "",
+      agent_name: retailer.agent_profiles?.full_name,
       commission_group_name: retailer.commission_group_id
         ? groupMap[retailer.commission_group_id] || undefined
         : undefined,

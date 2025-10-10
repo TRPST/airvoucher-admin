@@ -56,13 +56,13 @@ export function RetailerProfileCard({
                 <span className="font-medium">
                   {retailer.agent_name || "None"}
                 </span>
-                <button
+                {/* <button
                   onClick={onAgentClick}
                   className="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-muted"
                   title="Change sales agent"
                 >
                   Change
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -71,13 +71,13 @@ export function RetailerProfileCard({
                 <span className="font-medium">
                   {retailer.commission_group_name || "None"}
                 </span>
-                <button
+                {/* <button
                   onClick={onCommissionGroupClick}
                   className="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-muted"
                   title="Change commission group"
                 >
                   Change
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
