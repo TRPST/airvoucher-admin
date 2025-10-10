@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { Plus, Loader2, AlertCircle, X } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, X, Search } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import Link from 'next/link';
 
 import { TablePlaceholder } from '@/components/ui/table-placeholder';
 import { cn } from '@/utils/cn';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   createRetailer,
   type AdminRetailer,
@@ -48,12 +49,10 @@ export default function AdminRetailers() {
   } = useSWR(SwrKeys.agents(), agentsFetcher);
 
   // Derived loading and error states
-  const primed =
-    retailers !== undefined &&
-    commissionGroups !== undefined &&
-    agents !== undefined;
-
-  const isLoading = !primed;
+  const isLoading =
+    (retailersLoading as boolean) ||
+    (groupsLoading as boolean) ||
+    (agentsLoading as boolean);
 
   const error =
     (retailersError as any)?.message ||
@@ -90,6 +89,12 @@ export default function AdminRetailers() {
     password: '',
     autoGeneratePassword: false,
   });
+
+  // Search state with URL sync
+  const [search, setSearch] = React.useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+
 
   // Handler for input changes in the form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -245,6 +250,26 @@ export default function AdminRetailers() {
   const agentList = (agents as Agent[]) ?? [];
   const groupList = (commissionGroups as CommissionGroup[]) ?? [];
 
+  const filteredRetailers = (() => {
+    const term = debouncedSearch.trim().toLowerCase();
+    if (!term) return retailerList;
+    return retailerList.filter((r) => {
+      const values = [
+        r.name,
+        (r as any).contact_name,
+        r.email,
+        (r as any).contact_email,
+        (r as any).location,
+        r.agent_name,
+        r.commission_group_name,
+        r.status,
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+      return values.some((v) => v.includes(term));
+    });
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -261,7 +286,34 @@ export default function AdminRetailers() {
         </button>
       </div>
 
-      <RetailerTable retailers={retailerList} />
+      <div className="flex items-center justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            aria-label="Search retailers"
+            placeholder="Search retailers..."
+            className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-8 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="ml-4 hidden text-sm text-muted-foreground sm:block">
+          {filteredRetailers.length} of {retailerList.length}
+        </div>
+      </div>
+
+      <RetailerTable retailers={filteredRetailers} />
 
       <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
         <Dialog.Portal>

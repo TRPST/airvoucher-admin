@@ -5,12 +5,14 @@ import {
   Loader2,
   AlertCircle,
   X,
+  Search,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   createAgent,
   fetchUnassignedRetailers,
@@ -43,8 +45,7 @@ export default function AdminAgents() {
   } = useSWR(SwrKeys.unassignedRetailers(), unassignedRetailersFetcher);
 
   // Derived loading/error state (use cache presence only to gate initial loader)
-  const primed = agentsData !== undefined && unassignedRetailers !== undefined;
-  const isLoading = !primed;
+  const isLoading = (agentsLoading as boolean) || (unassignedLoading as boolean);
   const error =
     (agentsError as any)?.message ||
     (unassignedError as any)?.message ||
@@ -69,6 +70,12 @@ export default function AdminAgents() {
     autoGeneratePassword: false,
     assignedRetailers: [],
   });
+  
+  // Search state with URL sync
+  const [search, setSearch] = React.useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+
 
   // Handler for input changes in the form
   const handleInputChange = (
@@ -220,10 +227,29 @@ export default function AdminAgents() {
   }
 
   const agents = (agentsData as Agent[]) ?? [];
+
+  const filteredAgents = (() => {
+    const term = debouncedSearch.trim().toLowerCase();
+    if (!term) return agents;
+    return agents.filter((a) => {
+      const values = [
+        a.full_name,
+        a.email,
+        a.phone,
+        a.status,
+        String(a.retailer_count),
+        a.total_commission_earned != null ? a.total_commission_earned.toFixed(2) : "",
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+      return values.some((v) => v.includes(term));
+    });
+  })();
+
   const unassigned = (unassignedRetailers as any[]) ?? [];
 
   // Format data for the table
-  const tableData = agents.map((agent) => {
+  const tableData = filteredAgents.map((agent) => {
     const row = {
       Name: (
         <div className="flex items-center gap-2">
@@ -291,7 +317,7 @@ export default function AdminAgents() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="text-muted-foreground">Total Agents</div>
           <div className="mt-1 text-2xl font-semibold">{agents.length}</div>
@@ -313,6 +339,33 @@ export default function AdminAgents() {
           <div className="mt-1 text-2xl font-semibold text-amber-600">
             {unassigned.length}
           </div>
+        </div>
+      </div> */}
+
+      <div className="flex items-center justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            aria-label="Search agents"
+            placeholder="Search agents..."
+            className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-8 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="ml-4 hidden text-sm text-muted-foreground sm:block">
+          {filteredAgents.length} of {agents.length}
         </div>
       </div>
 
