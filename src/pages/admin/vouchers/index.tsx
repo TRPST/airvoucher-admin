@@ -75,7 +75,8 @@ function VouchersPageContent() {
     revalidateOnFocus: true,
   });
 
-  const primed = data !== undefined;
+  // Correct loading gate: show loader only when no data and no error
+  const isLoading = !data && !error;
 
   const networkSummaries: NetworkVoucherSummary[] = data?.networks ?? [];
   const otherVouchers: VoucherTypeSummary[] = data?.other ?? [];
@@ -140,8 +141,8 @@ function VouchersPageContent() {
     };
   }, [networkSummaries, sortedOtherVouchers]);
 
-  // Initial load only: show while cache is not primed yet
-  if (!primed) {
+  // Initial load only: show while fetching (avoid spinner-on-error)
+  if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
