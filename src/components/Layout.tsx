@@ -184,14 +184,14 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             icon: LayoutDashboard,
           },
           {
-            name: "Retailers",
-            href: "/admin/retailers",
-            icon: Store,
-          },
-          {
             name: "Agents",
             href: "/admin/agents",
             icon: Users,
+          },
+          {
+            name: "Retailers",
+            href: "/admin/retailers",
+            icon: Store,
           },
           {
             name: "Vouchers",
