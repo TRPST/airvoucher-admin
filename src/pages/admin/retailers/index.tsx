@@ -1,10 +1,6 @@
 import * as React from 'react';
 import { Plus, Loader2, AlertCircle, X, Search } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import Link from 'next/link';
-
-import { TablePlaceholder } from '@/components/ui/table-placeholder';
-import { cn } from '@/utils/cn';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   createRetailer,
@@ -16,6 +12,7 @@ import {
 } from '@/actions';
 import useRequireRole from '@/hooks/useRequireRole';
 import { RetailerTable } from '@/components/admin/retailers/RetailerTable';
+import { LocationAutocompleteInput } from '@/components/admin/retailers/LocationAutocompleteInput';
 import useSWR, { useSWRConfig } from 'swr';
 import { SwrKeys } from '@/lib/swr/keys';
 import {
@@ -26,7 +23,7 @@ import {
 
 export default function AdminRetailers() {
   // Protect this route - only allow admin role
-  const { isLoading: isRoleLoading } = useRequireRole('admin');
+  useRequireRole('admin');
   const { mutate } = useSWRConfig();
 
   // SWR data
@@ -112,6 +109,10 @@ export default function AdminRetailers() {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  const handleLocationSelect = React.useCallback((address: string) => {
+    setFormData(prev => ({ ...prev, location: address }));
+  }, []);
 
   // Generate a random password with letters, numbers, and special characters
   const generateRandomPassword = () => {
@@ -377,11 +378,12 @@ export default function AdminRetailers() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Location</label>
-                    <input
+                    <LocationAutocompleteInput
                       type="text"
                       name="location"
                       value={formData.location}
                       onChange={handleInputChange}
+                      onLocationSelect={handleLocationSelect}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       placeholder="e.g. Cape Town"
                     />
