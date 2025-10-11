@@ -17,6 +17,7 @@ import {
   createAgent,
   fetchUnassignedRetailers,
   assignRetailerToAgent,
+  updateAgent,
   type Agent,
 } from "@/actions";
 import useRequireRole from "@/hooks/useRequireRole";
@@ -27,7 +28,7 @@ import { agentsFetcher, unassignedRetailersFetcher } from "@/lib/swr/fetchers";
 
 export default function AdminAgents() {
   // Protect this route - only allow admin role
-  const { isLoading: isRoleLoading } = useRequireRole("admin");
+  useRequireRole("admin");
   const { mutate } = useSWRConfig();
 
   // SWR: agents list
@@ -70,6 +71,15 @@ export default function AdminAgents() {
     autoGeneratePassword: false,
     assignedRetailers: [],
   });
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [editingAgent, setEditingAgent] = React.useState<Agent | null>(null);
+  const [editFormData, setEditFormData] = React.useState<{ fullName: string; phone: string }>({
+    fullName: "",
+    phone: "",
+  });
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = React.useState(false);
   
   // Search state with URL sync
   const [search, setSearch] = React.useState("");
@@ -104,6 +114,77 @@ export default function AdminAgents() {
         ? prev.assignedRetailers.filter((id) => id !== retailerId)
         : [...prev.assignedRetailers, retailerId],
     }));
+  };
+
+  React.useEffect(() => {
+    if (editingAgent) {
+      setEditFormData({
+        fullName: editingAgent.full_name ?? "",
+        phone: editingAgent.phone ?? "",
+      });
+    }
+  }, [editingAgent]);
+
+  const handleEditDialogChange = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
+      setEditingAgent(null);
+      setEditError(null);
+    }
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAgent) return;
+
+    setIsEditSubmitting(true);
+    setEditError(null);
+
+    try {
+      const trimmedName = editFormData.fullName.trim();
+      const trimmedPhone = editFormData.phone.trim();
+
+      if (!trimmedName) {
+        setEditError("Name is required.");
+        setIsEditSubmitting(false);
+        return;
+      }
+
+      const { error: updateError } = await updateAgent(editingAgent.id, {
+        full_name: trimmedName,
+        phone: trimmedPhone || undefined,
+      });
+
+      if (updateError) {
+        setEditError(updateError.message);
+        setIsEditSubmitting(false);
+        return;
+      }
+
+      await mutate(SwrKeys.agents());
+      handleEditDialogChange(false);
+    } catch (err) {
+      setEditError(
+        `Error updating agent: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleEditClick = (
+    agent: Agent,
+    event?: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    setEditingAgent(agent);
+    setIsEditDialogOpen(true);
   };
 
   // Generate a random password
@@ -249,8 +330,17 @@ export default function AdminAgents() {
   const unassigned = (unassignedRetailers as any[]) ?? [];
 
   // Format data for the table
+  const tableColumns = [
+    "Name",
+    "Phone",
+    "Retailers",
+    "Current Commission",
+    "Status",
+    "Actions",
+  ];
+
   const tableData = filteredAgents.map((agent) => {
-    const row = {
+    const baseRow = {
       Name: (
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -258,14 +348,12 @@ export default function AdminAgents() {
           </div>
           <div>
             <div className="font-medium">{agent.full_name}</div>
-            <div className="text-xs text-muted-foreground">
-              {agent.email}
-            </div>
+            <div className="text-xs text-muted-foreground">{agent.email}</div>
           </div>
         </div>
       ),
       Phone: agent.phone || "Not provided",
-      "Retailers": agent.retailer_count,
+      Retailers: agent.retailer_count,
       "Current Commission": `R ${agent.total_commission_earned.toFixed(2)}`,
       Status: (
         <div
@@ -281,19 +369,33 @@ export default function AdminAgents() {
       ),
     };
 
-    // Wrap each row in a Link component
-    return Object.entries(row).reduce((acc, [key, value]) => {
-      acc[key] = (
-        <Link
-          href={`/admin/agents/${agent.id}`}
-          className="cursor-pointer"
-          style={{ display: "block" }}
-        >
-          {value}
-        </Link>
-      );
-      return acc;
-    }, {} as Record<string, React.ReactNode>);
+    const linkedRow = Object.entries(baseRow).reduce(
+      (acc, [key, value]) => {
+        acc[key] = (
+          <Link
+            href={`/admin/agents/${agent.id}`}
+            className="cursor-pointer"
+            style={{ display: "block" }}
+          >
+            {value}
+          </Link>
+        );
+        return acc;
+      },
+      {} as Record<string, React.ReactNode>
+    );
+
+    linkedRow.Actions = (
+      <button
+        type="button"
+        onClick={(event) => handleEditClick(agent, event)}
+        className="rounded-md border border-input px-3 py-1 text-xs font-medium hover:bg-muted"
+      >
+        Edit
+      </button>
+    );
+
+    return linkedRow;
   });
 
   return (
@@ -370,7 +472,7 @@ export default function AdminAgents() {
       </div>
 
       <TablePlaceholder
-        columns={["Name", "Phone", "Retailers", "Current Commission", "Status"]}
+        columns={tableColumns}
         data={tableData}
         rowsClickable={true}
         emptyMessage="No agents found."
@@ -552,6 +654,93 @@ export default function AdminAgents() {
                 </div>
               </form>
             </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Edit Agent Dialog */}
+      <Dialog.Root open={isEditDialogOpen} onOpenChange={handleEditDialogChange}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+            <div className="flex items-center justify-between">
+              <Dialog.Title className="text-lg font-semibold">
+                Edit Agent
+              </Dialog.Title>
+              <Dialog.Close className="rounded-full p-2 hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Dialog.Close>
+            </div>
+            {editError && (
+              <div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                <div className="flex items-center">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  {editError}
+                </div>
+              </div>
+            )}
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full Name</label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={editFormData.fullName}
+                  onChange={handleEditInputChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <input
+                  type="email"
+                  value={editingAgent?.email ?? ""}
+                  disabled
+                  className="w-full cursor-not-allowed rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={editFormData.phone}
+                  onChange={handleEditInputChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Phone number"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <Dialog.Close asChild>
+                  <button
+                    type="button"
+                    className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                </Dialog.Close>
+                <button
+                  type="submit"
+                  disabled={isEditSubmitting}
+                  className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isEditSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
