@@ -3,6 +3,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { cn } from '@/utils/cn';
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 interface LocationAutocompleteInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value: string;
@@ -23,7 +29,7 @@ export function LocationAutocompleteInput({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const sessionTokenRef = useRef<any>(null);
 
   // Load Maps JavaScript API with Places library
   useEffect(() => {
@@ -38,7 +44,7 @@ export function LocationAutocompleteInput({
   // Initialize a session token when component mounts
   useEffect(() => {
     if (window.google?.maps?.places) {
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
     }
   }, []);
 
@@ -63,7 +69,7 @@ export function LocationAutocompleteInput({
         };
 
         const { suggestions } =
-          await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+          await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
         setSuggestions(suggestions ?? []);
       } catch (err) {
