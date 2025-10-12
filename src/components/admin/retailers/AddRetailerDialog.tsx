@@ -10,6 +10,7 @@ interface AddRetailerDialogProps {
   formData: {
     businessName: string;
     contactName: string;
+    secondaryContactName: string;
     email: string;
     location: string;
     agentId: string;

@@ -66,6 +66,7 @@ export default function AdminRetailers() {
   const [formData, setFormData] = React.useState<{
     businessName: string;
     contactName: string;
+    secondaryContactName: string;
     email: string;
     location: string;
     agentId: string;
@@ -77,6 +78,7 @@ export default function AdminRetailers() {
   }>({
     businessName: '',
     contactName: '',
+    secondaryContactName: '',
     email: '',
     location: '',
     agentId: '',
@@ -175,6 +177,7 @@ export default function AdminRetailers() {
       const retailerData: RetailerData = {
         name: formData.businessName,
         contact_name: formData.contactName,
+        secondary_contact_name: formData.secondaryContactName || undefined,
         contact_email: formData.email,
         location: formData.location,
         agent_profile_id: formData.agentId || undefined,
@@ -207,6 +210,7 @@ export default function AdminRetailers() {
         setFormData({
           businessName: '',
           contactName: '',
+          secondaryContactName: '',
           email: '',
           location: '',
           agentId: '',
@@ -258,6 +262,7 @@ export default function AdminRetailers() {
       const values = [
         r.name,
         (r as any).contact_name,
+        r.secondary_contact_name,
         r.email,
         (r as any).contact_email,
         (r as any).location,
@@ -362,6 +367,17 @@ export default function AdminRetailers() {
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       placeholder="Enter contact name"
                       required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Second Contact Person</label>
+                    <input
+                      type="text"
+                      name="secondaryContactName"
+                      value={formData.secondaryContactName}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Optional secondary contact"
                     />
                   </div>
                   <div className="space-y-1">
