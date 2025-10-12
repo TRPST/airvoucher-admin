@@ -5,6 +5,7 @@ export type Retailer = {
   name: string;
   contact_name: string;
   contact_email: string;
+  location?: string;
   balance: number;
   credit_limit: number;
   credit_used: number;
