@@ -1,180 +1,134 @@
-import * as React from 'react';
+'use client';
 
-type AutocompleteInstance = {
-  addListener: (eventName: string, handler: () => void) => void;
-  getPlace: () => {
-    formatted_address?: string;
-    name?: string;
-  };
-};
-
-type NullableAutocomplete = AutocompleteInstance | null;
+import React, { useEffect, useState, useRef } from 'react';
 
 interface LocationAutocompleteInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value: string;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLocationSelect?: (address: string) => void;
-  apiKey?: string;
-}
-
-const SCRIPT_ID = 'google-places-autocomplete-script';
-let scriptLoadingPromise: Promise<void> | null = null;
-
-const loadGoogleMapsScript = (apiKey: string) => {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Google Maps script can only load in the browser'));
-  }
-
-  if (window.google?.maps?.places) {
-    return Promise.resolve();
-  }
-
-  if (!apiKey) {
-    return Promise.reject(new Error('Missing Google Maps API key'));
-  }
-
-  if (!scriptLoadingPromise) {
-    scriptLoadingPromise = new Promise<void>((resolve, reject) => {
-      const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
-
-      const handleError = () => {
-        reject(new Error('Failed to load Google Maps script'));
-      };
-
-      if (existingScript) {
-        const handleLoad = () => {
-          existingScript.setAttribute('data-loaded', 'true');
-          resolve();
-        };
-
-        if (existingScript.getAttribute('data-loaded') === 'true') {
-          resolve();
-        } else {
-          existingScript.addEventListener('load', handleLoad, { once: true });
-          existingScript.addEventListener('error', handleError, { once: true });
-        }
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.id = SCRIPT_ID;
-      script.async = true;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
-      const handleLoad = () => {
-        script.setAttribute('data-loaded', 'true');
-        resolve();
-      };
-      script.addEventListener('load', handleLoad, { once: true });
-      script.addEventListener('error', handleError, { once: true });
-      document.head.appendChild(script);
-    });
-  }
-
-  return scriptLoadingPromise;
-};
-
-declare global {
-  interface Window {
-    google?: {
-      maps?: {
-        places?: {
-          Autocomplete: new (
-            input: HTMLInputElement,
-            opts?: {
-              fields?: string[];
-              types?: string[];
-            }
-          ) => AutocompleteInstance;
-        };
-        event?: {
-          clearInstanceListeners: (instance: AutocompleteInstance | null) => void;
-        };
-      };
-    };
-  }
+  apiKey: string; // Pass NEXT_PUBLIC_GOOGLE_MAPS_API_KEY here
 }
 
 export function LocationAutocompleteInput({
-  apiKey,
-  onLocationSelect,
   value,
   onChange,
-  ...inputProps
+  onLocationSelect,
+  apiKey,
+  ...props
 }: LocationAutocompleteInputProps) {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const autocompleteRef = React.useRef<NullableAutocomplete>(null);
-  const hasLoggedWarning = React.useRef(false);
-  const onLocationSelectRef = React.useRef(onLocationSelect);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
 
-  React.useEffect(() => {
-    onLocationSelectRef.current = onLocationSelect;
-  }, [onLocationSelect]);
+  // Load Maps JavaScript API with Places library
+  useEffect(() => {
+    if (window.google?.maps?.places) return;
 
-  React.useEffect(() => {
-    const resolvedApiKey = apiKey ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    document.body.appendChild(script);
+  }, [apiKey]);
 
-    if (!resolvedApiKey) {
-      if (!hasLoggedWarning.current) {
-        console.warn('LocationAutocompleteInput: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set.');
-        hasLoggedWarning.current = true;
-      }
-      return;
+  // Initialize a session token when component mounts
+  useEffect(() => {
+    if (window.google?.maps?.places) {
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
     }
+  }, []);
 
-    let isActive = true;
-
-    const initAutocomplete = () => {
-      if (!isActive || !inputRef.current || !window.google?.maps?.places) {
+  // Fetch autocomplete predictions (NEW API)
+  useEffect(() => {
+    const fetchPredictions = async () => {
+      if (
+        !window.google?.maps?.places ||
+        !value ||
+        value.trim().length < 3
+      ) {
+        setSuggestions([]);
         return;
       }
 
-      const clearListeners = window.google?.maps?.event?.clearInstanceListeners;
-      if (autocompleteRef.current && clearListeners) {
-        clearListeners(autocompleteRef.current);
-      }
+      setLoading(true);
 
-      autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
-        fields: ['formatted_address', 'name', 'address_components'],
-        types: ['geocode'],
-      });
+      try {
+        const request = {
+          input: value.trim(),
+          sessionToken: sessionTokenRef.current!,
+        };
 
-      autocompleteRef.current.addListener('place_changed', () => {
-        if (!isActive) return;
-        const place = autocompleteRef.current?.getPlace();
-        const formatted = place?.formatted_address || place?.name || inputRef.current?.value || '';
-        if (formatted) {
-          onLocationSelectRef.current?.(formatted);
-        }
-      });
-    };
+        const { suggestions } =
+          await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
-    loadGoogleMapsScript(resolvedApiKey)
-      .then(() => {
-        initAutocomplete();
-      })
-      .catch((err) => {
-        if (!hasLoggedWarning.current) {
-          console.warn(err.message);
-          hasLoggedWarning.current = true;
-        }
-      });
-
-    return () => {
-      isActive = false;
-      const clearListeners = window.google?.maps?.event?.clearInstanceListeners;
-      if (autocompleteRef.current && clearListeners) {
-        clearListeners(autocompleteRef.current);
+        setSuggestions(suggestions ?? []);
+      } catch (err) {
+        console.error('Autocomplete fetch error', err);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
       }
     };
-  }, [apiKey]);
+
+    fetchPredictions();
+  }, [value]);
+
+  // Handle user selection
+  const handleSelect = async (suggestion: any) => {
+    try {
+      const place = suggestion.placePrediction.toPlace();
+
+      await place.fetchFields({
+        fields: ['displayName', 'formattedAddress'],
+      });
+
+      onLocationSelect?.(place.formattedAddress || place.displayName || '');
+    } catch (err) {
+      console.error('Failed to fetch place details', err);
+    } finally {
+      setSuggestions([]);
+    }
+  };
 
   return (
-    <input
-      ref={inputRef}
-      value={value}
-      onChange={onChange}
-      {...inputProps}
-    />
+    <div className="relative">
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setTimeout(() => setIsFocused(false), 150)}
+        autoComplete="off"
+        {...props}
+      />
+
+      {isFocused && (
+        <div className="absolute left-0 right-0 mt-1 rounded-md border bg-white shadow-md z-10">
+          {loading && <div className="px-3 py-2 text-gray-500">Loading…</div>}
+          {!loading && suggestions.length === 0 && (
+            <div className="px-3 py-2 text-gray-500">No results</div>
+          )}
+          {!loading &&
+            suggestions.map((s, i) => {
+              const prediction = s.placePrediction;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    handleSelect(s);
+                  }}
+                  className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                >
+                  <span className="font-medium">{prediction.text.text}</span>
+                </button>
+              );
+            })}
+        </div>
+      )}
+    </div>
   );
 }

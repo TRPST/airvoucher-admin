@@ -385,7 +385,8 @@ export default function AdminRetailers() {
                       onChange={handleInputChange}
                       onLocationSelect={handleLocationSelect}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="e.g. Cape Town"
+                      placeholder="Enter a location"
+                      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                     />
                   </div>
                   <div className="space-y-1">
