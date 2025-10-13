@@ -60,6 +60,7 @@ export default function AdminAgents() {
     fullName: string;
     email: string;
     phone: string;
+    status: "active" | "inactive";
     password: string;
     autoGeneratePassword: boolean;
     assignedRetailers: string[];
@@ -67,6 +68,7 @@ export default function AdminAgents() {
     fullName: "",
     email: "",
     phone: "",
+    status: "active",
     password: "",
     autoGeneratePassword: false,
     assignedRetailers: [],
@@ -74,9 +76,10 @@ export default function AdminAgents() {
 
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingAgent, setEditingAgent] = React.useState<Agent | null>(null);
-  const [editFormData, setEditFormData] = React.useState<{ fullName: string; phone: string }>({
+  const [editFormData, setEditFormData] = React.useState<{ fullName: string; phone: string; status: "active" | "inactive" }>({
     fullName: "",
     phone: "",
+    status: "active",
   });
   const [editError, setEditError] = React.useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = React.useState(false);
@@ -121,6 +124,7 @@ export default function AdminAgents() {
       setEditFormData({
         fullName: editingAgent.full_name ?? "",
         phone: editingAgent.phone ?? "",
+        status: editingAgent.status ?? "active",
       });
     }
   }, [editingAgent]);
@@ -133,7 +137,7 @@ export default function AdminAgents() {
     }
   };
 
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setEditFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -158,6 +162,7 @@ export default function AdminAgents() {
       const { error: updateError } = await updateAgent(editingAgent.id, {
         full_name: trimmedName,
         phone: trimmedPhone || undefined,
+        status: editFormData.status,
       });
 
       if (updateError) {
@@ -243,6 +248,7 @@ export default function AdminAgents() {
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone || undefined,
+          status: formData.status,
         },
         password: formData.password,
       });
@@ -272,6 +278,7 @@ export default function AdminAgents() {
           fullName: "",
           email: "",
           phone: "",
+          status: "active",
           password: "",
           autoGeneratePassword: false,
           assignedRetailers: [],
@@ -538,6 +545,18 @@ export default function AdminAgents() {
                   />
                 </div>
                 <div className="space-y-2 mb-4">
+                  <label className="text-sm font-medium">Status</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium">Password</label>
                     <div className="flex items-center">
@@ -715,6 +734,18 @@ export default function AdminAgents() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   placeholder="Phone number"
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
               <div className="flex justify-end space-x-2 pt-2">
                 <Dialog.Close asChild>

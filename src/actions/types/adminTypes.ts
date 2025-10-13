@@ -145,6 +145,7 @@ export type ProfileData = {
   email: string;
   phone?: string;
   role: 'admin' | 'retailer' | 'agent' | 'terminal';
+  status?: 'active' | 'inactive';
 };
 
 export type RetailerData = {
