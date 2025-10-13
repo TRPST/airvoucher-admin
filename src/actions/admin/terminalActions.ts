@@ -158,3 +158,50 @@ export async function createTerminalWithUser({
     };
   }
 }
+
+/**
+ * Update an existing terminal's details
+ */
+export async function updateTerminal(
+  terminalId: string,
+  updates: Partial<Pick<Terminal, 'name' | 'status'>>
+): Promise<ResponseType<Terminal>> {
+  const supabase = createClient();
+
+  const payload: Record<string, unknown> = {};
+  if (typeof updates.name !== 'undefined') {
+    payload.name = updates.name;
+  }
+  if (typeof updates.status !== 'undefined') {
+    payload.status = updates.status;
+  }
+
+  const { data, error } = await supabase
+    .from('terminals')
+    .update(payload)
+    .eq('id', terminalId)
+    .select(
+      `
+      id,
+      name,
+      last_active,
+      status
+    `
+    )
+    .single();
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const terminal: Terminal = {
+    id: data.id,
+    name: data.name,
+    last_active: data.last_active,
+    status: data.status as 'active' | 'inactive',
+    auth_user_id: '',
+    email: '',
+  };
+
+  return { data: terminal, error: null };
+}
