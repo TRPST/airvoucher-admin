@@ -80,15 +80,13 @@ function VouchersPageContent() {
 
   const networkSummaries: NetworkVoucherSummary[] = data?.networks ?? [];
   const otherVouchers: VoucherTypeSummary[] = data?.other ?? [];
+  const billPaymentVouchers: VoucherTypeSummary[] = data?.billPayments ?? [];
 
-  // Sort other vouchers based on predefined order
-  const sortedOtherVouchers = React.useMemo(() => {
-    if (!otherVouchers.length) return [];
+  const sortVoucherSummaries = React.useCallback((summaries: VoucherTypeSummary[]) => {
+    if (!summaries.length) return [];
 
-    // Create a copy of the array to avoid mutating the original
-    const sorted = [...otherVouchers];
+    const sorted = [...summaries];
 
-    // Sort based on the predefined order
     sorted.sort((a, b) => {
       const aIndex = VOUCHER_DISPLAY_ORDER.findIndex(name =>
         a.name.toLowerCase().includes(name.toLowerCase())
@@ -97,23 +95,28 @@ function VouchersPageContent() {
         b.name.toLowerCase().includes(name.toLowerCase())
       );
 
-      // If both items are in the order array, sort by their position
       if (aIndex !== -1 && bIndex !== -1) {
         return aIndex - bIndex;
       }
-
-      // If only one item is in the order array, prioritize it
       if (aIndex !== -1 && bIndex === -1) return -1;
       if (aIndex === -1 && bIndex !== -1) return 1;
 
-      // If neither item is in the order array, maintain alphabetical order
       return a.name.localeCompare(b.name);
     });
 
     return sorted;
-  }, [otherVouchers]);
+  }, []);
 
-  // Memoize expensive calculations combining both network and other vouchers
+  const sortedOtherVouchers = React.useMemo(
+    () => sortVoucherSummaries(otherVouchers),
+    [otherVouchers, sortVoucherSummaries]
+  );
+  const sortedBillPaymentVouchers = React.useMemo(
+    () => sortVoucherSummaries(billPaymentVouchers),
+    [billPaymentVouchers, sortVoucherSummaries]
+  );
+
+  // Memoize aggregate stats across all voucher groups
   const stats = React.useMemo(() => {
     const networkTotals = networkSummaries.reduce(
       (acc, network) => ({
@@ -133,13 +136,28 @@ function VouchersPageContent() {
       { availableVouchers: 0, totalValue: 0, soldVouchers: 0, disabledVouchers: 0 }
     );
 
+    const billPaymentTotals = sortedBillPaymentVouchers.reduce(
+      (acc, voucher) => ({
+        availableVouchers: acc.availableVouchers + voucher.availableVouchers,
+        totalValue: acc.totalValue + voucher.totalValue,
+        soldVouchers: acc.soldVouchers + voucher.soldVouchers,
+        disabledVouchers: acc.disabledVouchers + voucher.disabledVouchers,
+      }),
+      { availableVouchers: 0, totalValue: 0, soldVouchers: 0, disabledVouchers: 0 }
+    );
+
     return {
-      totalAvailableVouchers: networkTotals.totalVouchers + otherTotals.availableVouchers,
-      totalVoucherValue: networkTotals.totalValue + otherTotals.totalValue,
-      totalSoldVouchers: otherTotals.soldVouchers, // Networks don't track sold separately yet
-      totalDisabledVouchers: otherTotals.disabledVouchers, // Networks don't track disabled separately yet
+      totalAvailableVouchers:
+        networkTotals.totalVouchers +
+        otherTotals.availableVouchers +
+        billPaymentTotals.availableVouchers,
+      totalVoucherValue:
+        networkTotals.totalValue + otherTotals.totalValue + billPaymentTotals.totalValue,
+      totalSoldVouchers: otherTotals.soldVouchers + billPaymentTotals.soldVouchers, // Networks don't track sold separately yet
+      totalDisabledVouchers:
+        otherTotals.disabledVouchers + billPaymentTotals.disabledVouchers, // Networks don't track disabled separately yet
     };
-  }, [networkSummaries, sortedOtherVouchers]);
+  }, [networkSummaries, sortedOtherVouchers, sortedBillPaymentVouchers]);
 
   // Initial load only: show while fetching (avoid spinner-on-error)
   if (isLoading) {
@@ -232,6 +250,18 @@ function VouchersPageContent() {
         </div>
       )}
 
+      {/* Bill Payments Section */}
+      {sortedBillPaymentVouchers.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Bill Payments</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {sortedBillPaymentVouchers.map(voucherType => (
+              <VoucherTypeCard key={voucherType.id} summary={voucherType} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Other Voucher Types Section */}
       {sortedOtherVouchers.length > 0 && (
         <div className="space-y-4">
@@ -245,7 +275,9 @@ function VouchersPageContent() {
       )}
 
       {/* Empty State */}
-      {networkSummaries.length === 0 && sortedOtherVouchers.length === 0 && (
+      {networkSummaries.length === 0 &&
+        sortedOtherVouchers.length === 0 &&
+        sortedBillPaymentVouchers.length === 0 && (
         <div className="rounded-lg border border-border bg-card p-10 text-center">
           <CreditCard className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-medium">No Voucher Types Found</h3>

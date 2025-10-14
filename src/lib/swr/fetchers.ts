@@ -23,7 +23,7 @@ import type {
   SalesReportKey,
   EarningsSummaryKey,
 } from './keys';
-import type { NetworkVoucherSummary } from '@/actions/adminActions';
+import type { NetworkVoucherSummary, VoucherTypeSummary } from '@/actions/adminActions';
 
 // Fetch list of commission groups with counts
 export async function commissionGroupsWithCountsFetcher(): Promise<CommissionGroupWithCounts[]> {
@@ -108,10 +108,11 @@ export async function unassignedRetailersFetcher(): Promise<any[]> {
 /** Network voucher summaries (vouchers dashboard) */
 export async function networkVoucherSummariesFetcher(): Promise<{
   networks: NetworkVoucherSummary[];
-  other: any[];
+  other: VoucherTypeSummary[];
+  billPayments: VoucherTypeSummary[];
 }> {
   const { data, error } = await fetchNetworkVoucherSummaries();
   if (error) throw error;
-  // data expected format: { networks, other }
-  return data ?? { networks: [], other: [] };
+  // data expected format: { networks, other, billPayments }
+  return data ?? { networks: [], other: [], billPayments: [] };
 }

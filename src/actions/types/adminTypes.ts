@@ -59,7 +59,7 @@ export type VoucherType = {
   id: string;
   name: string;
   supplier_commission_pct: number;
-  category: 'airtime' | 'data' | 'other' | null;
+  category: 'airtime' | 'data' | 'other' | 'bill_payment' | null;
   sub_category: 'daily' | 'weekly' | 'monthly' | null;
   network_provider: 'cellc' | 'mtn' | 'vodacom' | 'telkom' | null;
   is_active: boolean;
@@ -68,7 +68,7 @@ export type VoucherType = {
 };
 
 export type NetworkProvider = 'cellc' | 'mtn' | 'vodacom' | 'telkom';
-export type VoucherCategory = 'airtime' | 'data' | 'other';
+export type VoucherCategory = 'airtime' | 'data' | 'other' | 'bill_payment';
 export type DataDuration = 'daily' | 'weekly' | 'monthly';
 
 export type NetworkVoucherSummary = {

@@ -423,6 +423,7 @@ export async function fetchNetworkVoucherSummaries(): Promise<
   ResponseType<{
     networks: NetworkVoucherSummary[];
     other: VoucherTypeSummary[];
+    billPayments: VoucherTypeSummary[];
   }>
 > {
   const supabase = createClient();
@@ -438,7 +439,7 @@ export async function fetchNetworkVoucherSummaries(): Promise<
     }
 
     if (!voucherTypes || voucherTypes.length === 0) {
-      return { data: { networks: [], other: [] }, error: null };
+      return { data: { networks: [], other: [], billPayments: [] }, error: null };
     }
 
     // Separate network providers from other vouchers
@@ -448,8 +449,12 @@ export async function fetchNetworkVoucherSummaries(): Promise<
         ['cellc', 'mtn', 'vodacom', 'telkom'].includes(type.network_provider)
     );
 
+    const billPaymentTypes = voucherTypes.filter(
+      (type: VoucherType) => type.category === 'bill_payment'
+    );
     const otherTypes = voucherTypes.filter(
-      (type: VoucherType) => !type.network_provider || type.category === 'other'
+      (type: VoucherType) =>
+        (type.category === 'other' || !type.network_provider) && type.category !== 'bill_payment'
     );
 
     // Group network types by provider
@@ -511,14 +516,19 @@ export async function fetchNetworkVoucherSummaries(): Promise<
     }
 
     // Build "other" voucher summaries using existing function
-    const { data: otherSummaries } = await fetchVoucherTypeSummaries();
+    const { data: allSummaries } = await fetchVoucherTypeSummaries();
     const filteredOtherSummaries =
-      otherSummaries?.filter(summary => otherTypes.some(type => type.id === summary.id)) || [];
+      allSummaries?.filter(summary => otherTypes.some(type => type.id === summary.id)) || [];
+    const filteredBillPaymentSummaries =
+      allSummaries?.filter(summary =>
+        billPaymentTypes.some(type => type.id === summary.id)
+      ) || [];
 
     return {
       data: {
         networks: networkSummaries,
         other: filteredOtherSummaries,
+        billPayments: filteredBillPaymentSummaries,
       },
       error: null,
     };
