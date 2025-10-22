@@ -4,6 +4,7 @@ export { FinancialOverview } from "./FinancialOverview";
 export { TerminalsSection } from "./TerminalsSection";
 export { SalesHistorySection } from "./SalesHistorySection";
 export { AddTerminalModal } from "./AddTerminalModal";
+export { EditTerminalModal } from "./EditTerminalModal";
 export { CommissionGroupModal } from "./CommissionGroupModal";
 export { SalesAgentModal } from "./SalesAgentModal";
 export { BalanceUpdateModal } from "./BalanceUpdateModal";

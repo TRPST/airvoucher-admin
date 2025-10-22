@@ -14,7 +14,8 @@ export async function fetchTerminals(retailerId: string): Promise<ResponseType<T
       id,
       name,
       last_active,
-      status
+      status,
+      short_code
     `
     )
     .eq('retailer_id', retailerId);
@@ -29,6 +30,7 @@ export async function fetchTerminals(retailerId: string): Promise<ResponseType<T
     name: terminal.name,
     last_active: terminal.last_active,
     status: terminal.status as 'active' | 'inactive',
+    short_code: terminal.short_code,
     auth_user_id: '', // No longer in the database
     email: '', // Email not available in the current query
   }));
@@ -68,93 +70,122 @@ export async function createTerminal(
  */
 export async function createTerminalWithUser({
   name,
-  contact_person,
   retailer_id,
-  email,
   password,
 }: {
   name: string;
-  contact_person: string;
   retailer_id: string;
-  email: string;
   password: string;
-}): Promise<ResponseType<{ id: string }>> {
+}): Promise<ResponseType<{ id: string; aliasEmail: string }>> {
   const supabase = createClient();
 
   try {
-    // Use the API route to create a user (this calls the server-side admin client)
-    const response = await fetch('/api/admin/create-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        userData: {
-          role: 'terminal',
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return { data: null, error: new Error(errorData.error || 'Failed to create user') };
-    }
-
-    const { user } = await response.json();
-
-    if (!user) {
-      return {
-        data: null,
-        error: new Error('Failed to create user in authentication system'),
-      };
-    }
-
-    // Next, create the profile linked to the new user ID
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: user.id, // Use the UUID from Supabase auth
-        full_name: contact_person,
-        email: email,
-        role: 'terminal',
-      })
-      .select('id')
-      .single();
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      // We can't delete the auth user here as we don't have admin privileges
-      // The user will remain in Auth but without a profile
-      return { data: null, error: profileError };
-    }
-
-    // Finally, create the terminal
+    // Step 1: create terminal first
     const { data: terminal, error: terminalError } = await supabase
       .from('terminals')
       .insert({
         name,
         retailer_id,
         status: 'active',
-        auth_user_id: user.id,
+      })
+      .select('id, short_code')
+      .single();
+
+    if (terminalError) throw terminalError;
+
+    // Step 2: Create the Supabase Auth user
+    const aliasEmail = `${terminal.short_code.toLowerCase()}@terminal.local`;
+    const response = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: aliasEmail,
+        password,
+        userData: { role: 'terminal' },
+      }),
+    });
+    if (!response.ok) throw new Error('Failed to create user');
+    const { user } = await response.json();
+
+    // Step 3: Create profile for that auth user
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        full_name: `${terminal.short_code.toLowerCase()} Terminal`,
+        email: aliasEmail,
+        role: 'terminal',
       })
       .select('id')
       .single();
 
-    if (terminalError) {
-      console.error('Error creating terminal:', terminalError);
-      // We can't delete the auth user here without admin privileges
-      // Just return the error to the client
-      return { data: null, error: terminalError };
-    }
+    if (profileError) throw profileError;
 
-    return { data: terminal, error: null };
-  } catch (error) {
-    console.error('Unexpected error in createTerminalWithUser:', error);
+    // Step 4: Link terminal to that profile ID
+    const { error: linkError } = await supabase
+      .from('terminals')
+      .update({ auth_user_id: profile.id })
+      .eq('id', terminal.id);
+
+    if (linkError) throw linkError;
+
+
+    return { data: { id: terminal.id, aliasEmail }, error: null };
+  } catch (err) {
+    console.log(`${JSON.stringify(err, null, 2)}`);
+    console.error('Error creating terminal with alias user:', err);
     return {
       data: null,
-      error: error instanceof Error ? error : new Error(String(error)),
+      error: err instanceof Error ? err : new Error(String(err)),
     };
   }
+}
+
+/**
+ * Update an existing terminal's details
+ */
+export async function updateTerminal(
+  terminalId: string,
+  updates: Partial<Pick<Terminal, 'name' | 'status'>>
+): Promise<ResponseType<Terminal>> {
+  const supabase = createClient();
+
+  const payload: Record<string, unknown> = {};
+  if (typeof updates.name !== 'undefined') {
+    payload.name = updates.name;
+  }
+  if (typeof updates.status !== 'undefined') {
+    payload.status = updates.status;
+  }
+
+  const { data, error } = await supabase
+    .from('terminals')
+    .update(payload)
+    .eq('id', terminalId)
+    .select(
+      `
+      id,
+      name,
+      last_active,
+      status,
+      short_code
+    `
+    )
+    .single();
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const terminal: Terminal = {
+    id: data.id,
+    name: data.name,
+    last_active: data.last_active,
+    status: data.status as 'active' | 'inactive',
+    short_code: data.short_code,
+    auth_user_id: '',
+    email: '',
+  };
+
+  return { data: terminal, error: null };
 }

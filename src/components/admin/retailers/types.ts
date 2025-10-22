@@ -35,6 +35,11 @@ export interface AddTerminalModalProps extends ModalProps {
   onTerminalAdded: () => void;
 }
 
+export interface EditTerminalModalProps extends ModalProps {
+  terminal: AdminTerminal | null;
+  onTerminalUpdated: (terminal: AdminTerminal) => void;
+}
+
 export interface CommissionGroupModalProps extends ModalProps {
   retailer: AdminRetailer;
   onUpdate: (commissionGroupId: string | undefined, commissionGroupName: string | undefined) => void;

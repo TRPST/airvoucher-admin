@@ -25,6 +25,7 @@ export function RetailerUpdateModal({
   onUpdated,
 }: RetailerUpdateModalProps) {
   const [contactName, setContactName] = useState(retailer.contact_name || "");
+  const [secondaryContactName, setSecondaryContactName] = useState(retailer.secondary_contact_name || "");
   const [contactEmail, setContactEmail] = useState(retailer.contact_email || "");
   const [status, setStatus] = useState<"active" | "suspended" | "inactive">(retailer.status);
   const [agentId, setAgentId] = useState(retailer.agent_profile_id || "");
@@ -42,6 +43,7 @@ export function RetailerUpdateModal({
     if (!isOpen) return;
     // Initialize from latest retailer data
     setContactName(retailer.contact_name || "");
+    setSecondaryContactName(retailer.secondary_contact_name || "");
     setContactEmail(retailer.contact_email || "");
     setStatus(retailer.status);
     setAgentId(retailer.agent_profile_id || "");
@@ -84,6 +86,7 @@ export function RetailerUpdateModal({
     try {
       const { error: updError } = await updateRetailer(retailer.id, {
         contact_name: contactName || undefined,
+        secondary_contact_name: secondaryContactName || undefined,
         contact_email: contactEmail || undefined,
         status,
         agent_profile_id: agentId || undefined,
@@ -99,6 +102,7 @@ export function RetailerUpdateModal({
         ...retailer,
         contact_name: contactName || "",
         contact_email: contactEmail || "",
+        secondary_contact_name: secondaryContactName || undefined,
         status,
         agent_profile_id: agentId || undefined,
         commission_group_id: commissionGroupId || undefined,
@@ -156,6 +160,17 @@ export function RetailerUpdateModal({
                     onChange={(e) => setContactName(e.target.value)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     placeholder="Contact person name"
+                  />
+                </div>
+
+                <div className="space-y-2 mb-3">
+                  <label className="text-sm font-medium">Second Contact Person</label>
+                  <input
+                    type="text"
+                    value={secondaryContactName}
+                    onChange={(e) => setSecondaryContactName(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Optional secondary contact"
                   />
                 </div>
 

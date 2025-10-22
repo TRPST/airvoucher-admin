@@ -1,10 +1,6 @@
 import * as React from 'react';
 import { Plus, Loader2, AlertCircle, X, Search } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import Link from 'next/link';
-
-import { TablePlaceholder } from '@/components/ui/table-placeholder';
-import { cn } from '@/utils/cn';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   createRetailer,
@@ -16,6 +12,7 @@ import {
 } from '@/actions';
 import useRequireRole from '@/hooks/useRequireRole';
 import { RetailerTable } from '@/components/admin/retailers/RetailerTable';
+import { LocationAutocompleteInput } from '@/components/admin/retailers/LocationAutocompleteInput';
 import useSWR, { useSWRConfig } from 'swr';
 import { SwrKeys } from '@/lib/swr/keys';
 import {
@@ -26,7 +23,7 @@ import {
 
 export default function AdminRetailers() {
   // Protect this route - only allow admin role
-  const { isLoading: isRoleLoading } = useRequireRole('admin');
+  useRequireRole('admin');
   const { mutate } = useSWRConfig();
 
   // SWR data
@@ -69,6 +66,7 @@ export default function AdminRetailers() {
   const [formData, setFormData] = React.useState<{
     businessName: string;
     contactName: string;
+    secondaryContactName: string;
     email: string;
     location: string;
     agentId: string;
@@ -80,6 +78,7 @@ export default function AdminRetailers() {
   }>({
     businessName: '',
     contactName: '',
+    secondaryContactName: '',
     email: '',
     location: '',
     agentId: '',
@@ -112,6 +111,10 @@ export default function AdminRetailers() {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  const handleLocationSelect = React.useCallback((address: string) => {
+    setFormData(prev => ({ ...prev, location: address }));
+  }, []);
 
   // Generate a random password with letters, numbers, and special characters
   const generateRandomPassword = () => {
@@ -174,6 +177,7 @@ export default function AdminRetailers() {
       const retailerData: RetailerData = {
         name: formData.businessName,
         contact_name: formData.contactName,
+        secondary_contact_name: formData.secondaryContactName || undefined,
         contact_email: formData.email,
         location: formData.location,
         agent_profile_id: formData.agentId || undefined,
@@ -206,6 +210,7 @@ export default function AdminRetailers() {
         setFormData({
           businessName: '',
           contactName: '',
+          secondaryContactName: '',
           email: '',
           location: '',
           agentId: '',
@@ -257,6 +262,7 @@ export default function AdminRetailers() {
       const values = [
         r.name,
         (r as any).contact_name,
+        r.secondary_contact_name,
         r.email,
         (r as any).contact_email,
         (r as any).location,
@@ -364,6 +370,17 @@ export default function AdminRetailers() {
                     />
                   </div>
                   <div className="space-y-1">
+                    <label className="text-sm font-medium">Second Contact Person</label>
+                    <input
+                      type="text"
+                      name="secondaryContactName"
+                      value={formData.secondaryContactName}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Optional secondary contact"
+                    />
+                  </div>
+                  <div className="space-y-1">
                     <label className="text-sm font-medium">Email</label>
                     <input
                       type="email"
@@ -377,13 +394,15 @@ export default function AdminRetailers() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Location</label>
-                    <input
+                    <LocationAutocompleteInput
                       type="text"
                       name="location"
                       value={formData.location}
                       onChange={handleInputChange}
+                      onLocationSelect={handleLocationSelect}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="e.g. Cape Town"
+                      placeholder="Enter a location"
+                      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                     />
                   </div>
                   <div className="space-y-1">
