@@ -55,6 +55,7 @@ export function TerminalsSection({
 
   // Format terminal data for table
   const terminalData = terminals.map((terminal) => ({
+    ID: terminal.short_code ?? "-",
     Name: terminal.name,
     Status: (
       <div
@@ -130,7 +131,7 @@ export function TerminalsSection({
                 </button>
               </div>
               <TablePlaceholder
-                columns={["Name", "Status", "Last Active", "Actions"]}
+                columns={["ID", "Name", "Status", "Last Active", "Actions"]}
                 data={terminalData}
                 emptyMessage="No terminals found for this retailer"
               />

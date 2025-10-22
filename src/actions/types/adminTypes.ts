@@ -41,6 +41,7 @@ export type Terminal = {
   name: string;
   last_active: string | null;
   status: 'active' | 'inactive';
+  short_code: string;
   auth_user_id?: string; // Now optional since it's been removed from the database
   email?: string; // Optional since we're not fetching it anymore
 };

@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../Desktop/Air Voucher/airvoucher-terminal"
+		},
+		{
+			"path": "../../../airvoucher-agent"
+		},
+		{
+			"path": "../../../airvoucher-retailer"
+		}
+	],
+	"settings": {}
+}
