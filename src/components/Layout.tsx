@@ -20,6 +20,7 @@ import {
   X,
   ChevronRight,
   LogOut,
+  Settings,
 } from "lucide-react";
 // Import Supabase client directly
 import { createClient } from "@/utils/supabase/client";
@@ -207,6 +208,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             name: "Reports",
             href: "/admin/reports",
             icon: FileText,
+          },
+          {
+            name: "Settings",
+            href: "/admin/settings",
+            icon: Settings,
           },
           // Profile removed from sidebar nav
         ];

@@ -1,25 +1,41 @@
-import { DollarSign, CreditCard, Percent } from "lucide-react";
+import { DollarSign, CreditCard, Percent, History } from "lucide-react";
 import { StatsTile } from "@/components/ui/stats-tile";
 import type { FinancialOverviewProps } from "./types";
 
-export function FinancialOverview({ retailer, onBalanceUpdate }: FinancialOverviewProps) {
-  const handleUpdateBalances = () => {
-    // This will be handled by the parent component which will open the modal
-    // We just need to trigger the callback with current values to pre-populate
-    onBalanceUpdate(retailer.balance, retailer.credit_limit);
-  };
-
+export function FinancialOverview({ 
+  retailer, 
+  onDepositClick, 
+  onCreditLimitClick,
+  onDepositHistoryClick 
+}: FinancialOverviewProps) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h3 className="text-lg font-medium">Financial Overview</h3>
-        <button
-          onClick={handleUpdateBalances}
-          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted"
-          title="Update balances"
-        >
-          Update Balances
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={onDepositClick}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted"
+            title="Process deposit"
+          >
+            Update Balance
+          </button>
+          <button
+            onClick={onCreditLimitClick}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted"
+            title="Update credit limit"
+          >
+            Update Credit
+          </button>
+          <button
+            onClick={onDepositHistoryClick}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-1"
+            title="View deposit history"
+          >
+            <History className="h-4 w-4" />
+            Deposit History
+          </button>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsTile

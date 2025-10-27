@@ -76,6 +76,22 @@ export {
   type VoucherCommissionOverride,
 } from './admin/commissionOverrideActions';
 
+// Deposit exports
+export type {
+  DepositMethod,
+  FeeType,
+  DepositFeeConfiguration,
+  RetailerDeposit,
+  ProcessDepositParams,
+} from './adminActions';
+
+export {
+  fetchDepositFeeConfigurations,
+  updateDepositFeeConfiguration,
+  processRetailerDeposit,
+  fetchRetailerDepositHistory,
+} from './adminActions';
+
 // Retailer exports
 export type {
   RetailerProfile,

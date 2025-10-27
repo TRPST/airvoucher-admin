@@ -14,7 +14,9 @@ import {
   AddTerminalModal,
   CommissionGroupModal,
   SalesAgentModal,
-  BalanceUpdateModal,
+  DepositModal,
+  CreditLimitModal,
+  DepositHistoryModal,
   RetailerUpdateModal,
 } from "@/components/admin/retailers";
 
@@ -43,7 +45,9 @@ export default function RetailerDetails() {
   const [showAddTerminalModal, setShowAddTerminalModal] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
-  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
+  const [showDepositHistoryModal, setShowDepositHistoryModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Load retailer data
@@ -148,12 +152,20 @@ export default function RetailerDetails() {
     }
   };
 
-  const handleBalanceUpdate = (balance: number, creditLimit: number) => {
+  const handleBalanceUpdate = (newBalance: number) => {
     if (retailer) {
       setRetailer({
         ...retailer,
-        balance,
-        credit_limit: creditLimit,
+        balance: newBalance,
+      });
+    }
+  };
+
+  const handleCreditLimitUpdate = (newCreditLimit: number) => {
+    if (retailer) {
+      setRetailer({
+        ...retailer,
+        credit_limit: newCreditLimit,
       });
     }
   };
@@ -216,7 +228,9 @@ export default function RetailerDetails() {
       {/* Financial Overview */}
       <FinancialOverview
         retailer={retailer}
-        onBalanceUpdate={() => setShowBalanceModal(true)}
+        onDepositClick={() => setShowDepositModal(true)}
+        onCreditLimitClick={() => setShowCreditLimitModal(true)}
+        onDepositHistoryClick={() => setShowDepositHistoryModal(true)}
       />
 
       {/* Expandable Sections */}
@@ -261,11 +275,24 @@ export default function RetailerDetails() {
         onUpdate={handleAgentUpdate}
       />
 
-      <BalanceUpdateModal
-        isOpen={showBalanceModal}
-        onClose={() => setShowBalanceModal(false)}
+      <DepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
         retailer={retailer}
         onUpdate={handleBalanceUpdate}
+      />
+
+      <CreditLimitModal
+        isOpen={showCreditLimitModal}
+        onClose={() => setShowCreditLimitModal(false)}
+        retailer={retailer}
+        onUpdate={handleCreditLimitUpdate}
+      />
+
+      <DepositHistoryModal
+        isOpen={showDepositHistoryModal}
+        onClose={() => setShowDepositHistoryModal(false)}
+        retailer={retailer}
       />
 
       <RetailerUpdateModal
