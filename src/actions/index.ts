@@ -92,6 +92,18 @@ export {
   fetchRetailerDepositHistory,
 } from './adminActions';
 
+// Credit limit exports
+export type {
+  AdjustmentType,
+  CreditLimitAdjustment,
+  ProcessCreditAdjustmentParams,
+} from './admin/creditActions';
+
+export {
+  processCreditLimitAdjustment,
+  fetchRetailerCreditHistory,
+} from './admin/creditActions';
+
 // Retailer exports
 export type {
   RetailerProfile,

@@ -16,7 +16,7 @@ import {
   SalesAgentModal,
   DepositModal,
   CreditLimitModal,
-  DepositHistoryModal,
+  BalanceHistoryModal,
   RetailerUpdateModal,
 } from "@/components/admin/retailers";
 
@@ -47,7 +47,7 @@ export default function RetailerDetails() {
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
-  const [showDepositHistoryModal, setShowDepositHistoryModal] = useState(false);
+  const [showBalanceHistoryModal, setShowBalanceHistoryModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Load retailer data
@@ -230,7 +230,7 @@ export default function RetailerDetails() {
         retailer={retailer}
         onDepositClick={() => setShowDepositModal(true)}
         onCreditLimitClick={() => setShowCreditLimitModal(true)}
-        onDepositHistoryClick={() => setShowDepositHistoryModal(true)}
+        onDepositHistoryClick={() => setShowBalanceHistoryModal(true)}
       />
 
       {/* Expandable Sections */}
@@ -289,9 +289,9 @@ export default function RetailerDetails() {
         onUpdate={handleCreditLimitUpdate}
       />
 
-      <DepositHistoryModal
-        isOpen={showDepositHistoryModal}
-        onClose={() => setShowDepositHistoryModal(false)}
+      <BalanceHistoryModal
+        isOpen={showBalanceHistoryModal}
+        onClose={() => setShowBalanceHistoryModal(false)}
         retailer={retailer}
       />
 

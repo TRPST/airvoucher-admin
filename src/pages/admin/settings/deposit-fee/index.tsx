@@ -121,7 +121,7 @@ export default function DepositFeeSettings() {
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium">Deposit Method</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Fee Type</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Fee Amount (R)</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">Fee Amount</th>
                 <th className="px-4 py-3 text-right text-sm font-medium">Action</th>
               </tr>
             </thead>
@@ -253,15 +253,20 @@ function DepositMethodRow({ methodConfig, config, onSave }: DepositMethodRowProp
 
       {/* Fee Amount Input */}
       <td className="px-4 py-3">
-        <input
-          type="number"
-          value={feeValue}
-          onChange={(e) => handleFeeValueChange(e.target.value)}
-          min="0"
-          step={feeType === "fixed" ? "0.01" : "0.1"}
-          className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm"
-          placeholder={feeType === "fixed" ? "0.00" : "0.0"}
-        />
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-foreground">
+            {feeType === "fixed" ? "R" : "%"}
+          </span>
+          <input
+            type="number"
+            value={feeValue}
+            onChange={(e) => handleFeeValueChange(e.target.value)}
+            min="0"
+            step={feeType === "fixed" ? "0.01" : "0.1"}
+            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
+            placeholder={feeType === "fixed" ? "0.00" : "0.0"}
+          />
+        </div>
       </td>
 
       {/* Action Button */}
@@ -383,16 +388,21 @@ function DepositMethodMobileRow({ methodConfig, config, onSave }: DepositMethodR
 
       {/* Fee Amount */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Fee Amount (R)</label>
-        <input
-          type="number"
-          value={feeValue}
-          onChange={(e) => handleFeeValueChange(e.target.value)}
-          min="0"
-          step={feeType === "fixed" ? "0.01" : "0.1"}
-          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-          placeholder={feeType === "fixed" ? "0.00" : "0.0"}
-        />
+        <label className="text-xs font-medium text-muted-foreground">Fee Amount</label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {feeType === "fixed" ? "R" : "%"}
+          </span>
+          <input
+            type="number"
+            value={feeValue}
+            onChange={(e) => handleFeeValueChange(e.target.value)}
+            min="0"
+            step={feeType === "fixed" ? "0.01" : "0.1"}
+            className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            placeholder={feeType === "fixed" ? "0.00" : "0.0"}
+          />
+        </div>
       </div>
 
       {/* Save Button */}

@@ -30,10 +30,10 @@ export function FinancialOverview({
           <button
             onClick={onDepositHistoryClick}
             className="rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-1"
-            title="View deposit history"
+            title="View balance history"
           >
             <History className="h-4 w-4" />
-            Deposit History
+            Balance History
           </button>
         </div>
       </div>

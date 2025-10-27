@@ -9,5 +9,6 @@ export { SalesAgentModal } from "./SalesAgentModal";
 export { DepositModal } from "./DepositModal";
 export { CreditLimitModal } from "./CreditLimitModal";
 export { DepositHistoryModal } from "./DepositHistoryModal";
+export { BalanceHistoryModal } from "./BalanceHistoryModal";
 export * from "./types";
 export { RetailerUpdateModal } from "./RetailerUpdateModal";
