@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Calendar, Search, Filter, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Activity } from "lucide-react";
+import { X, Calendar, ChevronUp, ChevronDown, Activity } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/utils/cn";
 import type { SalesReport } from "@/actions";
@@ -21,9 +21,7 @@ export function SalesHistoryModal({
   retailerName,
 }: SalesHistoryModalProps) {
   // Table state
-  const [searchTerm, setSearchTerm] = useState('');
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -33,16 +31,6 @@ export function SalesHistoryModal({
   // Filter and sort sales data
   const filteredAndSortedSales = (() => {
     let filtered = [...sales];
-
-    // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        sale =>
-          sale.voucher_type?.toLowerCase().includes(term) ||
-          sale.id.toLowerCase().includes(term)
-      );
-    }
 
     // Apply voucher type filter
     if (voucherTypeFilter !== 'all') {
@@ -79,6 +67,32 @@ export function SalesHistoryModal({
     return filtered;
   })();
 
+  // Calculate totals for filtered sales
+  const totals = (() => {
+    return filteredAndSortedSales.reduce(
+      (acc, sale) => {
+        const supplierCommissionAmount =
+          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+        const airVoucherProfit = sale.profit || 0;
+
+        return {
+          amount: acc.amount + sale.amount,
+          supplierCommission: acc.supplierCommission + supplierCommissionAmount,
+          retailerCommission: acc.retailerCommission + sale.retailer_commission,
+          agentCommission: acc.agentCommission + sale.agent_commission,
+          profit: acc.profit + airVoucherProfit,
+        };
+      },
+      {
+        amount: 0,
+        supplierCommission: 0,
+        retailerCommission: 0,
+        agentCommission: 0,
+        profit: 0,
+      }
+    );
+  })();
+
   // Handle sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -91,9 +105,7 @@ export function SalesHistoryModal({
 
   // Reset filters when modal closes
   const handleClose = () => {
-    setSearchTerm('');
     setVoucherTypeFilter('all');
-    setShowFilters(false);
     onClose();
   };
 
@@ -120,60 +132,25 @@ export function SalesHistoryModal({
               <p className="text-sm text-muted-foreground">{filteredAndSortedSales.length} total sales</p>
             </div>
 
-            {/* Search and Filter Controls */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="search"
-                    placeholder="Search sales..."
-                    className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={cn(
-                    'inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm',
-                    showFilters
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-input bg-background hover:bg-muted'
-                  )}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filter
-                </button>
-              </div>
+            {/* Filter Controls */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="voucherTypeFilter" className="text-sm font-medium">
+                Filter by Type
+              </label>
+              <select
+                id="voucherTypeFilter"
+                className="w-full sm:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={voucherTypeFilter}
+                onChange={e => setVoucherTypeFilter(e.target.value)}
+              >
+                <option value="all">All Types</option>
+                {voucherTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            {/* Filter Panel */}
-            {showFilters && (
-              <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-                <h3 className="mb-3 font-medium">Filter Options</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="voucherTypeFilter" className="mb-1 block text-sm font-medium">
-                      Voucher Type
-                    </label>
-                    <select
-                      id="voucherTypeFilter"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      value={voucherTypeFilter}
-                      onChange={e => setVoucherTypeFilter(e.target.value)}
-                    >
-                      <option value="all">All Types</option>
-                      {voucherTypes.map(type => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Sales Table */}
             {sales.length > 0 ? (
@@ -295,6 +272,35 @@ export function SalesHistoryModal({
                         );
                       })}
                     </tbody>
+                    <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+                      <tr className="font-semibold">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={2}>
+                          TOTAL
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
+                          R {totals.amount.toFixed(2)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
+                          R {totals.supplierCommission.toFixed(2)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
+                          R {totals.retailerCommission.toFixed(2)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
+                          R {totals.agentCommission.toFixed(2)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm">
+                          <span
+                            className={cn(
+                              'font-bold',
+                              totals.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                            )}
+                          >
+                            R {totals.profit.toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
@@ -311,7 +317,7 @@ export function SalesHistoryModal({
             )}
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className="flex justify-end pt-4 border-border">
             <Dialog.Close asChild>
               <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
                 Close
