@@ -18,6 +18,22 @@ export function CustomAuth({ role }: CustomAuthProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPortal, setCurrentPortal] = useState<PortalType | null>(null);
+  const [isRecovery, setIsRecovery] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (
+        hashParams.has("access_token") &&
+        hashParams.get("type") === "recovery"
+      ) {
+        setIsRecovery(true);
+        router.replace("/auth/reset-password" + window.location.hash);
+      }
+    }
+  }, [router]);
+
+  if (isRecovery) return null;
 
   // Detect current portal from hostname on client-side
   useEffect(() => {

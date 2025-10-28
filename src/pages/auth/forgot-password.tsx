@@ -2,44 +2,42 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [supabaseClient] = useState(() => createClient());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setError('');
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
+      const base = 'https://admin.arv-shop.com/auth';
+      const redirectUrl = `${base}/reset-password`;
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to send reset email');
-        return;
-      }
-
+    if (error) {
+      console.error('Supabase reset error:', error);
+      setError('Failed to send reset email. Please try again.');
+    } else {
       setSuccess(true);
       setEmail('');
-    } catch (error) {
-      console.error('Error sending reset email:', error);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    setError('An unexpected error occurred. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
