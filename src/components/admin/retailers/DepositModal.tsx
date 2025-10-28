@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, AlertCircle, HandCoins } from "lucide-react";
+import { X, Loader2, AlertCircle, HandCoins, TrendingDown } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   fetchDepositFeeConfigurations,
   processRetailerDeposit,
   type DepositMethod,
   type DepositFeeConfiguration,
+  type DepositAdjustmentType,
 } from "@/actions";
 import type { AdminRetailer } from "@/actions";
 
@@ -22,6 +23,7 @@ export function DepositModal({
   retailer,
   onUpdate,
 }: DepositModalProps) {
+  const [adjustmentType, setAdjustmentType] = useState<DepositAdjustmentType>("deposit");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState<DepositMethod>("EFT");
   const [notes, setNotes] = useState("");
@@ -80,7 +82,9 @@ export function DepositModal({
   }
 
   const netAmount = amount - feeAmount;
-  const projectedBalance = retailer.balance + netAmount;
+  const projectedBalance = adjustmentType === "deposit"
+    ? retailer.balance + netAmount
+    : retailer.balance - netAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +96,13 @@ export function DepositModal({
     }
 
     if (netAmount <= 0) {
-      setError("Deposit amount must be greater than the fee");
+      setError("Amount must be greater than the fee");
+      return;
+    }
+
+    // Validate removal won't result in negative balance
+    if (adjustmentType === "removal" && projectedBalance < 0) {
+      setError(`Cannot remove R ${netAmount.toFixed(2)}. Current balance is only R ${retailer.balance.toFixed(2)}`);
       return;
     }
 
@@ -104,6 +114,7 @@ export function DepositModal({
         retailer_id: retailer.id,
         amount_deposited: amount,
         deposit_method: depositMethod,
+        adjustment_type: adjustmentType,
         notes: notes.trim() || undefined,
       });
 
@@ -124,7 +135,7 @@ export function DepositModal({
       }
     } catch (err) {
       setError(
-        `Error processing deposit: ${
+        `Error processing ${adjustmentType}: ${
           err instanceof Error ? err.message : String(err)
         }`
       );
@@ -134,6 +145,7 @@ export function DepositModal({
   };
 
   const handleClose = () => {
+    setAdjustmentType("deposit");
     setDepositAmount("");
     setDepositMethod("EFT");
     setNotes("");
@@ -148,7 +160,7 @@ export function DepositModal({
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-lg font-semibold">
-              Process Deposit
+              {adjustmentType === "deposit" ? "Process Deposit" : "Remove Balance"}
             </Dialog.Title>
             <Dialog.Close className="rounded-full p-2 hover:bg-muted">
               <X className="h-4 w-4" aria-hidden="true" />
@@ -173,10 +185,38 @@ export function DepositModal({
 
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4 mb-4">
-                  {/* Deposit Amount */}
+                  {/* Add/Remove Toggle */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentType("deposit")}
+                      className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        adjustmentType === "deposit"
+                          ? "bg-green-600 text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      <HandCoins className="h-4 w-4 inline mr-2" />
+                      Add to Balance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdjustmentType("removal")}
+                      className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        adjustmentType === "removal"
+                          ? "bg-red-600 text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      <TrendingDown className="h-4 w-4 inline mr-2" />
+                      Remove from Balance
+                    </button>
+                  </div>
+
+                  {/* Amount */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Deposit Amount
+                      {adjustmentType === "deposit" ? "Deposit Amount" : "Amount to Remove"}
                     </label>
                     <input
                       type="number"
@@ -213,11 +253,11 @@ export function DepositModal({
                   {currentFeeConfig && amount > 0 && (
                     <div className="rounded-md bg-muted/50 p-4 space-y-2">
                       <div className="text-sm font-medium mb-2">
-                        Deposit Breakdown
+                        {adjustmentType === "deposit" ? "Deposit Breakdown" : "Removal Breakdown"}
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Deposit Amount:
+                          {adjustmentType === "deposit" ? "Deposit Amount:" : "Amount to Remove:"}
                         </span>
                         <span className="font-medium">R {amount.toFixed(2)}</span>
                       </div>
@@ -230,7 +270,7 @@ export function DepositModal({
                         </span>
                       </div>
                       <div className="border-t border-border pt-2 flex justify-between text-sm">
-                        <span className="font-medium">Net Amount:</span>
+                        <span className="font-medium">Net {adjustmentType === "deposit" ? "Amount:" : "Removal:"}</span>
                         <span className="font-bold text-primary">
                           R {netAmount.toFixed(2)}
                         </span>
@@ -243,7 +283,7 @@ export function DepositModal({
                       </div>
                       <div className="flex justify-between text-sm border-t border-border pt-2">
                         <span className="font-medium">New Balance:</span>
-                        <span className="font-bold text-green-600">
+                        <span className={`font-bold ${adjustmentType === "deposit" ? "text-green-600" : "text-orange-600"}`}>
                           R {projectedBalance.toFixed(2)}
                         </span>
                       </div>
@@ -275,8 +315,12 @@ export function DepositModal({
                   </Dialog.Close>
                   <button
                     type="submit"
-                    disabled={isProcessing || amount <= 0 || netAmount <= 0}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isProcessing || amount <= 0 || netAmount <= 0 || (adjustmentType === "removal" && projectedBalance < 0)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium shadow disabled:opacity-50 disabled:cursor-not-allowed ${
+                      adjustmentType === "deposit"
+                        ? "bg-green-600 text-white hover:bg-green-700"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
                   >
                     {isProcessing ? (
                       <>
@@ -285,8 +329,17 @@ export function DepositModal({
                       </>
                   ) : (
                     <>
-                      <HandCoins className="mr-2 h-4 w-4 inline" />
-                      Process Deposit
+                      {adjustmentType === "deposit" ? (
+                        <>
+                          <HandCoins className="mr-2 h-4 w-4 inline" />
+                          Process Deposit
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown className="mr-2 h-4 w-4 inline" />
+                          Remove Balance
+                        </>
+                      )}
                     </>
                   )}
                   </button>
