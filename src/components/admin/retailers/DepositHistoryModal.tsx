@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, History, Calendar, User } from "lucide-react";
+import { X, Loader2, History, HandCoins, User } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { fetchRetailerDepositHistory, type RetailerDeposit } from "@/actions";
 import type { AdminRetailer } from "@/actions";
@@ -88,7 +88,7 @@ export function DepositHistoryModal({
               </div>
             ) : deposits.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium">No deposit history</p>
                 <p className="text-sm">Deposits will appear here once processed</p>
               </div>

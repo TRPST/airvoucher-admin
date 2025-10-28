@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, History, DollarSign, TrendingUp } from "lucide-react";
+import { X, Loader2, History, HandCoins, TrendingUp } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import { cn } from "@/utils/cn";
@@ -113,7 +113,7 @@ export function BalanceHistoryModal({
                   "data-[state=inactive]:text-muted-foreground hover:text-foreground"
                 )}
               >
-                <DollarSign className="h-4 w-4" />
+                <HandCoins className="h-4 w-4" />
                 Deposit History
               </Tabs.Trigger>
               <Tabs.Trigger
@@ -144,7 +144,7 @@ export function BalanceHistoryModal({
                 </div>
               ) : deposits.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium">No deposit history</p>
                   <p className="text-sm">Deposits will appear here once processed</p>
                 </div>

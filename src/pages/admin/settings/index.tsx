@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { DollarSign, ChevronRight } from "lucide-react";
+import { HandCoins, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 type SettingsCard = {
@@ -16,7 +16,7 @@ const settingsCards: SettingsCard[] = [
   {
     title: "Deposit Fee Settings",
     description: "Configure fees for different deposit methods (EFT, ATM, Counter, Branch)",
-    icon: DollarSign,
+    icon: HandCoins,
     href: "/admin/settings/deposit-fee",
     iconBgColor: "bg-green-100 dark:bg-green-900/20",
     iconColor: "text-green-600 dark:text-green-400",
@@ -69,11 +69,11 @@ export default function AdminSettings() {
       </div>
 
       {/* Empty State Message (if only one card) */}
-      {settingsCards.length === 1 && (
+      {/* {settingsCards.length === 1 && (
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>More settings options will be added here in the future.</p>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

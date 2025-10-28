@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, AlertCircle, DollarSign } from "lucide-react";
+import { X, Loader2, AlertCircle, HandCoins } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   fetchDepositFeeConfigurations,
@@ -283,12 +283,12 @@ export function DepositModal({
                         <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
                         Processing...
                       </>
-                    ) : (
-                      <>
-                        <DollarSign className="mr-2 h-4 w-4 inline" />
-                        Process Deposit
-                      </>
-                    )}
+                  ) : (
+                    <>
+                      <HandCoins className="mr-2 h-4 w-4 inline" />
+                      Process Deposit
+                    </>
+                  )}
                   </button>
                 </div>
               </form>
