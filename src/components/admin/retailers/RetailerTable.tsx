@@ -69,7 +69,7 @@ export function RetailerTable({ retailers }: RetailerTableProps) {
       columns={['Name', 'Agent', 'Commission Group', 'Balance', 'Available Credit', 'Status']}
       data={tableData}
       rowsClickable={true}
-      className="max-h-[80vh]"
+      className="h-full"
     />
   );
 }
