@@ -85,7 +85,7 @@ export function BalanceHistoryModal({
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[90vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-[90vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg h-[80vh] max-h-[85vh] overflow-hidden flex flex-col min-h-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
@@ -102,9 +102,9 @@ export function BalanceHistoryModal({
           <Tabs.Root
             value={activeTab}
             onValueChange={setActiveTab}
-            className="flex-1 flex flex-col overflow-hidden"
+            className="flex-1 flex flex-col overflow-hidden min-h-0"
           >
-            <Tabs.List className="flex border-b border-border">
+            <Tabs.List className="flex flex-shrink-0">
               <Tabs.Trigger
                 value="deposits"
                 className={cn(
@@ -132,7 +132,7 @@ export function BalanceHistoryModal({
             {/* Deposit History Tab */}
             <Tabs.Content
               value="deposits"
-              className="mt-4 flex-1 overflow-auto"
+              className="flex overflow-y-auto min-h-0 mt-2"
             >
               {isLoadingDeposits ? (
                 <div className="flex items-center justify-center py-12">
@@ -149,11 +149,11 @@ export function BalanceHistoryModal({
                   <p className="text-sm">Deposits will appear here once processed</p>
                 </div>
               ) : (
-                <>
-                  <div className="rounded-md border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 rounded-md border border-border overflow-hidden flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b border-border">
+                        <thead className="sticky top-0 bg-muted border-b border-border z-10">
                           <tr>
                             <th className="px-4 py-3 text-left font-medium">Date</th>
                             <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -236,7 +236,7 @@ export function BalanceHistoryModal({
                       </table>
                     </div>
                   </div>
-                  <div className="mt-4 pt-4 border-border">
+                  <div className="mt-4 pt-4 border-t border-border flex-shrink-0">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>
                         {deposits.length} deposit{deposits.length !== 1 ? "s" : ""}{" "}
@@ -250,12 +250,19 @@ export function BalanceHistoryModal({
                       </span>
                     </div>
                   </div>
-                </>
+                  <div className="flex justify-end mt-4 flex-shrink-0">
+                    <Dialog.Close asChild>
+                      <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
+                        Close
+                      </button>
+                    </Dialog.Close>
+                  </div>
+                </div>
               )}
             </Tabs.Content>
 
             {/* Credit History Tab */}
-            <Tabs.Content value="credit" className="mt-4 flex-1 overflow-auto">
+            <Tabs.Content value="credit" className="flex overflow-y-auto min-h-0">
               {isLoadingCredit ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -273,11 +280,11 @@ export function BalanceHistoryModal({
                   </p>
                 </div>
               ) : (
-                <>
-                  <div className="rounded-md border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 rounded-md border border-border overflow-hidden flex flex-col min-h-0">
+                    <div className="flex-1 overflow-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b border-border">
+                        <thead className="sticky top-0 bg-muted border-b border-border z-10">
                           <tr>
                             <th className="px-4 py-3 text-left font-medium">Date</th>
                             <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -358,7 +365,7 @@ export function BalanceHistoryModal({
                       </table>
                     </div>
                   </div>
-                  <div className="mt-4 pt-4 border-border">
+                  <div className="mt-4 pt-4 border-t border-border flex-shrink-0">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>
                         {creditHistory.length} adjustment
@@ -366,18 +373,17 @@ export function BalanceHistoryModal({
                       </span>
                     </div>
                   </div>
-                </>
+                  <div className="flex justify-end mt-4 flex-shrink-0">
+                    <Dialog.Close asChild>
+                      <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
+                        Close
+                      </button>
+                    </Dialog.Close>
+                  </div>
+                </div>
               )}
             </Tabs.Content>
           </Tabs.Root>
-
-          <div className="flex justify-end mt-4">
-            <Dialog.Close asChild>
-              <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
-                Close
-              </button>
-            </Dialog.Close>
-          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
