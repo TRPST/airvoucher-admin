@@ -128,7 +128,7 @@ export function CustomAuth({ role }: CustomAuthProps) {
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-4">
         <button
           type="submit"
           disabled={isLoading}
@@ -143,6 +143,13 @@ export function CustomAuth({ role }: CustomAuthProps) {
             <span>Sign In</span>
           )}
         </button>
+
+        <a
+          href="/auth/forgot-password"
+          className="text-center text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          Forgot your password?
+        </a>
       </div>
     </form>
   );
