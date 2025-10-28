@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Loader2, AlertCircle, Copy, RefreshCw } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { createTerminalWithUser, fetchAdminTerminals } from '@/actions';
+import { createTerminalWithUser } from '@/actions';
 import { generatePassword } from '@/utils/password';
 import type { AddTerminalModalProps } from './types';
 
@@ -13,17 +13,32 @@ export function AddTerminalModal({
 }: AddTerminalModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    contact_person: '',
-    email: '',
     password: '',
     autoGeneratePassword: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [createdTerminal, setCreatedTerminal] = useState<{
-    email: string;
+    aliasEmail: string;
     password: string;
   } | null>(null);
+  const extractErrorMessage = (err: unknown): string => {
+    if (!err) return 'An unexpected error occurred';
+    if (typeof err === 'string') return err;
+    if (err instanceof Error) return err.message || 'An unexpected error occurred';
+    if (typeof err === 'object') {
+      const candidate = (err as { message?: unknown; error?: unknown }).message ?? (err as { message?: unknown; error?: unknown }).error;
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate;
+      }
+      try {
+        return JSON.stringify(err);
+      } catch {
+        // fall through to generic string conversion
+      }
+    }
+    return String(err);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -50,16 +65,14 @@ export function AddTerminalModal({
     setError(null);
 
     try {
-      const { data, error } = await createTerminalWithUser({
+      const { data, error: createError } = await createTerminalWithUser({
         name: formData.name,
-        contact_person: formData.contact_person,
         retailer_id: retailerId,
-        email: formData.email,
         password: formData.password,
       });
 
-      if (error) {
-        setError(error.message);
+      if (createError) {
+        setError(createError);
         return;
       }
 
@@ -70,14 +83,14 @@ export function AddTerminalModal({
 
       // Show success message with credentials
       setCreatedTerminal({
-        email: formData.email,
         password: formData.password,
+        aliasEmail: data.aliasEmail,
       });
 
       // Notify parent that terminal was added
       onTerminalAdded();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(err ?? 'An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,8 +99,6 @@ export function AddTerminalModal({
   const handleClose = () => {
     setFormData({
       name: '',
-      contact_person: '',
-      email: '',
       password: '',
       autoGeneratePassword: false,
     });
@@ -116,11 +127,11 @@ export function AddTerminalModal({
           </div>
 
           <div className="mt-2 space-y-4">
-            {error && (
+            {error != null && (
               <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                 <div className="flex items-center">
                   <AlertCircle className="mr-2 h-4 w-4" />
-                  {error}
+                  {extractErrorMessage(error)}
                 </div>
               </div>
             )}
@@ -128,22 +139,22 @@ export function AddTerminalModal({
             {createdTerminal ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  The terminal has been created successfully. Please save these credentials as they
-                  will not be shown again:
+                  The terminal has been created successfully. The login alias and password are shown
+                  below and will not be displayed again:
                 </p>
 
                 <div className="space-y-2">
                   <div>
-                    <label className="text-sm font-medium">Email</label>
+                    <label className="text-sm font-medium">Alias Email</label>
                     <div className="mt-1 flex items-center gap-2">
                       <input
                         type="text"
-                        value={createdTerminal.email}
+                        value={createdTerminal.aliasEmail}
                         readOnly
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       />
                       <button
-                        onClick={() => copyToClipboard(createdTerminal.email)}
+                        onClick={() => copyToClipboard(createdTerminal.aliasEmail)}
                         className="rounded-md p-2 hover:bg-muted"
                         title="Copy to clipboard"
                       >
@@ -172,6 +183,11 @@ export function AddTerminalModal({
                   </div>
                 </div>
 
+                <p className="text-xs text-muted-foreground">
+                  The alias email is generated from the terminal short code and can also be viewed
+                  on the terminal details screen.
+                </p>
+
                 <div className="flex justify-end">
                   <button
                     onClick={handleClose}
@@ -193,32 +209,6 @@ export function AddTerminalModal({
                       onChange={handleInputChange}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       placeholder="Enter terminal name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Contact Person</label>
-                    <input
-                      type="text"
-                      name="contact_person"
-                      value={formData.contact_person}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Enter contact person's full name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Enter contact person's email"
                       required
                     />
                   </div>

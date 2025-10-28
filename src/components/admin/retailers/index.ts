@@ -8,6 +8,7 @@ export { SalesHistoryCard } from "./SalesHistoryCard";
 export { TerminalsModal } from "./TerminalsModal";
 export { SalesHistoryModal } from "./SalesHistoryModal";
 export { AddTerminalModal } from "./AddTerminalModal";
+export { EditTerminalModal } from "./EditTerminalModal";
 export { CommissionGroupModal } from "./CommissionGroupModal";
 export { SalesAgentModal } from "./SalesAgentModal";
 export { DepositModal } from "./DepositModal";

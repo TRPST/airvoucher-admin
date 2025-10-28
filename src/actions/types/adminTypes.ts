@@ -5,6 +5,8 @@ export type Retailer = {
   name: string;
   contact_name: string;
   contact_email: string;
+  location?: string;
+  secondary_contact_name?: string;
   balance: number;
   credit_limit: number;
   credit_used: number;
@@ -39,6 +41,7 @@ export type Terminal = {
   name: string;
   last_active: string | null;
   status: 'active' | 'inactive';
+  short_code: string;
   auth_user_id?: string; // Now optional since it's been removed from the database
   email?: string; // Optional since we're not fetching it anymore
 };
@@ -57,7 +60,7 @@ export type VoucherType = {
   id: string;
   name: string;
   supplier_commission_pct: number;
-  category: 'airtime' | 'data' | 'other' | null;
+  category: 'airtime' | 'data' | 'other' | 'bill_payment' | null;
   sub_category: 'daily' | 'weekly' | 'monthly' | null;
   network_provider: 'cellc' | 'mtn' | 'vodacom' | 'telkom' | null;
   is_active: boolean;
@@ -66,7 +69,7 @@ export type VoucherType = {
 };
 
 export type NetworkProvider = 'cellc' | 'mtn' | 'vodacom' | 'telkom';
-export type VoucherCategory = 'airtime' | 'data' | 'other';
+export type VoucherCategory = 'airtime' | 'data' | 'other' | 'bill_payment';
 export type DataDuration = 'daily' | 'weekly' | 'monthly';
 
 export type NetworkVoucherSummary = {
@@ -143,6 +146,7 @@ export type ProfileData = {
   email: string;
   phone?: string;
   role: 'admin' | 'retailer' | 'agent' | 'terminal';
+  status?: 'active' | 'inactive';
 };
 
 export type RetailerData = {
@@ -150,6 +154,7 @@ export type RetailerData = {
   contact_name?: string;
   contact_email?: string;
   location?: string;
+  secondary_contact_name?: string;
   agent_profile_id?: string;
   commission_group_id?: string;
   initial_balance?: number;

@@ -6,6 +6,7 @@ interface RetailerFormProps {
   formData: {
     businessName: string;
     contactName: string;
+    secondaryContactName: string;
     email: string;
     location: string;
     agentId: string;
@@ -66,6 +67,17 @@ export function RetailerForm({
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           placeholder="Contact person name"
           required
+        />
+      </div>
+      <div className="mb-4 space-y-2">
+        <label className="text-sm font-medium">Second Contact Person</label>
+        <input
+          type="text"
+          name="secondaryContactName"
+          value={formData.secondaryContactName}
+          onChange={onInputChange}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="Optional secondary contact"
         />
       </div>
       <div className="mb-4 space-y-2">

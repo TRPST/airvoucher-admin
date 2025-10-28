@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { Smartphone, ChevronDown, Plus, MoreHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import type { TerminalSectionProps } from "./types";
+import { EditTerminalModal } from "./EditTerminalModal";
 
 export function TerminalsSection({
   retailerId,
@@ -12,9 +14,48 @@ export function TerminalsSection({
   onToggle,
   onAddTerminal,
 }: TerminalSectionProps) {
+  const [selectedTerminal, setSelectedTerminal] =
+    useState<TerminalSectionProps["terminals"][number] | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!selectedTerminal) {
+      return;
+    }
+
+    const latest = terminals.find(
+      (terminal) => terminal.id === selectedTerminal.id
+    );
+
+    if (latest && latest !== selectedTerminal) {
+      setSelectedTerminal(latest);
+    }
+  }, [terminals, selectedTerminal]);
+
+  const handleEditClick = (
+    terminal: TerminalSectionProps["terminals"][number]
+  ) => {
+    setSelectedTerminal(terminal);
+    setIsEditModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsEditModalOpen(false);
+    setSelectedTerminal(null);
+  };
+
+  const handleTerminalUpdated = (
+    updatedTerminal: TerminalSectionProps["terminals"][number]
+  ) => {
+    const updatedTerminals = terminals.map((terminal) =>
+      terminal.id === updatedTerminal.id ? updatedTerminal : terminal
+    );
+    onTerminalsUpdate(updatedTerminals);
+  };
 
   // Format terminal data for table
   const terminalData = terminals.map((terminal) => ({
+    ID: terminal.short_code ?? "-",
     Name: terminal.name,
     Status: (
       <div
@@ -39,7 +80,12 @@ export function TerminalsSection({
       : "Never",
     Actions: (
       <div className="flex items-center gap-2">
-        <button className="rounded-md p-2 hover:bg-muted">
+        <button
+          type="button"
+          onClick={() => handleEditClick(terminal)}
+          className="rounded-md p-2 hover:bg-muted"
+          aria-label={`Edit ${terminal.name}`}
+        >
           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
@@ -85,7 +131,7 @@ export function TerminalsSection({
                 </button>
               </div>
               <TablePlaceholder
-                columns={["Name", "Status", "Last Active", "Actions"]}
+                columns={["ID", "Name", "Status", "Last Active", "Actions"]}
                 data={terminalData}
                 emptyMessage="No terminals found for this retailer"
               />
@@ -93,6 +139,12 @@ export function TerminalsSection({
           </motion.div>
         )}
       </AnimatePresence>
+      <EditTerminalModal
+        isOpen={isEditModalOpen}
+        onClose={handleModalClose}
+        terminal={selectedTerminal}
+        onTerminalUpdated={handleTerminalUpdated}
+      />
     </div>
   );
 }

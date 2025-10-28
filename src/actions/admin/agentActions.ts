@@ -15,6 +15,7 @@ export async function fetchAgents(): Promise<ResponseType<Agent[]>> {
         full_name,
         email,
         phone,
+        status,
         avatar_url,
         created_at,
         updated_at
@@ -102,8 +103,11 @@ export async function fetchAgents(): Promise<ResponseType<Agent[]>> {
         return saleDate >= thirtyDaysAgo;
       });
 
-      const hasActiveRetailers = retailerCountMap.get(profile.id) || 0 > 0;
-      const status = (hasActiveRetailers && hasRecentSales) ? "active" : "inactive";
+      const hasActiveRetailers = (retailerCountMap.get(profile.id) || 0) > 0;
+      const storedStatus = (profile.status as Agent["status"] | null) ?? null;
+      const status =
+        storedStatus ??
+        ((hasActiveRetailers && hasRecentSales) ? "active" : "inactive");
 
       return {
         id: profile.id,
@@ -145,6 +149,7 @@ export async function fetchAgentById(agentId: string): Promise<ResponseType<Agen
         full_name,
         email,
         phone,
+        status,
         avatar_url,
         created_at,
         updated_at
@@ -219,7 +224,10 @@ export async function fetchAgentById(agentId: string): Promise<ResponseType<Agen
     });
 
     const hasActiveRetailers = (retailerCount?.length || 0) > 0;
-    const status = (hasActiveRetailers && hasRecentSales) ? "active" : "inactive";
+    const storedStatus = (profile.status as Agent["status"] | null) ?? null;
+    const status =
+      storedStatus ??
+      ((hasActiveRetailers && hasRecentSales) ? "active" : "inactive");
 
     const agent: Agent = {
       id: profile.id,
@@ -256,6 +264,7 @@ export async function updateAgent(
     email?: string;
     phone?: string;
     avatar_url?: string;
+    status?: "active" | "inactive";
   }
 ): Promise<ResponseType<{ id: string }>> {
   const supabase = createClient();
@@ -327,6 +336,7 @@ export async function createAgent(params: {
     full_name: string;
     email: string;
     phone?: string;
+    status: "active" | "inactive";
   };
   password: string;
 }): Promise<ResponseType<{ id: string }>> {
@@ -371,6 +381,7 @@ export async function createAgent(params: {
         full_name: params.profileData.full_name,
         email: params.profileData.email,
         phone: params.profileData.phone,
+        status: params.profileData.status,
       })
       .select("id")
       .single();

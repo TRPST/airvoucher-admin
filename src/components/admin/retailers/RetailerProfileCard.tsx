@@ -35,6 +35,18 @@ export function RetailerProfileCard({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Second Contact:</span>
+              <span className="font-medium">
+                {retailer.secondary_contact_name || "Not provided"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Location:</span>
+              <span className="font-medium">
+                {retailer.location || "Not provided"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Status:</span>
               <div
                 className={cn(

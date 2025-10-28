@@ -50,6 +50,7 @@ export {
   fetchTerminals as fetchAdminTerminals,
   createTerminal,
   createTerminalWithUser,
+  updateTerminal,
   fetchVoucherInventory,
   uploadVouchers,
   disableVoucher,
