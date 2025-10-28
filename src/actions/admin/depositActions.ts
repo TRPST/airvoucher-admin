@@ -175,10 +175,10 @@ export async function processRetailerDeposit({
       };
     }
 
-    // Step 5: Get current retailer balance
+    // Step 5: Get current retailer balance and credit limit
     const { data: retailer, error: retailerError } = await supabase
       .from("retailers")
-      .select("balance")
+      .select("balance, credit_limit")
       .eq("id", retailer_id)
       .single();
 
@@ -187,6 +187,7 @@ export async function processRetailerDeposit({
     }
 
     const balance_before = retailer.balance;
+    const credit_limit = retailer.credit_limit || 0;
     
     // Calculate balance_after based on adjustment type
     let balance_after: number;
@@ -196,12 +197,13 @@ export async function processRetailerDeposit({
       // removal
       balance_after = balance_before - net_amount;
       
-      // Validate that removal won't result in negative balance
-      if (balance_after < 0) {
+      // Validate that removal won't exceed credit limit (balance can be negative up to -credit_limit)
+      const min_allowed_balance = -credit_limit;
+      if (balance_after < min_allowed_balance) {
         return {
           data: null,
           error: new Error(
-            `Cannot remove R ${net_amount.toFixed(2)}. Current balance is only R ${balance_before.toFixed(2)}`
+            `Cannot remove R ${net_amount.toFixed(2)}. Would exceed credit limit. Minimum allowed balance: -R ${credit_limit.toFixed(2)} (Current: R ${balance_before.toFixed(2)})`
           ),
         };
       }
