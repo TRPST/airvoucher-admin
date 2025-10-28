@@ -104,7 +104,7 @@ export function BalanceHistoryModal({
             onValueChange={setActiveTab}
             className="flex-1 flex flex-col overflow-hidden min-h-0"
           >
-            <Tabs.List className="flex border-b border-border flex-shrink-0">
+            <Tabs.List className="flex flex-shrink-0">
               <Tabs.Trigger
                 value="deposits"
                 className={cn(
@@ -132,7 +132,7 @@ export function BalanceHistoryModal({
             {/* Deposit History Tab */}
             <Tabs.Content
               value="deposits"
-              className="flex-1 flex flex-col overflow-hidden min-h-0"
+              className="flex overflow-y-auto min-h-0 mt-2"
             >
               {isLoadingDeposits ? (
                 <div className="flex items-center justify-center py-12">
@@ -149,9 +149,9 @@ export function BalanceHistoryModal({
                   <p className="text-sm">Deposits will appear here once processed</p>
                 </div>
               ) : (
-                <div className="flex-1 grid grid-rows-[1fr_auto_auto] min-h-0">
-                  <div className="rounded-md border border-border overflow-hidden flex flex-col min-h-0">
-                    <div className="flex-1 overflow-auto">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 rounded-md border border-border overflow-hidden flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto">
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-muted border-b border-border z-10">
                           <tr>
@@ -262,7 +262,7 @@ export function BalanceHistoryModal({
             </Tabs.Content>
 
             {/* Credit History Tab */}
-            <Tabs.Content value="credit" className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <Tabs.Content value="credit" className="flex overflow-y-auto min-h-0">
               {isLoadingCredit ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -280,8 +280,8 @@ export function BalanceHistoryModal({
                   </p>
                 </div>
               ) : (
-                <div className="flex-1 grid grid-rows-[1fr_auto_auto] min-h-0">
-                  <div className="rounded-md border border-border overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 rounded-md border border-border overflow-hidden flex flex-col min-h-0">
                     <div className="flex-1 overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-muted border-b border-border z-10">
