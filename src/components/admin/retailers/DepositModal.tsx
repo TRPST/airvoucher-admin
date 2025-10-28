@@ -85,6 +85,9 @@ export function DepositModal({
   const projectedBalance = adjustmentType === "deposit"
     ? retailer.balance + netAmount
     : retailer.balance - netAmount;
+  
+  const minAllowedBalance = -retailer.credit_limit;
+  const wouldExceedCreditLimit = adjustmentType === "removal" && projectedBalance < minAllowedBalance;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +103,9 @@ export function DepositModal({
       return;
     }
 
-    // Validate removal won't result in negative balance
-    if (adjustmentType === "removal" && projectedBalance < 0) {
-      setError(`Cannot remove R ${netAmount.toFixed(2)}. Current balance is only R ${retailer.balance.toFixed(2)}`);
+    // Validate removal won't exceed credit limit
+    if (wouldExceedCreditLimit) {
+      setError(`Cannot remove R ${netAmount.toFixed(2)}. Would exceed credit limit. Minimum allowed balance: -R ${retailer.credit_limit.toFixed(2)}`);
       return;
     }
 
@@ -157,8 +160,8 @@ export function DepositModal({
     <Dialog.Root open={isOpen} onOpenChange={handleClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
-          <div className="flex items-center justify-between">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg max-h-[90vh] translate-x-[-50%] translate-y-[-50%] border border-border bg-card shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
             <Dialog.Title className="text-lg font-semibold">
               {adjustmentType === "deposit" ? "Process Deposit" : "Remove Balance"}
             </Dialog.Title>
@@ -168,12 +171,13 @@ export function DepositModal({
             </Dialog.Close>
           </div>
 
-          {isLoadingFees ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="mt-2 space-y-4">
+          <div className="flex-1 overflow-y-auto px-6">
+            {isLoadingFees ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="py-4 space-y-4">
               {error && (
                 <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
                   <div className="flex items-center">
@@ -283,10 +287,24 @@ export function DepositModal({
                       </div>
                       <div className="flex justify-between text-sm border-t border-border pt-2">
                         <span className="font-medium">New Balance:</span>
-                        <span className={`font-bold ${adjustmentType === "deposit" ? "text-green-600" : "text-orange-600"}`}>
+                        <span className={`font-bold ${adjustmentType === "deposit" ? "text-green-600" : projectedBalance < 0 ? "text-red-600" : "text-orange-600"}`}>
                           R {projectedBalance.toFixed(2)}
                         </span>
                       </div>
+                      {adjustmentType === "removal" && (
+                        <div className="mt-2 pt-2 border-t border-border">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Credit Limit:</span>
+                            <span>R {retailer.credit_limit.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                            <span>Min Allowed Balance:</span>
+                            <span className={wouldExceedCreditLimit ? "text-red-600 font-medium" : ""}>
+                              -R {retailer.credit_limit.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -315,7 +333,7 @@ export function DepositModal({
                   </Dialog.Close>
                   <button
                     type="submit"
-                    disabled={isProcessing || amount <= 0 || netAmount <= 0 || (adjustmentType === "removal" && projectedBalance < 0)}
+                    disabled={isProcessing || amount <= 0 || netAmount <= 0 || wouldExceedCreditLimit}
                     className={`rounded-md px-4 py-2 text-sm font-medium shadow disabled:opacity-50 disabled:cursor-not-allowed ${
                       adjustmentType === "deposit"
                         ? "bg-green-600 text-white hover:bg-green-700"
@@ -343,10 +361,11 @@ export function DepositModal({
                     </>
                   )}
                   </button>
-                </div>
-              </form>
-            </div>
-          )}
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
