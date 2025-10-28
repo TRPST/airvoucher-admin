@@ -245,7 +245,11 @@ export function BalanceHistoryModal({
                       <span>
                         Total deposited: R{" "}
                         {deposits
-                          .reduce((sum, d) => sum + d.amount_deposited, 0)
+                          .reduce((sum, d) => {
+                            return d.adjustment_type === 'removal' 
+                              ? sum - d.amount_deposited 
+                              : sum + d.amount_deposited;
+                          }, 0)
                           .toFixed(2)}
                       </span>
                     </div>
@@ -262,7 +266,7 @@ export function BalanceHistoryModal({
             </Tabs.Content>
 
             {/* Credit History Tab */}
-            <Tabs.Content value="credit" className="flex overflow-y-auto min-h-0">
+            <Tabs.Content value="credit" className="flex items-center justify-center overflow-y-auto min-h-0">
               {isLoadingCredit ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
