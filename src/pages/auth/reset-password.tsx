@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { createClient } from '@/utils/supabase/client';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -14,19 +15,25 @@ export default function ResetPasswordPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    // Extract token from URL hash (Supabase sends it as #access_token=...)
     if (typeof window !== 'undefined') {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const token = hashParams.get('access_token');
-
-      if (token) {
-        setAccessToken(token);
-      } else {
-        setError('Invalid or missing reset token. Please request a new password reset.');
-      }
+      if (token) setAccessToken(token);
+      else setError('Invalid or missing reset token. Please request a new password reset.');
     }
+  }, []);
+
+  // 🔹 Listen for Supabase password recovery event
+  useEffect(() => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('Password recovery event detected');
+      }
+    });
+    return () => subscription.subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,66 +41,48 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
     setError(null);
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
-    // Validate password length
     if (password.length < 8) {
       setError('Password must be at least 8 characters long');
       setIsLoading(false);
       return;
     }
 
-    // Validate password complexity
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      setError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+    if (!hasUpper || !hasLower || !hasNumber) {
+      setError('Password must contain at least one uppercase, one lowercase, and one number');
       setIsLoading(false);
       return;
     }
 
     if (!accessToken) {
-      setError('Invalid or missing reset token');
+      setError('Missing reset token');
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password, accessToken }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to reset password');
-        return;
-      }
-
+      const { data, error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       setSuccess(true);
-
-      // Redirect to login after 3 seconds
       setTimeout(() => {
         router.push('/auth');
       }, 3000);
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      setError('An unexpected error occurred. Please try again.');
+    } catch (err: any) {
+      console.error('Error resetting password:', err);
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
