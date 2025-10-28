@@ -68,6 +68,21 @@ export {
 } from './admin/commissionGroupActions';
 export type { CommissionGroupWithCounts } from './admin/commissionGroupActions';
 
+// Re-export deposit actions
+export {
+  fetchDepositFeeConfigurations,
+  updateDepositFeeConfiguration,
+  processRetailerDeposit,
+  fetchRetailerDepositHistory,
+} from './admin/depositActions';
+export type {
+  DepositMethod,
+  FeeType,
+  DepositFeeConfiguration,
+  RetailerDeposit,
+  ProcessDepositParams,
+} from './admin/depositActions';
+
 // Re-export report actions
 export {
   fetchSalesReport,

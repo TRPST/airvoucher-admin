@@ -22,7 +22,9 @@ export interface SalesHistorySectionProps {
 
 export interface FinancialOverviewProps {
   retailer: AdminRetailer;
-  onBalanceUpdate: (balance: number, creditLimit: number) => void;
+  onDepositClick: () => void;
+  onCreditLimitClick: () => void;
+  onDepositHistoryClick: () => void;
 }
 
 export interface ModalProps {

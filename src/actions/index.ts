@@ -77,6 +77,34 @@ export {
   type VoucherCommissionOverride,
 } from './admin/commissionOverrideActions';
 
+// Deposit exports
+export type {
+  DepositMethod,
+  FeeType,
+  DepositFeeConfiguration,
+  RetailerDeposit,
+  ProcessDepositParams,
+} from './adminActions';
+
+export {
+  fetchDepositFeeConfigurations,
+  updateDepositFeeConfiguration,
+  processRetailerDeposit,
+  fetchRetailerDepositHistory,
+} from './adminActions';
+
+// Credit limit exports
+export type {
+  AdjustmentType,
+  CreditLimitAdjustment,
+  ProcessCreditAdjustmentParams,
+} from './admin/creditActions';
+
+export {
+  processCreditLimitAdjustment,
+  fetchRetailerCreditHistory,
+} from './admin/creditActions';
+
 // Retailer exports
 export type {
   RetailerProfile,
