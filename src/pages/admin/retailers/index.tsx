@@ -277,7 +277,7 @@ export default function AdminRetailers() {
   })();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6" style={{height: '75vh'}}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Retailers</h1>
@@ -319,7 +319,9 @@ export default function AdminRetailers() {
         </div>
       </div>
 
-      <RetailerTable retailers={filteredRetailers} />
+      <div className="flex-1 h-full">
+        <RetailerTable retailers={filteredRetailers} />
+      </div>
 
       <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
         <Dialog.Portal>

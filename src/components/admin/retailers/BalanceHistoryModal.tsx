@@ -156,8 +156,9 @@ export function BalanceHistoryModal({
                         <thead className="bg-muted/50 border-b border-border">
                           <tr>
                             <th className="px-4 py-3 text-left font-medium">Date</th>
+                            <th className="px-4 py-3 text-left font-medium">Type</th>
                             <th className="px-4 py-3 text-left font-medium">Method</th>
-                            <th className="px-4 py-3 text-right font-medium">Deposited</th>
+                            <th className="px-4 py-3 text-right font-medium">Amount</th>
                             <th className="px-4 py-3 text-right font-medium">Fee</th>
                             <th className="px-4 py-3 text-right font-medium">Net Amount</th>
                             <th className="px-4 py-3 text-right font-medium">Balance Before</th>
@@ -166,52 +167,71 @@ export function BalanceHistoryModal({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                          {deposits.map((deposit) => (
-                            <tr
-                              key={deposit.id}
-                              className="hover:bg-muted/30 transition-colors"
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                {formatDate(deposit.created_at)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                                  {deposit.deposit_method}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-medium">
-                                R {deposit.amount_deposited.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right text-destructive">
-                                {formatFeeDisplay(deposit)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-primary">
-                                R {deposit.net_amount.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-medium">
-                                R {(deposit.balance_after - deposit.net_amount).toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-medium text-green-600">
-                                R {deposit.balance_after.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {deposit.processed_by_name ? (
-                                  <div className="text-xs">
-                                    <div className="font-medium">
-                                      {deposit.processed_by_name}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                      {deposit.processed_by_email || ""}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">
-                                    Unknown
+                          {deposits.map((deposit) => {
+                            const isRemoval = deposit.adjustment_type === 'removal';
+                            return (
+                              <tr
+                                key={deposit.id}
+                                className="hover:bg-muted/30 transition-colors"
+                              >
+                                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                  {formatDate(deposit.created_at)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                      isRemoval
+                                        ? "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                                        : "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                                    )}
+                                  >
+                                    {isRemoval ? "Removal" : "Deposit"}
                                   </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                    {deposit.deposit_method}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right font-medium">
+                                  <span className={isRemoval ? "text-red-600" : ""}>
+                                    {isRemoval ? "-" : ""}R {deposit.amount_deposited.toFixed(2)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right text-destructive">
+                                  {formatFeeDisplay(deposit)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-primary">
+                                  {isRemoval ? "-" : ""}R {deposit.net_amount.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right font-medium">
+                                  R {deposit.balance_before.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right font-medium">
+                                  <span className={isRemoval ? "text-orange-600" : "text-green-600"}>
+                                    R {deposit.balance_after.toFixed(2)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  {deposit.processed_by_name ? (
+                                    <div className="text-xs">
+                                      <div className="font-medium">
+                                        {deposit.processed_by_name}
+                                      </div>
+                                      <div className="text-muted-foreground">
+                                        {deposit.processed_by_email || ""}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">
+                                      Unknown
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

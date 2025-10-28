@@ -13,7 +13,7 @@ import {
 export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
   const supabase = createClient();
   try {
-    // Step 1: Fetch all retailers
+    // Step 1: Fetch all retailers ordered by creation date (newest first)
     const { data, error } = await supabase.from("retailers").select(`
       id,
       name,
@@ -30,7 +30,8 @@ export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
       commission_group_id,
       profiles!retailers_user_profile_id_fkey(full_name, email),
       agent_profiles:profiles!retailers_agent_profile_id_fkey(id, full_name)
-    `);
+    `)
+    .order('created_at', { ascending: false });
 
     if (error) {
       return { data: null, error };

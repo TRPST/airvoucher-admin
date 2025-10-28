@@ -82,6 +82,7 @@ export type {
   DepositMethod,
   FeeType,
   DepositFeeConfiguration,
+  DepositAdjustmentType,
   RetailerDeposit,
   ProcessDepositParams,
 } from './adminActions';

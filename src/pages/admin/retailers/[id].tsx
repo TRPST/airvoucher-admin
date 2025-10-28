@@ -9,8 +9,10 @@ import {
   NotFoundState,
   RetailerProfileCard,
   FinancialOverview,
-  TerminalsSection,
-  SalesHistorySection,
+  TerminalsCard,
+  SalesHistoryCard,
+  TerminalsModal,
+  SalesHistoryModal,
   AddTerminalModal,
   CommissionGroupModal,
   SalesAgentModal,
@@ -32,7 +34,6 @@ import {
 export default function RetailerDetails() {
   const router = useRouter();
   const { id } = router.query;
-  const [expandedSection, setExpandedSection] = useState<string | null>("terminals");
 
   // State for data and loading
   const [retailer, setRetailer] = useState<AdminRetailer | null>(null);
@@ -42,6 +43,8 @@ export default function RetailerDetails() {
   const [error, setError] = useState<string | null>(null);
 
   // Modal states
+  const [showTerminalsModal, setShowTerminalsModal] = useState(false);
+  const [showSalesHistoryModal, setShowSalesHistoryModal] = useState(false);
   const [showAddTerminalModal, setShowAddTerminalModal] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
@@ -170,10 +173,6 @@ export default function RetailerDetails() {
     }
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
   // Loading state
   if (isLoading) {
     return <LoadingState />;
@@ -233,27 +232,41 @@ export default function RetailerDetails() {
         onDepositHistoryClick={() => setShowBalanceHistoryModal(true)}
       />
 
-      {/* Expandable Sections */}
-      <div className="space-y-4">
-        {/* Terminals Section */}
-        <TerminalsSection
-          retailerId={typeof id === "string" ? id : ""}
-          terminals={terminals}
-          onTerminalsUpdate={handleTerminalsUpdate}
-          isExpanded={expandedSection === "terminals"}
-          onToggle={() => toggleSection("terminals")}
-          onAddTerminal={() => setShowAddTerminalModal(true)}
+      {/* Cards Section */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
+        {/* Sales History Card */}
+        <SalesHistoryCard
+          sales={sales}
+          onClick={() => setShowSalesHistoryModal(true)}
         />
 
-        {/* Sales History Section */}
-        <SalesHistorySection
-          sales={sales}
-          isExpanded={expandedSection === "sales"}
-          onToggle={() => toggleSection("sales")}
+        {/* Terminals Card */}
+        <TerminalsCard
+          terminals={terminals}
+          onClick={() => setShowTerminalsModal(true)}
         />
       </div>
 
       {/* Modals */}
+      <TerminalsModal
+        isOpen={showTerminalsModal}
+        onClose={() => setShowTerminalsModal(false)}
+        retailerId={typeof id === "string" ? id : ""}
+        terminals={terminals}
+        onAddTerminal={() => {
+          setShowTerminalsModal(false);
+          setShowAddTerminalModal(true);
+        }}
+        onTerminalsUpdate={handleTerminalsUpdate}
+      />
+
+      <SalesHistoryModal
+        isOpen={showSalesHistoryModal}
+        onClose={() => setShowSalesHistoryModal(false)}
+        sales={sales}
+        retailerName={retailer.name}
+      />
+
       <AddTerminalModal
         isOpen={showAddTerminalModal}
         onClose={() => setShowAddTerminalModal(false)}

@@ -6,24 +6,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
 const tablePlaceholderVariants = cva(
-  "w-full overflow-auto rounded-lg border border-border bg-card shadow-sm animate-fade-in",
-  {
-    variants: {
-      size: {
-        sm: "max-h-[300px]",
-        md: "max-h-[500px]",
-        lg: "max-h-[700px]",
-      },
-    },
-    defaultVariants: {
-      size: "md",
-    },
-  }
+  "w-full max-h-full rounded-lg border border-border bg-card shadow-sm animate-fade-in flex flex-col"
 );
 
 export interface TablePlaceholderProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof tablePlaceholderVariants> {
+  extends React.HTMLAttributes<HTMLDivElement> {
   columns: string[];
   rows?: number;
   loading?: boolean;
@@ -34,7 +21,6 @@ export interface TablePlaceholderProps
 
 export function TablePlaceholder({
   className,
-  size,
   columns,
   rows = 5,
   loading = false,
@@ -99,10 +85,11 @@ export function TablePlaceholder({
 
   return (
     <div
-      className={cn(tablePlaceholderVariants({ size, className }))}
+      className={cn(tablePlaceholderVariants(), className)}
       {...props}
     >
-      <table className="w-full border-collapse">
+      <div className="overflow-auto flex-1">
+        <table className="w-full border-collapse">
         <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <tr className="border-b border-border">
             {columns.map((column, index) => (
@@ -115,8 +102,9 @@ export function TablePlaceholder({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">{renderRows()}</tbody>
-      </table>
+          <tbody className="divide-y divide-border">{renderRows()}</tbody>
+        </table>
+      </div>
     </div>
   );
 }

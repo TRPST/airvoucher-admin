@@ -14,6 +14,8 @@ export type DepositFeeConfiguration = {
   updated_at: string;
 };
 
+export type DepositAdjustmentType = 'deposit' | 'removal';
+
 export type RetailerDeposit = {
   id: string;
   retailer_id: string;
@@ -25,6 +27,7 @@ export type RetailerDeposit = {
   net_amount: number;
   balance_before: number;
   balance_after: number;
+  adjustment_type: DepositAdjustmentType;
   processed_by: string | null;
   processed_by_name?: string;
   processed_by_email?: string;
@@ -36,6 +39,7 @@ export type ProcessDepositParams = {
   retailer_id: string;
   amount_deposited: number;
   deposit_method: DepositMethod;
+  adjustment_type: DepositAdjustmentType;
   notes?: string;
 };
 
@@ -118,6 +122,7 @@ export async function processRetailerDeposit({
   retailer_id,
   amount_deposited,
   deposit_method,
+  adjustment_type,
   notes,
 }: ProcessDepositParams): Promise<{
   data: RetailerDeposit | null;
@@ -165,7 +170,7 @@ export async function processRetailerDeposit({
       return {
         data: null,
         error: new Error(
-          "Deposit amount must be greater than the fee amount"
+          "Amount must be greater than the fee amount"
         ),
       };
     }
@@ -182,7 +187,25 @@ export async function processRetailerDeposit({
     }
 
     const balance_before = retailer.balance;
-    const balance_after = balance_before + net_amount;
+    
+    // Calculate balance_after based on adjustment type
+    let balance_after: number;
+    if (adjustment_type === 'deposit') {
+      balance_after = balance_before + net_amount;
+    } else {
+      // removal
+      balance_after = balance_before - net_amount;
+      
+      // Validate that removal won't result in negative balance
+      if (balance_after < 0) {
+        return {
+          data: null,
+          error: new Error(
+            `Cannot remove R ${net_amount.toFixed(2)}. Current balance is only R ${balance_before.toFixed(2)}`
+          ),
+        };
+      }
+    }
 
     // Step 6: Update retailer balance
     const { error: updateError } = await supabase
@@ -194,7 +217,7 @@ export async function processRetailerDeposit({
       return { data: null, error: updateError };
     }
 
-    // Step 7: Record the deposit in audit trail
+    // Step 7: Record the transaction in audit trail
     const { data: deposit, error: depositError } = await supabase
       .from("retailer_deposits")
       .insert({
@@ -207,6 +230,7 @@ export async function processRetailerDeposit({
         net_amount,
         balance_before,
         balance_after,
+        adjustment_type,
         processed_by: user.id,
         notes: notes || null,
       })
@@ -271,6 +295,7 @@ export async function fetchRetailerDepositHistory(
       net_amount: deposit.net_amount,
       balance_before: deposit.balance_before,
       balance_after: deposit.balance_after,
+      adjustment_type: deposit.adjustment_type || 'deposit', // Default to 'deposit' for backwards compatibility
       processed_by: deposit.processed_by,
       processed_by_name: deposit.profiles?.full_name,
       processed_by_email: deposit.profiles?.email,
