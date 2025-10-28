@@ -88,7 +88,7 @@ export function TablePlaceholder({
       className={cn(tablePlaceholderVariants(), className)}
       {...props}
     >
-      <div className="overflow-auto flex-1">
+      <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
         <table className="w-full border-collapse">
         <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <tr className="border-b border-border">

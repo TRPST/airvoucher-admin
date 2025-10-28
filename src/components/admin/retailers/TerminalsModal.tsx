@@ -91,14 +91,14 @@ export function TerminalsModal({
               emptyMessage="No terminals found for this retailer"
             />
           </div>
-
+{/* 
           <div className="flex justify-end pt-4 border-border">
             <Dialog.Close asChild>
               <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
                 Close
               </button>
             </Dialog.Close>
-          </div>
+          </div> */}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
