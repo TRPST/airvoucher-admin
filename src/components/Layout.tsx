@@ -37,9 +37,10 @@ type UserRole = "admin" | "retailer" | "agent" | "terminal" | "cashier";
 interface LayoutProps {
   children: React.ReactNode;
   role?: UserRole;
+  fullscreen?: boolean;
 }
 
-export function Layout({ children, role = "admin" }: LayoutProps) {
+export function Layout({ children, role = "admin", fullscreen = false }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -407,6 +408,27 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const bottomTabItems = getBottomTabItems(role);
   const mobileSidebarItems = getMobileSidebarItems(role);
 
+  // Fullscreen layout (no sidebar)
+  if (fullscreen) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        {/* Mobile top nav */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4 md:p-6">
+          <div className="flex items-center">
+            <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8" />
+          </div>
+          <ThemeToggle />
+        </div>
+
+        {/* Main content */}
+        <main className="flex-1">
+          <div className="mx-auto max-w-full p-4 md:p-6 lg:p-8">
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Regular layout for other roles
   return (
