@@ -495,7 +495,7 @@ function SalesReportContent() {
 
           {filteredAndSortedSales.length > 0 ? (
             <div className="rounded-lg border border-border shadow-sm">
-              <div className="overflow-x-auto max-h-[calc(100vh-500px)] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[95vh] overflow-y-auto">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <tr className="border-b border-border">
