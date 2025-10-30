@@ -23,6 +23,7 @@ function SalesReportContent() {
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
 
   // Table state
@@ -61,10 +62,11 @@ function SalesReportContent() {
     loadSales();
   }, [startDate, endDate]);
 
-  // Get unique voucher types, retailers, and agents
+  // Get unique voucher types, retailers, agents, and commission groups
   const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
   const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
   const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
+  const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
 
   // Quick filter handler
   const handleQuickFilter = (filter: QuickFilter) => {
@@ -124,6 +126,11 @@ function SalesReportContent() {
     // Apply agent filter
     if (agentFilter !== 'all') {
       filtered = filtered.filter(sale => sale.agent_name === agentFilter);
+    }
+
+    // Apply commission group filter
+    if (commissionGroupFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.commission_group_name === commissionGroupFilter);
     }
 
     // Apply sorting
@@ -390,7 +397,7 @@ function SalesReportContent() {
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <label htmlFor="voucherTypeFilter" className="block text-sm font-medium mb-2">
             Filter by Voucher Type
@@ -443,6 +450,25 @@ function SalesReportContent() {
             {agents.map((agent) => (
               <option key={agent} value={agent}>
                 {agent}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="commissionGroupFilter" className="block text-sm font-medium mb-2">
+            Filter by Commission Group
+          </label>
+          <select
+            id="commissionGroupFilter"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={commissionGroupFilter}
+            onChange={(e) => setCommissionGroupFilter(e.target.value)}
+          >
+            <option value="all">All Groups</option>
+            {commissionGroups.map((group) => (
+              <option key={group} value={group}>
+                {group}
               </option>
             ))}
           </select>
@@ -541,6 +567,7 @@ function SalesReportContent() {
                             ))}
                         </button>
                       </th>
+                      <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
                       <th className="whitespace-nowrap px-4 py-3">
                         <button
                           onClick={() => handleSort('voucher_type')}
@@ -602,6 +629,9 @@ function SalesReportContent() {
                             {sale.agent_name || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.commission_group_name || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
                               <div
                                 className={cn(
@@ -648,7 +678,7 @@ function SalesReportContent() {
                   </tbody>
                   <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                     <tr className="font-semibold">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={4}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={5}>
                         TOTAL
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">

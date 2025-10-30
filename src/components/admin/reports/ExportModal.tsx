@@ -61,6 +61,7 @@ export function ExportModal({
       'Date',
       'Retailer',
       'Agent',
+      'Commission Group',
       'Type',
       'Amount',
       'Supplier Commission',
@@ -78,6 +79,7 @@ export function ExportModal({
         new Date(sale.created_at).toLocaleString('en-ZA'),
         sale.retailer_name || 'Unknown',
         sale.agent_name || '-',
+        sale.commission_group_name || '-',
         sale.voucher_type || 'Unknown',
         sale.amount.toFixed(2),
         supplierCommissionAmount.toFixed(2),
@@ -90,6 +92,7 @@ export function ExportModal({
     // Add totals row
     rows.push([
       'TOTAL',
+      '',
       '',
       '',
       '',
@@ -119,18 +122,6 @@ export function ExportModal({
       // Dynamically import xlsx library
       const XLSX = await import('xlsx');
 
-      const headers = [
-        'Date',
-        'Retailer',
-        'Agent',
-        'Type',
-        'Amount',
-        'Supplier Commission',
-        'Retailer Commission',
-        'Agent Commission',
-        'AV Profit',
-      ];
-
       const data = sales.map((sale) => {
         const supplierCommissionAmount =
           sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
@@ -140,6 +131,7 @@ export function ExportModal({
           Date: new Date(sale.created_at).toLocaleString('en-ZA'),
           Retailer: sale.retailer_name || 'Unknown',
           Agent: sale.agent_name || '-',
+          'Commission Group': sale.commission_group_name || '-',
           Type: sale.voucher_type || 'Unknown',
           Amount: parseFloat(sale.amount.toFixed(2)),
           'Supplier Commission': parseFloat(supplierCommissionAmount.toFixed(2)),
@@ -154,6 +146,7 @@ export function ExportModal({
         Date: 'TOTAL',
         Retailer: '',
         Agent: '',
+        'Commission Group': '',
         Type: '',
         Amount: parseFloat(totals.amount.toFixed(2)),
         'Supplier Commission': parseFloat(totals.supplierCommission.toFixed(2)),
@@ -248,15 +241,16 @@ export function ExportModal({
       (doc as any).autoTable({
         head: [
           [
-            'Date',
-            'Retailer',
-            'Agent',
-            'Type',
-            'Amount',
-            'Supp. Com.',
-            'Ret. Com.',
-            'Agent Com.',
-            'AV Profit',
+      'Date',
+      'Retailer',
+      'Agent',
+      'Commission Group',
+      'Type',
+      'Amount',
+      'Supp. Com.',
+      'Ret. Com.',
+      'Agent Com.',
+      'AV Profit',
           ],
         ],
         body: tableData,
