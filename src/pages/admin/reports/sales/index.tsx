@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { fetchSalesReport, type SalesReport } from "@/actions";
 import { Layout } from "@/components/Layout";
+import { SalesTableModal } from "@/components/admin/reports/SalesTableModal";
+import { ExportModal } from "@/components/admin/reports/ExportModal";
 
 type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
 type SortDirection = 'asc' | 'desc';
@@ -26,6 +28,10 @@ function SalesReportContent() {
   // Table state
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Modal state
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Load sales data
   useEffect(() => {
@@ -469,6 +475,22 @@ function SalesReportContent() {
             <p className="text-sm text-muted-foreground">
               {filteredAndSortedSales.length} total sales
             </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTableModal(true)}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              >
+                <Maximize2 className="h-4 w-4" />
+                Open Modal
+              </button>
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+            </div>
           </div>
 
           {filteredAndSortedSales.length > 0 ? (
@@ -669,6 +691,23 @@ function SalesReportContent() {
           )}
         </>
       )}
+
+      {/* Modals */}
+      <SalesTableModal
+        isOpen={showTableModal}
+        onClose={() => setShowTableModal(false)}
+        sales={filteredAndSortedSales}
+        initialSortField={sortField}
+        initialSortDirection={sortDirection}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        sales={filteredAndSortedSales}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
   );
 }
