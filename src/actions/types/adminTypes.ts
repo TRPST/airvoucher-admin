@@ -117,6 +117,8 @@ export type SalesReport = {
   terminal_name: string;
   retailer_name: string;
   agent_name: string;
+  commission_group_name?: string;
+  commission_group_id?: string;
   voucher_type: string;
   supplier_commission_pct: number;
   supplier_commission: number;

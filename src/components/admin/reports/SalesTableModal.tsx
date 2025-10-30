@@ -108,7 +108,7 @@ export function SalesTableModal({
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed inset-0 z-50 grid w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col">
+        <Dialog.Content className="fixed inset-0 z-50 w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -122,14 +122,14 @@ export function SalesTableModal({
             </Dialog.Close>
           </div>
 
-          <div className="flex-1 overflow-hidden space-y-2 flex flex-col">
-            <div className="flex items-center justify-between">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
+            <div className="flex items-center justify-between flex-shrink-0">
               <p className="text-sm text-muted-foreground">{sortedSales.length} total sales</p>
             </div>
 
             {/* Sales Table */}
             {sales.length > 0 ? (
-              <div className="rounded-lg border border-border shadow-sm flex-1 flex flex-col overflow-hidden">
+              <div className="rounded-lg border border-border shadow-sm flex-1 overflow-hidden flex flex-col">
                 <div className="overflow-x-auto overflow-y-auto flex-1">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -162,26 +162,27 @@ export function SalesTableModal({
                               ))}
                           </button>
                         </th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('agent_name')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            AGENT
-                            {sortField === 'agent_name' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('voucher_type')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            TYPE
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('agent_name')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          AGENT
+                          {sortField === 'agent_name' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('voucher_type')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          TYPE
                             {sortField === 'voucher_type' &&
                               (sortDirection === 'asc' ? (
                                 <ChevronUp className="h-3 w-3" />
@@ -237,6 +238,9 @@ export function SalesTableModal({
                               {sale.agent_name || '-'}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm">
+                              {sale.commission_group_name || '-'}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm">
                               <div className="flex items-center gap-2">
                                 <div
                                   className={cn(
@@ -283,7 +287,7 @@ export function SalesTableModal({
                     </tbody>
                     <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                       <tr className="font-semibold">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={4}>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={5}>
                           TOTAL
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
