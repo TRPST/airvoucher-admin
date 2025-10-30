@@ -37,9 +37,10 @@ type UserRole = "admin" | "retailer" | "agent" | "terminal" | "cashier";
 interface LayoutProps {
   children: React.ReactNode;
   role?: UserRole;
+  fullscreen?: boolean;
 }
 
-export function Layout({ children, role = "admin" }: LayoutProps) {
+export function Layout({ children, role = "admin", fullscreen = false }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -407,6 +408,14 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const bottomTabItems = getBottomTabItems(role);
   const mobileSidebarItems = getMobileSidebarItems(role);
 
+  // Fullscreen layout (no sidebar, no navbar)
+  if (fullscreen) {
+    return (
+      <div className="bg-background text-foreground">
+        {children}
+      </div>
+    );
+  }
 
   // Regular layout for other roles
   return (
