@@ -132,14 +132,14 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
       ),
       Amount: `R ${sale.amount.toFixed(2)}`,
       Retailer: sale.retailer_name || 'Unknown',
-      'Supp. Com.': `R ${supplierCommissionAmount.toFixed(2)}`,
-      'Ret. Com.': `R ${sale.retailer_commission.toFixed(2)}`,
-      'Agent Com.': `R ${sale.agent_commission.toFixed(2)}`,
+      'Supp. Com.': `R ${supplierCommissionAmount.toFixed(4)}`,
+      'Ret. Com.': `R ${sale.retailer_commission.toFixed(4)}`,
+      'Agent Com.': `R ${sale.agent_commission.toFixed(4)}`,
       'AV Profit': (
         <span
           className={cn('font-medium', airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600')}
         >
-          R {airVoucherProfit.toFixed(2)}
+          R {airVoucherProfit.toFixed(4)}
         </span>
       ),
     };

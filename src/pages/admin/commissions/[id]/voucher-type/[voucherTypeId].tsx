@@ -220,10 +220,8 @@ export default function VoucherAmountCommissions() {
     const numValue = parseFloat(normalized);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
 
-    const formattedValue =
-      field === 'supplier_pct'
-        ? formatToTwoDecimals(numValue) // keep as percent (e.g., 3.5)
-        : Math.round((numValue / 100) * 10000) / 10000; // store fraction to 4 dp
+    // All percentages stored as decimals (divided by 100) for consistency
+    const formattedValue = Math.round((numValue / 100) * 10000) / 10000;
 
     setRowDrafts((prev) => ({
       ...prev,
@@ -370,7 +368,7 @@ export default function VoucherAmountCommissions() {
       setIsBulkSaving(true);
 
       // Helper to convert percent string to stored number for fields
-      const parseSupplier = (s: string) => formatToTwoDecimals(parseFloat(s));
+      // All percentages divided by 100 to store as decimals
       const parseFraction = (s: string) => {
         const n = parseFloat(s);
         return Math.round((n / 100) * 10000) / 10000;
@@ -381,7 +379,7 @@ export default function VoucherAmountCommissions() {
         if (!originalRate) continue;
 
         const nextSupplier =
-          bulkDraft.supplier_pct === '' ? originalRate.supplier_pct : parseSupplier(bulkDraft.supplier_pct);
+          bulkDraft.supplier_pct === '' ? originalRate.supplier_pct : parseFraction(bulkDraft.supplier_pct);
         const nextRetailer =
           bulkDraft.retailer_pct === '' ? originalRate.retailer_pct : parseFraction(bulkDraft.retailer_pct);
         const nextAgent =
@@ -571,6 +569,7 @@ export default function VoucherAmountCommissions() {
                 const draft = isRowEditing ? rowDrafts[rate.amount.toString()] : null;
 
                 // Values to display in inputs when editing
+                // All stored as decimals, multiply by 100 for display
                 const draftSupplier =
                   isRowEditing && typeof draft?.supplier_pct !== 'string' ? draft?.supplier_pct ?? 0 : 0;
                 const draftRetailer =
@@ -610,7 +609,7 @@ export default function VoucherAmountCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier)}
+                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier * 100)}
                           onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
                           className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
@@ -623,7 +622,7 @@ export default function VoucherAmountCommissions() {
                               : ''
                           )}
                         >
-                          {rate.supplier_pct.toFixed(2)}%
+                          {(rate.supplier_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>
