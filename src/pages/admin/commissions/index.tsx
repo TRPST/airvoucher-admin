@@ -295,7 +295,6 @@ export default function AdminCommissions() {
       {/* Commission Groups Table */}
       <CommissionGroupsTable
         groups={groups ?? []}
-        onArchive={refreshCommissionGroups}
       />
 
       <AddCommissionDialog

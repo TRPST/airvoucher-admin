@@ -6,9 +6,11 @@ import {
   Loader2,
   AlertCircle,
   Pencil,
+  Trash2,
 } from 'lucide-react';
 import {
   updateCommissionGroup,
+  archiveCommissionGroup,
 } from '@/actions';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
@@ -56,6 +58,10 @@ export default function CommissionGroupDetail() {
     name: '',
     description: '',
   });
+
+  // Archive modal state
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = React.useState(false);
+  const [isArchiving, setIsArchiving] = React.useState(false);
 
   // SWR: fetch group meta by id
   const {
@@ -204,6 +210,33 @@ export default function CommissionGroupDetail() {
     }
   };
 
+  // Archive handler
+  const handleArchive = async () => {
+    if (!groupId) return;
+
+    try {
+      setIsArchiving(true);
+      const { error } = await archiveCommissionGroup(groupId);
+      
+      if (error) {
+        console.error('Error archiving commission group:', error);
+        toast.error(error.message || 'Failed to archive group');
+        return;
+      }
+
+      toast.success('Commission group archived successfully');
+      setIsArchiveModalOpen(false);
+      
+      // Redirect to commissions list
+      router.push('/admin/commissions');
+    } catch (err) {
+      console.error('Error archiving commission group:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to archive group');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -255,13 +288,20 @@ export default function CommissionGroupDetail() {
               {groupDescription || 'Manage commission rates for this group'}
             </p>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
             <button
               onClick={openEditGroup}
               className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
             >
               <Pencil className="mr-2 h-4 w-4" />
               Edit Group
+            </button>
+            <button
+              onClick={() => setIsArchiveModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Archive
             </button>
           </div>
         </div>
@@ -503,6 +543,51 @@ export default function CommissionGroupDetail() {
             >
               {isUpdatingGroup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Save
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation Modal */}
+      <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Commission Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive "{groupName}"? This action will hide the group from the active list.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-4 text-sm">
+            <p className="text-amber-800 dark:text-amber-200">
+              Archiving this group will not affect existing retailers or agents assigned to it, but it will no longer be available for new assignments.
+            </p>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <button
+              onClick={() => setIsArchiveModalOpen(false)}
+              disabled={isArchiving}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleArchive}
+              disabled={isArchiving}
+              className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 disabled:opacity-50 dark:bg-red-900 dark:hover:bg-red-800"
+            >
+              {isArchiving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Archiving...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Archive Group
+                </>
+              )}
             </button>
           </DialogFooter>
         </DialogContent>
