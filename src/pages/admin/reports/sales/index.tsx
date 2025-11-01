@@ -211,24 +211,28 @@ function SalesReportContent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Link href="/admin/reports">
-        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
-          Back to reports
-        </button>
-      </Link>
+      {/* Sticky header section */}
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+        {/* Back button */}
+        <Link href="/admin/reports">
+          <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
+            <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+            Back to reports
+          </button>
+        </Link>
 
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Sales Report
-          </h1>
+        {/* Header */}
+        <div className="mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Sales Report
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            Comprehensive view of all sales transactions with detailed breakdowns.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Comprehensive view of all sales transactions with detailed breakdowns.
-        </p>
       </div>
 
       {/* Quick Filters */}

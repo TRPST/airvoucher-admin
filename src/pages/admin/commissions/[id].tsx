@@ -238,7 +238,7 @@ export default function CommissionGroupDetail() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8">
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         {/* Back button */}
         <Link href="/admin/commissions" passHref>
           <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
