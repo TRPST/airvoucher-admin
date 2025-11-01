@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ChevronLeft, Phone, Database, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Phone, Database, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
   fetchVoucherTypesByNetwork,
@@ -116,14 +116,14 @@ export default function NetworkProviderVoucherSelection() {
       </div>
 
       {/* Category Selection Cards */}
-      <div className="grid max-w-2xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {hasAirtime && (
           <CategoryCard
             title={`${providerName} Airtime`}
             description={`Manage ${providerName} airtime vouchers`}
             icon={Phone}
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/airtime`)}
-            colorClass="bg-blue-500/10 text-blue-500 border-blue-500/20"
+            colorClass="bg-blue-100 dark:bg-blue-900/20"
             linkText="Airtime"
             provider={provider as NetworkProvider}
             category="airtime"
@@ -136,7 +136,7 @@ export default function NetworkProviderVoucherSelection() {
             description={`Manage ${providerName} data bundle vouchers`}
             icon={Database}
             onClick={() => router.push(`/admin/vouchers/networks/${provider}/data`)}
-            colorClass="bg-green-500/10 text-green-500 border-green-500/20"
+            colorClass="bg-green-100 dark:bg-green-900/20"
             linkText="Data"
             provider={provider as NetworkProvider}
             category="data"
@@ -212,31 +212,29 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   return (
     <div
       className={cn(
-        'flex h-full flex-col rounded-lg border border-border bg-card p-8 shadow-sm',
-        'cursor-pointer transition-all duration-200 hover:border-primary/20 hover:shadow-md',
-        'transform hover:scale-[1.02]'
+        'group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/50'
       )}
       onClick={onClick}
     >
-      <div
-        className={cn('mb-6 flex h-16 w-16 items-center justify-center rounded-full', colorClass)}
-      >
-        <Icon className="h-8 w-8" />
+      <div className="flex items-center justify-between mb-3">
+        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden', colorClass)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-
-      <h3 className="mb-4 text-2xl font-medium">{title}</h3>
-      {/* <p className="mb-4 text-muted-foreground">{description}</p> */}
+      
+      <h3 className="mb-3 text-base font-medium">{title}</h3>
 
       {/* Stats Section */}
       {isLoadingStats ? (
-        <div className="mb-6 space-y-2">
+        <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Loading stats...</span>
+            <span className="text-muted-foreground">Loading...</span>
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         </div>
       ) : stats ? (
-        <div className="mb-6 space-y-2">
+        <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Total Vouchers:</span>
             <span className="font-medium">{stats.totalVouchers.toLocaleString()}</span>
@@ -252,24 +250,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         </div>
       ) : null}
 
-      <div className="mt-auto flex items-center text-sm text-primary">
-        <span>Manage</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="ml-1 h-4 w-4"
-        >
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
-      </div>
+      {/* Hover Effect */}
+      <div className="absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
     </div>
   );
 };

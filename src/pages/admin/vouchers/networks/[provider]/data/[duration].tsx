@@ -1,7 +1,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ChevronLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
+import { ChevronLeft, Loader2, AlertCircle, CreditCard, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import {
   fetchVoucherTypesByNetworkCategoryAndDuration,
@@ -154,11 +155,12 @@ export default function DataDurationVoucherSelection() {
       </div>
 
       {/* Voucher Type Selection */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {voucherTypes.map(voucherType => (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {voucherTypes.map((voucherType, index) => (
           <VoucherTypeCard
             key={voucherType.id}
             voucherType={voucherType}
+            index={index}
             onClick={() => router.push(`/admin/vouchers/${voucherType.id}`)}
           />
         ))}
@@ -170,84 +172,56 @@ export default function DataDurationVoucherSelection() {
 // Voucher Type Card Component
 interface VoucherTypeCardProps {
   voucherType: VoucherType;
+  index: number;
   onClick: () => void;
 }
 
-const VoucherTypeCard: React.FC<VoucherTypeCardProps> = ({ voucherType, onClick }) => {
+const VoucherTypeCard: React.FC<VoucherTypeCardProps> = ({ voucherType, index, onClick }) => {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
       className={cn(
-        'flex h-full flex-col rounded-lg border border-border bg-card p-6 shadow-sm',
-        'cursor-pointer transition-all duration-200 hover:border-primary/20 hover:shadow-md',
-        'transform hover:scale-[1.02]'
+        'group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/50'
       )}
       onClick={onClick}
     >
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <CreditCard className="h-6 w-6" />
+      {/* Icon and Chevron */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+          <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        </div>
+        <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
 
-      <h3 className="mb-2 text-xl font-medium">{voucherType.name}</h3>
+      {/* Content */}
+      <div>
+        <h3 className="mb-2 text-lg font-semibold">{voucherType.name}</h3>
 
-      <div className="mb-3 space-y-1">
-        {/* Network Provider */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Network:</span>
-          <span className="font-medium">
-            {voucherType.network_provider
-              ? voucherType.network_provider.charAt(0).toUpperCase() +
-                voucherType.network_provider.slice(1)
-              : 'Unknown'}
-          </span>
-        </div>
+        <div className="space-y-2">
+          {/* Duration/Sub-category */}
+          {voucherType.sub_category && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Duration:</span>
+              <span className="font-medium">
+                {voucherType.sub_category.charAt(0).toUpperCase() + voucherType.sub_category.slice(1)}
+              </span>
+            </div>
+          )}
 
-        {/* Category */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Category:</span>
-          <span className="font-medium">
-            {voucherType.category
-              ? voucherType.category.charAt(0).toUpperCase() + voucherType.category.slice(1)
-              : 'Unknown'}
-          </span>
-        </div>
-
-        {/* Duration/Sub-category */}
-        {voucherType.sub_category && (
+          {/* Supplier Commission */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Duration:</span>
+            <span className="text-muted-foreground">Supplier Com:</span>
             <span className="font-medium">
-              {voucherType.sub_category.charAt(0).toUpperCase() + voucherType.sub_category.slice(1)}
+              {voucherType.supplier_commission_pct?.toFixed(2) || '0.00'}%
             </span>
           </div>
-        )}
-
-        {/* Supplier Commission */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Supplier Commission:</span>
-          <span className="font-medium">
-            {voucherType.supplier_commission_pct?.toFixed(2) || '0.00'}%
-          </span>
         </div>
       </div>
 
-      <div className="mt-auto flex items-center text-sm text-primary">
-        <span>Manage Vouchers</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="ml-1 h-4 w-4"
-        >
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
-      </div>
-    </div>
+      {/* Hover Effect */}
+      <div className="absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
+    </motion.div>
   );
 };

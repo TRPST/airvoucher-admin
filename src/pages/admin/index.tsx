@@ -74,7 +74,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
+      {/* Sticky header section */}
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
         <p className="text-muted-foreground">Welcome to the Airvoucher admin dashboard.</p>
       </div>

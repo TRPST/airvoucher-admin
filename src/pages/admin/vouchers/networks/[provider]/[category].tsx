@@ -1,7 +1,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ChevronLeft, Clock, Calendar, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Calendar, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import {
   fetchVoucherTypesByNetworkAndCategory,
@@ -162,12 +163,13 @@ export default function CategoryVoucherSelection() {
 
         {/* Duration Selection Cards */}
         <div className="grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-3">
-          {dataDurations.map(duration => (
+          {dataDurations.map((duration, index) => (
             <DurationCard
               key={duration}
               duration={duration}
               provider={provider as string}
               providerName={providerName}
+              index={index}
               onClick={() => router.push(`/admin/vouchers/networks/${provider}/data/${duration}`)}
             />
           ))}
@@ -205,6 +207,7 @@ interface DurationCardProps {
   duration: DataDuration;
   provider: string;
   providerName: string;
+  index: number;
   onClick: () => void;
 }
 
@@ -212,6 +215,7 @@ const DurationCard: React.FC<DurationCardProps> = ({
   duration,
   provider,
   providerName,
+  index,
   onClick,
 }) => {
   const [stats, setStats] = React.useState<CategoryStats | null>(null);
@@ -253,95 +257,88 @@ const DurationCard: React.FC<DurationCardProps> = ({
           icon: Clock,
           title: `${providerName} Daily Data`,
           description: `${providerName} short-term data bundles`,
-          colorClass: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+          iconBgColor: 'bg-orange-100 dark:bg-orange-900/20',
+          iconColor: 'text-orange-600 dark:text-orange-400',
         };
       case 'weekly':
         return {
           icon: Calendar,
           title: `${providerName} Weekly Data`,
           description: `${providerName} medium-term data bundles`,
-          colorClass: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+          iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+          iconColor: 'text-blue-600 dark:text-blue-400',
         };
       case 'monthly':
         return {
           icon: CalendarDays,
           title: `${providerName} Monthly Data`,
           description: `${providerName} long-term data bundles`,
-          colorClass: 'bg-green-500/10 text-green-500 border-green-500/20',
+          iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+          iconColor: 'text-green-600 dark:text-green-400',
         };
       default:
         return {
           icon: Calendar,
           title: `${providerName} ${String(duration).charAt(0).toUpperCase() + String(duration).slice(1)} Data`,
           description: `${providerName} ${String(duration)} data bundles`,
-          colorClass: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+          iconBgColor: 'bg-gray-100 dark:bg-gray-900/20',
+          iconColor: 'text-gray-600 dark:text-gray-400',
         };
     }
   }, [duration, providerName]);
 
-  const { icon: Icon, title, description, colorClass } = durationConfig;
+  const { icon: Icon, title, description, iconBgColor, iconColor } = durationConfig;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
       className={cn(
-        'flex h-full flex-col rounded-lg border border-border bg-card p-6 shadow-sm',
-        'cursor-pointer transition-all duration-200 hover:border-primary/20 hover:shadow-md',
-        'transform hover:scale-[1.02]'
+        'group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md'
       )}
       onClick={onClick}
     >
-      <div
-        className={cn('mb-4 flex h-12 w-12 items-center justify-center rounded-full', colorClass)}
-      >
-        <Icon className="h-6 w-6" />
+      {/* Icon and Chevron */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className={cn('flex h-12 w-12 items-center justify-center rounded-lg', iconBgColor)}>
+          <Icon className={cn('h-6 w-6', iconColor)} />
+        </div>
+        <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
 
-      <h3 className="mb-4 text-xl font-medium">{title}</h3>
-      {/* <p className="mb-4 text-muted-foreground">{description}</p> */}
+      {/* Content */}
+      <div>
+        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
 
-      {/* Stats Section */}
-      {isLoadingStats ? (
-        <div className="mb-6 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Loading stats...</span>
-            <Loader2 className="h-4 w-4 animate-spin" />
+        {/* Stats Section */}
+        {isLoadingStats ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Loading stats...</span>
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
           </div>
-        </div>
-      ) : stats ? (
-        <div className="mb-6 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total Vouchers:</span>
-            <span className="font-medium">{stats.totalVouchers.toLocaleString()}</span>
+        ) : stats ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Total Vouchers:</span>
+              <span className="font-medium">{stats.totalVouchers.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Inventory Value:</span>
+              <span className="font-medium">R {stats.inventoryValue.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Sold Value:</span>
+              <span className="font-medium">R {stats.soldValue.toFixed(2)}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Inventory Value:</span>
-            <span className="font-medium">R {stats.inventoryValue.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Sold Value:</span>
-            <span className="font-medium">R {stats.soldValue.toFixed(2)}</span>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-auto flex items-center text-sm text-primary">
-        <span>Manage</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="ml-1 h-4 w-4"
-        >
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
+        ) : null}
       </div>
-    </div>
+
+      {/* Hover Effect */}
+      <div className="absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
+    </motion.div>
   );
 };

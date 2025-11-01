@@ -263,13 +263,13 @@ export function SalesTableModal({
                               R {sale.amount.toFixed(2)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                              R {supplierCommissionAmount.toFixed(2)}
+                              R {supplierCommissionAmount.toFixed(4)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                              R {sale.retailer_commission.toFixed(2)}
+                              R {sale.retailer_commission.toFixed(4)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                              R {sale.agent_commission.toFixed(2)}
+                              R {sale.agent_commission.toFixed(4)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm">
                               <span
@@ -278,7 +278,7 @@ export function SalesTableModal({
                                   airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
                                 )}
                               >
-                                R {airVoucherProfit.toFixed(2)}
+                                R {airVoucherProfit.toFixed(4)}
                               </span>
                             </td>
                           </tr>
@@ -294,13 +294,13 @@ export function SalesTableModal({
                           R {totals.amount.toFixed(2)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
-                          R {totals.supplierCommission.toFixed(2)}
+                          R {totals.supplierCommission.toFixed(4)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
-                          R {totals.retailerCommission.toFixed(2)}
+                          R {totals.retailerCommission.toFixed(4)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                          R {totals.agentCommission.toFixed(2)}
+                          R {totals.agentCommission.toFixed(4)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm">
                           <span
@@ -309,7 +309,7 @@ export function SalesTableModal({
                               totals.profit >= 0 ? 'text-green-600' : 'text-red-600'
                             )}
                           >
-                            R {totals.profit.toFixed(2)}
+                            R {totals.profit.toFixed(4)}
                           </span>
                         </td>
                       </tr>

@@ -4,8 +4,10 @@ import { useRouter } from 'next/router';
 import { ChevronLeft, Loader2, AlertCircle, Check, X, Pencil } from 'lucide-react';
 import {
   upsertVoucherCommissionOverride,
+  upsertCommissionRate,
   type VoucherCommissionOverride,
 } from '@/actions';
+import { updateSupplierCommission } from '@/actions/admin/voucherActions';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import {
@@ -48,6 +50,15 @@ export default function VoucherAmountCommissions() {
   const { id: groupIdParam, voucherTypeId: voucherTypeIdParam } = router.query;
   const groupId = typeof groupIdParam === 'string' ? groupIdParam : undefined;
   const voucherTypeId = typeof voucherTypeIdParam === 'string' ? voucherTypeIdParam : undefined;
+
+  // Default rates editing state
+  const [editingDefaults, setEditingDefaults] = React.useState(false);
+  const [defaultsDraft, setDefaultsDraft] = React.useState<{
+    supplier_pct: string;
+    retailer_pct: string;
+    agent_pct: string;
+  }>({ supplier_pct: '', retailer_pct: '', agent_pct: '' });
+  const [isSavingDefaults, setIsSavingDefaults] = React.useState(false);
 
   // Per-row editing state
   const [editingRowAmount, setEditingRowAmount] = React.useState<number | null>(null);
@@ -107,6 +118,34 @@ export default function VoucherAmountCommissions() {
   );
   const voucherTypeName = voucherType?.name ?? '';
 
+  // Determine logo path based on voucher type
+  const logoPath = React.useMemo(() => {
+    const name = voucherTypeName.toLowerCase();
+    const networkProvider = voucherType?.network_provider;
+
+    // Network-based logos
+    if (networkProvider) {
+      switch (networkProvider) {
+        case 'mtn':
+          return '/assets/vouchers/mtn-logo.jpg';
+        case 'cellc':
+          return '/assets/vouchers/cellc-logo.png';
+        case 'vodacom':
+          return '/assets/vouchers/vodacom-logo.png';
+        case 'telkom':
+          return '/assets/vouchers/telkom-logo.png';
+      }
+    }
+
+    // Other voucher types by name
+    if (name.includes('ringa')) return '/assets/vouchers/ringas-logo.jpg';
+    if (name.includes('hollywood')) return '/assets/vouchers/hollywoodbets-logo.jpg';
+    if (name.includes('easyload')) return '/assets/vouchers/easyload-logo.png';
+    if (name.includes('ott')) return '/assets/vouchers/ott-logo.png';
+
+    return null;
+  }, [voucherTypeName, voucherType]);
+
   // Derived default rates (supplier percent from voucher type, retailer/agent fractions from group rate)
   const defaultRates = React.useMemo(() => {
     const currentGroup = (allGroups ?? []).find((g: any) => g.id === groupId);
@@ -160,6 +199,99 @@ export default function VoucherAmountCommissions() {
   // Helper function to format numbers to 2 decimal places
   const formatToTwoDecimals = (value: number): number => {
     return Math.round(value * 100) / 100;
+  };
+
+  // Default rates editing handlers
+  const startDefaultsEdit = () => {
+    setDefaultsDraft({
+      supplier_pct: defaultRates.supplier_pct.toFixed(2),
+      retailer_pct: (defaultRates.retailer_pct * 100).toFixed(2),
+      agent_pct: (defaultRates.agent_pct * 100).toFixed(2),
+    });
+    setEditingDefaults(true);
+  };
+
+  const cancelDefaultsEdit = () => {
+    setEditingDefaults(false);
+    setDefaultsDraft({ supplier_pct: '', retailer_pct: '', agent_pct: '' });
+  };
+
+  const handleDefaultRateChange = (
+    field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
+    value: string
+  ) => {
+    if (value === '') {
+      setDefaultsDraft((prev) => ({ ...prev, [field]: '' }));
+      return;
+    }
+
+    const normalized = value.replace(',', '.').trim();
+    const numValue = parseFloat(normalized);
+    if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
+
+    setDefaultsDraft((prev) => ({ ...prev, [field]: normalized }));
+  };
+
+  const saveDefaultRates = async () => {
+    if (!groupId || !voucherTypeId) return;
+
+    const supplier = parseFloat(defaultsDraft.supplier_pct);
+    const retailer = parseFloat(defaultsDraft.retailer_pct);
+    const agent = parseFloat(defaultsDraft.agent_pct);
+
+    if (isNaN(supplier) || isNaN(retailer) || isNaN(agent)) {
+      toast.error('Please enter valid commission percentages');
+      return;
+    }
+
+    try {
+      setIsSavingDefaults(true);
+
+      const supplierChanged = supplier !== defaultRates.supplier_pct;
+      const retailerChanged = (retailer / 100) !== defaultRates.retailer_pct;
+      const agentChanged = (agent / 100) !== defaultRates.agent_pct;
+
+      // Update retailer/agent defaults if changed
+      if (retailerChanged || agentChanged) {
+        const { error } = await upsertCommissionRate(
+          groupId,
+          voucherTypeId,
+          retailer / 100, // Convert to fraction
+          agent / 100 // Convert to fraction
+        );
+        if (error) {
+          console.error('Error updating commission rates:', error);
+          throw new Error('Failed to update retailer/agent commission rates');
+        }
+      }
+
+      // Update supplier commission if changed
+      if (supplierChanged) {
+        const { error } = await updateSupplierCommission(voucherTypeId, supplier);
+        if (error) {
+          console.error('Error updating supplier commission:', error);
+          throw new Error('Failed to update supplier commission');
+        }
+      }
+
+      // Revalidate caches
+      const tasks: Array<Promise<any>> = [];
+      if (retailerChanged || agentChanged) {
+        tasks.push(mutate(SwrKeys.commissionGroups()));
+      }
+      if (supplierChanged) {
+        tasks.push(mutate(SwrKeys.voucherTypes('all')));
+      }
+      await Promise.all(tasks);
+
+      setEditingDefaults(false);
+      toast.success('Default commission rates updated');
+    } catch (err) {
+      console.error('Error saving default rates:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save default rates');
+    } finally {
+      setIsSavingDefaults(false);
+    }
   };
 
   // Row editing controls
@@ -220,10 +352,8 @@ export default function VoucherAmountCommissions() {
     const numValue = parseFloat(normalized);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) return;
 
-    const formattedValue =
-      field === 'supplier_pct'
-        ? formatToTwoDecimals(numValue) // keep as percent (e.g., 3.5)
-        : Math.round((numValue / 100) * 10000) / 10000; // store fraction to 4 dp
+    // All percentages stored as decimals (divided by 100) for consistency
+    const formattedValue = Math.round((numValue / 100) * 10000) / 10000;
 
     setRowDrafts((prev) => ({
       ...prev,
@@ -370,7 +500,7 @@ export default function VoucherAmountCommissions() {
       setIsBulkSaving(true);
 
       // Helper to convert percent string to stored number for fields
-      const parseSupplier = (s: string) => formatToTwoDecimals(parseFloat(s));
+      // All percentages divided by 100 to store as decimals
       const parseFraction = (s: string) => {
         const n = parseFloat(s);
         return Math.round((n / 100) * 10000) / 10000;
@@ -381,7 +511,7 @@ export default function VoucherAmountCommissions() {
         if (!originalRate) continue;
 
         const nextSupplier =
-          bulkDraft.supplier_pct === '' ? originalRate.supplier_pct : parseSupplier(bulkDraft.supplier_pct);
+          bulkDraft.supplier_pct === '' ? originalRate.supplier_pct : parseFraction(bulkDraft.supplier_pct);
         const nextRetailer =
           bulkDraft.retailer_pct === '' ? originalRate.retailer_pct : parseFraction(bulkDraft.retailer_pct);
         const nextAgent =
@@ -493,30 +623,161 @@ export default function VoucherAmountCommissions() {
 
       {/* Page header */}
       <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{voucherTypeName} Commission Overrides</h1>
-          <p className="text-muted-foreground">Manage commission rates for specific voucher amounts in {groupName}</p>
+        <div className="flex items-start gap-4">
+          {logoPath && (
+            <div className="flex-shrink-0">
+              <img
+                src={logoPath}
+                alt={voucherTypeName}
+                className="h-16 w-16 rounded-lg object-contain"
+              />
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{voucherTypeName} Commission Overrides</h1>
+            <p className="text-muted-foreground">Manage commission rates for specific voucher amounts in {groupName}</p>
+          </div>
         </div>
       </div>
 
-      {/* Default rates info */}
-      <div className="rounded-lg border border-border bg-muted/50 p-4">
-        <h3 className="mb-2 font-medium">Default Commission Rates for {voucherTypeName}</h3>
-        <div className="flex gap-6 text-sm">
+      {/* Default rates section */}
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <span className="text-muted-foreground">Supplier:</span>{' '}
-            <span className="font-medium">{defaultRates.supplier_pct.toFixed(2)}%</span>
+            <h3 className="text-base font-medium">Default Commission Rates</h3>
+            <p className="text-xs text-muted-foreground">
+              Base rates for all {voucherTypeName} vouchers in {groupName}
+            </p>
           </div>
-          <div>
-            <span className="text-muted-foreground">Retailer:</span>{' '}
-            <span className="font-medium">{(defaultRates.retailer_pct * 100).toFixed(2)}%</span>
+          {!editingDefaults && (
+            <button
+              onClick={startDefaultsEdit}
+              disabled={editingRowAmount !== null}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit Defaults
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {/* Supplier Commission */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Supplier Commission</label>
+            {editingDefaults ? (
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={defaultsDraft.supplier_pct}
+                  onChange={(e) => handleDefaultRateChange('supplier_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-7 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="0.00"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">
+                  %
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md bg-blue-100 px-2.5 py-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <span className="text-base font-semibold">{defaultRates.supplier_pct.toFixed(2)}%</span>
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-muted-foreground">Agent:</span>{' '}
-            <span className="font-medium">{(defaultRates.agent_pct * 100).toFixed(2)}%</span>
+
+          {/* Retailer Commission */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Retailer Commission</label>
+            {editingDefaults ? (
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={defaultsDraft.retailer_pct}
+                  onChange={(e) => handleDefaultRateChange('retailer_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-7 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="0.00"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">
+                  %
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md bg-green-100 px-2.5 py-1.5 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                <span className="text-base font-semibold">
+                  {(defaultRates.retailer_pct * 100).toFixed(2)}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Agent Commission */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Agent Commission</label>
+            {editingDefaults ? (
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={defaultsDraft.agent_pct}
+                  onChange={(e) => handleDefaultRateChange('agent_pct', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-7 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="0.00"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">
+                  %
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md bg-purple-100 px-2.5 py-1.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                <span className="text-base font-semibold">
+                  {(defaultRates.agent_pct * 100).toFixed(2)}%
+                </span>
+              </div>
+            )}
           </div>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">These are the default rates. You can override them below.</p>
+
+        {/* Edit actions */}
+        {editingDefaults && (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={saveDefaultRates}
+              disabled={isSavingDefaults}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isSavingDefaults ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Save Defaults
+            </button>
+            <button
+              onClick={cancelDefaultsEdit}
+              disabled={isSavingDefaults}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Per-Amount Overrides Section Header */}
+      <div>
+        <h3 className="text-lg font-medium">Per-Amount Commission Overrides</h3>
+        <p className="text-sm text-muted-foreground">
+          Override default rates for specific voucher amounts. Amounts not listed here will use the default rates above.
+        </p>
       </div>
 
       {/* Bulk actions bar */}
@@ -571,6 +832,7 @@ export default function VoucherAmountCommissions() {
                 const draft = isRowEditing ? rowDrafts[rate.amount.toString()] : null;
 
                 // Values to display in inputs when editing
+                // All stored as decimals, multiply by 100 for display
                 const draftSupplier =
                   isRowEditing && typeof draft?.supplier_pct !== 'string' ? draft?.supplier_pct ?? 0 : 0;
                 const draftRetailer =
@@ -610,7 +872,7 @@ export default function VoucherAmountCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier)}
+                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier * 100)}
                           onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
                           className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
@@ -623,7 +885,7 @@ export default function VoucherAmountCommissions() {
                               : ''
                           )}
                         >
-                          {rate.supplier_pct.toFixed(2)}%
+                          {(rate.supplier_pct * 100).toFixed(2)}%
                         </span>
                       )}
                     </td>

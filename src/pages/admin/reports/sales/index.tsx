@@ -211,24 +211,28 @@ function SalesReportContent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Link href="/admin/reports">
-        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
-          Back to reports
-        </button>
-      </Link>
+      {/* Sticky header section */}
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+        {/* Back button */}
+        <Link href="/admin/reports">
+          <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
+            <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+            Back to reports
+          </button>
+        </Link>
 
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Sales Report
-          </h1>
+        {/* Header */}
+        <div className="mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Sales Report
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            Comprehensive view of all sales transactions with detailed breakdowns.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Comprehensive view of all sales transactions with detailed breakdowns.
-        </p>
       </div>
 
       {/* Quick Filters */}
@@ -654,13 +658,13 @@ function SalesReportContent() {
                             R {sale.amount.toFixed(2)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                            R {supplierCommissionAmount.toFixed(2)}
+                            R {supplierCommissionAmount.toFixed(4)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                            R {sale.retailer_commission.toFixed(2)}
+                            R {sale.retailer_commission.toFixed(4)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                            R {sale.agent_commission.toFixed(2)}
+                            R {sale.agent_commission.toFixed(4)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm">
                             <span
@@ -669,7 +673,7 @@ function SalesReportContent() {
                                 airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
                               )}
                             >
-                              R {airVoucherProfit.toFixed(2)}
+                              R {airVoucherProfit.toFixed(4)}
                             </span>
                           </td>
                         </tr>
@@ -685,13 +689,13 @@ function SalesReportContent() {
                         R {stats.totalAmount.toFixed(2)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
-                        R {stats.supplierCommission.toFixed(2)}
+                        R {stats.supplierCommission.toFixed(4)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
-                        R {stats.retailerCommission.toFixed(2)}
+                        R {stats.retailerCommission.toFixed(4)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                        R {stats.agentCommission.toFixed(2)}
+                        R {stats.agentCommission.toFixed(4)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <span
@@ -700,7 +704,7 @@ function SalesReportContent() {
                             stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
                           )}
                         >
-                          R {stats.profit.toFixed(2)}
+                          R {stats.profit.toFixed(4)}
                         </span>
                       </td>
                     </tr>
