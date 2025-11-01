@@ -11,6 +11,7 @@ import {
   updateCommissionGroup,
 } from '@/actions';
 import { toast } from 'sonner';
+import { cn } from '@/utils/cn';
 import {
   Dialog,
   DialogContent,
@@ -236,30 +237,33 @@ export default function CommissionGroupDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
-      <Link href="/admin/commissions" passHref>
-        <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
-          <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
-          Back to commission groups
-        </button>
-      </Link>
-
-      {/* Page header */}
-      <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{groupName}</h1>
-          <p className="text-muted-foreground">
-            {groupDescription || 'Manage commission rates for this group'}
-          </p>
-        </div>
-        <div>
-          <button
-            onClick={openEditGroup}
-            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Group
+      {/* Sticky header section */}
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8">
+        {/* Back button */}
+        <Link href="/admin/commissions" passHref>
+          <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
+            <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
+            Back to commission groups
           </button>
+        </Link>
+
+        {/* Page header */}
+        <div className="mt-2 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{groupName}</h1>
+            <p className="text-muted-foreground">
+              {groupDescription || 'Manage commission rates for this group'}
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={openEditGroup}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Group
+            </button>
+          </div>
         </div>
       </div>
 
