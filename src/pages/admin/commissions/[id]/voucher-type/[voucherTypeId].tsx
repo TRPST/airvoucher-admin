@@ -7,7 +7,6 @@ import {
   upsertCommissionRate,
   type VoucherCommissionOverride,
 } from '@/actions';
-import { updateSupplierCommission } from '@/actions/admin/voucherActions';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import {
@@ -30,17 +29,17 @@ import {
 
 type VoucherAmountRate = {
   amount: number;
-  supplier_pct: number; // stored as percentage e.g. 3.5
-  retailer_pct: number; // stored as fraction e.g. 0.05 (5%)
-  agent_pct: number; // stored as fraction e.g. 0.05 (5%)
+  supplier_pct: number; // stored as decimal e.g. 0.05 (5%)
+  retailer_pct: number; // stored as decimal e.g. 0.05 (5%)
+  agent_pct: number; // stored as decimal e.g. 0.05 (5%)
   hasOverride: boolean;
 };
 
 type EditableVoucherAmountRate = {
   amount: number;
-  supplier_pct: number | string; // supplier kept as percentage
-  retailer_pct: number | string; // fraction (0-1) internally, but inputs as percent
-  agent_pct: number | string; // fraction (0-1) internally, but inputs as percent
+  supplier_pct: number | string; // decimal (0-1) internally, but inputs as percent
+  retailer_pct: number | string; // decimal (0-1) internally, but inputs as percent
+  agent_pct: number | string; // decimal (0-1) internally, but inputs as percent
   hasOverride: boolean;
 };
 
@@ -146,16 +145,16 @@ export default function VoucherAmountCommissions() {
     return null;
   }, [voucherTypeName, voucherType]);
 
-  // Derived default rates (supplier percent from voucher type, retailer/agent fractions from group rate)
+  // Derived default rates (all commission values from group rates, stored as decimals)
   const defaultRates = React.useMemo(() => {
     const currentGroup = (allGroups ?? []).find((g: any) => g.id === groupId);
     const rate = currentGroup?.rates?.find((r: any) => r.voucher_type_id === voucherTypeId);
     return {
-      supplier_pct: voucherType?.supplier_commission_pct || 0,
+      supplier_pct: rate?.supplier_pct || 0,
       retailer_pct: rate?.retailer_pct || 0,
       agent_pct: rate?.agent_pct || 0,
     };
-  }, [allGroups, groupId, voucherType, voucherTypeId]);
+  }, [allGroups, groupId, voucherTypeId]);
 
   // Derived combined table rows
   const amountRates: VoucherAmountRate[] = React.useMemo(() => {
@@ -204,7 +203,7 @@ export default function VoucherAmountCommissions() {
   // Default rates editing handlers
   const startDefaultsEdit = () => {
     setDefaultsDraft({
-      supplier_pct: defaultRates.supplier_pct.toFixed(2),
+      supplier_pct: (defaultRates.supplier_pct * 100).toFixed(2),
       retailer_pct: (defaultRates.retailer_pct * 100).toFixed(2),
       agent_pct: (defaultRates.agent_pct * 100).toFixed(2),
     });
@@ -247,42 +246,27 @@ export default function VoucherAmountCommissions() {
     try {
       setIsSavingDefaults(true);
 
-      const supplierChanged = supplier !== defaultRates.supplier_pct;
+      const supplierChanged = (supplier / 100) !== defaultRates.supplier_pct;
       const retailerChanged = (retailer / 100) !== defaultRates.retailer_pct;
       const agentChanged = (agent / 100) !== defaultRates.agent_pct;
 
-      // Update retailer/agent defaults if changed
-      if (retailerChanged || agentChanged) {
+      // Update all commission rates if any changed (ALL stored as decimals now)
+      if (supplierChanged || retailerChanged || agentChanged) {
         const { error } = await upsertCommissionRate(
           groupId,
           voucherTypeId,
-          retailer / 100, // Convert to fraction
-          agent / 100 // Convert to fraction
+          retailer / 100, // Convert percentage to decimal
+          agent / 100, // Convert percentage to decimal
+          supplier / 100 // Convert percentage to decimal
         );
         if (error) {
           console.error('Error updating commission rates:', error);
-          throw new Error('Failed to update retailer/agent commission rates');
+          throw new Error('Failed to update commission rates');
         }
       }
 
-      // Update supplier commission if changed
-      if (supplierChanged) {
-        const { error } = await updateSupplierCommission(voucherTypeId, supplier);
-        if (error) {
-          console.error('Error updating supplier commission:', error);
-          throw new Error('Failed to update supplier commission');
-        }
-      }
-
-      // Revalidate caches
-      const tasks: Array<Promise<any>> = [];
-      if (retailerChanged || agentChanged) {
-        tasks.push(mutate(SwrKeys.commissionGroups()));
-      }
-      if (supplierChanged) {
-        tasks.push(mutate(SwrKeys.voucherTypes('all')));
-      }
-      await Promise.all(tasks);
+      // Revalidate commission groups cache
+      await mutate(SwrKeys.commissionGroups());
 
       setEditingDefaults(false);
       toast.success('Default commission rates updated');
@@ -683,7 +667,7 @@ export default function VoucherAmountCommissions() {
               </div>
             ) : (
               <div className="rounded-md bg-blue-100 px-2.5 py-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                <span className="text-base font-semibold">{defaultRates.supplier_pct.toFixed(2)}%</span>
+                <span className="text-base font-semibold">{(defaultRates.supplier_pct * 100).toFixed(2)}%</span>
               </div>
             )}
           </div>
