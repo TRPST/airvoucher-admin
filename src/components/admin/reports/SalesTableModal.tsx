@@ -22,16 +22,55 @@ export function SalesTableModal({
   initialSortField = 'date',
   initialSortDirection = 'desc',
 }: SalesTableModalProps) {
+  // Filter state
+  const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
+  const [retailerFilter, setRetailerFilter] = useState<string>('all');
+  const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
+  const [terminalFilter, setTerminalFilter] = useState<string>('all');
+
   // Table state
   const [sortField, setSortField] = useState<SortField>(initialSortField);
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
 
-  // Sort sales data
-  const sortedSales = (() => {
-    let sorted = [...sales];
+  // Get unique values for filters
+  const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
+  const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
+  const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
+  const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
+  const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
+
+  // Filter and sort sales data
+  const filteredAndSortedSales = (() => {
+    let filtered = [...sales];
+
+    // Apply voucher type filter
+    if (voucherTypeFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.voucher_type === voucherTypeFilter);
+    }
+
+    // Apply retailer filter
+    if (retailerFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.retailer_name === retailerFilter);
+    }
+
+    // Apply agent filter
+    if (agentFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.agent_name === agentFilter);
+    }
+
+    // Apply commission group filter
+    if (commissionGroupFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.commission_group_name === commissionGroupFilter);
+    }
+
+    // Apply terminal filter
+    if (terminalFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.terminal_short_code === terminalFilter);
+    }
 
     // Apply sorting
-    sorted.sort((a, b) => {
+    filtered.sort((a, b) => {
       let aValue: string | number | Date;
       let bValue: string | number | Date;
 
@@ -65,12 +104,12 @@ export function SalesTableModal({
       return 0;
     });
 
-    return sorted;
+    return filtered;
   })();
 
   // Calculate totals
   const totals = (() => {
-    return sortedSales.reduce(
+    return filteredAndSortedSales.reduce(
       (acc, sale) => {
         const supplierCommissionAmount =
           sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
@@ -109,14 +148,83 @@ export function SalesTableModal({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content className="fixed inset-0 z-50 w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Calendar className="h-5 w-5 text-primary" />
-              <Dialog.Title className="text-lg font-semibold">
-                Sales Report - Detailed View
+              <Dialog.Title className="text-lg font-semibold whitespace-nowrap">
+                Sales Report
               </Dialog.Title>
             </div>
-            <Dialog.Close className="rounded-full p-2 hover:bg-muted">
+            
+            {/* Compact Filters */}
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto">
+              <select
+                className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={voucherTypeFilter}
+                onChange={(e) => setVoucherTypeFilter(e.target.value)}
+              >
+                <option value="all">All Types</option>
+                {voucherTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="w-32 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={retailerFilter}
+                onChange={(e) => setRetailerFilter(e.target.value)}
+              >
+                <option value="all">All Retailers</option>
+                {retailers.map((retailer) => (
+                  <option key={retailer} value={retailer}>
+                    {retailer}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={agentFilter}
+                onChange={(e) => setAgentFilter(e.target.value)}
+              >
+                <option value="all">All Agents</option>
+                {agents.map((agent) => (
+                  <option key={agent} value={agent}>
+                    {agent}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={commissionGroupFilter}
+                onChange={(e) => setCommissionGroupFilter(e.target.value)}
+              >
+                <option value="all">All Groups</option>
+                {commissionGroups.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="w-32 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={terminalFilter}
+                onChange={(e) => setTerminalFilter(e.target.value)}
+              >
+                <option value="all">All Terminals</option>
+                {terminals.map((terminal) => (
+                  <option key={terminal} value={terminal}>
+                    {terminal}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Dialog.Close className="rounded-full p-2 hover:bg-muted flex-shrink-0">
               <X className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Close</span>
             </Dialog.Close>
@@ -124,7 +232,7 @@ export function SalesTableModal({
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-2">
             <div className="flex items-center justify-between flex-shrink-0">
-              <p className="text-sm text-muted-foreground">{sortedSales.length} total sales</p>
+              <p className="text-sm text-muted-foreground">{filteredAndSortedSales.length} total sales</p>
             </div>
 
             {/* Sales Table */}
@@ -177,6 +285,7 @@ export function SalesTableModal({
                         </button>
                       </th>
                       <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                      <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
                       <th className="whitespace-nowrap px-4 py-3">
                         <button
                           onClick={() => handleSort('voucher_type')}
@@ -212,7 +321,7 @@ export function SalesTableModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {sortedSales.map((sale, index) => {
+                      {filteredAndSortedSales.map((sale, index) => {
                         const airVoucherProfit = sale.profit || 0;
                         const supplierCommissionAmount =
                           sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
@@ -229,6 +338,7 @@ export function SalesTableModal({
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
+                                second: '2-digit',
                               })}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -239,6 +349,9 @@ export function SalesTableModal({
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm">
                               {sale.commission_group_name || '-'}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                              {sale.terminal_short_code || '-'}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm">
                               <div className="flex items-center gap-2">
@@ -287,7 +400,7 @@ export function SalesTableModal({
                     </tbody>
                     <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                       <tr className="font-semibold">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={5}>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
                           TOTAL
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">

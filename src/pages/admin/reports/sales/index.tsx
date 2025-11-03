@@ -24,6 +24,7 @@ function SalesReportContent() {
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
+  const [terminalFilter, setTerminalFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
 
   // Table state
@@ -62,11 +63,12 @@ function SalesReportContent() {
     loadSales();
   }, [startDate, endDate]);
 
-  // Get unique voucher types, retailers, agents, and commission groups
+  // Get unique voucher types, retailers, agents, commission groups, and terminals
   const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
   const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
   const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
   const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
+  const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
 
   // Quick filter handler
   const handleQuickFilter = (filter: QuickFilter) => {
@@ -131,6 +133,11 @@ function SalesReportContent() {
     // Apply commission group filter
     if (commissionGroupFilter !== 'all') {
       filtered = filtered.filter(sale => sale.commission_group_name === commissionGroupFilter);
+    }
+
+    // Apply terminal filter
+    if (terminalFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.terminal_short_code === terminalFilter);
     }
 
     // Apply sorting
@@ -477,6 +484,25 @@ function SalesReportContent() {
             ))}
           </select>
         </div>
+
+        <div>
+          <label htmlFor="terminalFilter" className="block text-sm font-medium mb-2">
+            Filter by Terminal ID
+          </label>
+          <select
+            id="terminalFilter"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={terminalFilter}
+            onChange={(e) => setTerminalFilter(e.target.value)}
+          >
+            <option value="all">All Terminals</option>
+            {terminals.map((terminal) => (
+              <option key={terminal} value={terminal}>
+                {terminal}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -572,6 +598,7 @@ function SalesReportContent() {
                         </button>
                       </th>
                       <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                      <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
                       <th className="whitespace-nowrap px-4 py-3">
                         <button
                           onClick={() => handleSort('voucher_type')}
@@ -624,6 +651,7 @@ function SalesReportContent() {
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit',
+                              second: '2-digit',
                             })}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -634,6 +662,9 @@ function SalesReportContent() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             {sale.commission_group_name || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                            {sale.terminal_short_code || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
@@ -682,7 +713,7 @@ function SalesReportContent() {
                   </tbody>
                   <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                     <tr className="font-semibold">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={5}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
                         TOTAL
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
