@@ -357,7 +357,7 @@ export function ExportModal({
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className="flex justify-end pt-4">
             <Dialog.Close asChild>
               <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
                 Cancel
