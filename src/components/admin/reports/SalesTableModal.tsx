@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { X, Calendar, ChevronUp, ChevronDown, Activity } from "lucide-react";
+import { X, Calendar, ChevronUp, ChevronDown, Activity, Download } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/utils/cn";
 import type { SalesReport } from "@/actions";
+import { ExportModal } from "./ExportModal";
 
 interface SalesTableModalProps {
   isOpen: boolean;
@@ -28,10 +29,16 @@ export function SalesTableModal({
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   // Table state
   const [sortField, setSortField] = useState<SortField>(initialSortField);
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
+
+  // Modal state
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Get unique values for filters
   const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
@@ -40,9 +47,53 @@ export function SalesTableModal({
   const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
   const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
 
+  // Quick filter handler
+  const handleQuickFilter = (filter: 'all' | 'today' | 'week' | 'month') => {
+    setQuickFilter(filter);
+    const now = new Date();
+    
+    switch (filter) {
+      case 'today':
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        setStartDate(todayStart.toISOString().split('T')[0]);
+        setEndDate(now.toISOString().split('T')[0]);
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        setStartDate(weekStart.toISOString().split('T')[0]);
+        setEndDate(now.toISOString().split('T')[0]);
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        setStartDate(monthStart.toISOString().split('T')[0]);
+        setEndDate(now.toISOString().split('T')[0]);
+        break;
+      case 'all':
+      default:
+        setStartDate('');
+        setEndDate('');
+        break;
+    }
+  };
+
   // Filter and sort sales data
   const filteredAndSortedSales = (() => {
     let filtered = [...sales];
+
+    // Apply date range filter
+    if (startDate) {
+      filtered = filtered.filter(sale => {
+        const saleDate = new Date(sale.created_at).toISOString().split('T')[0];
+        return saleDate >= startDate;
+      });
+    }
+    if (endDate) {
+      filtered = filtered.filter(sale => {
+        const saleDate = new Date(sale.created_at).toISOString().split('T')[0];
+        return saleDate <= endDate;
+      });
+    }
 
     // Apply voucher type filter
     if (voucherTypeFilter !== 'all') {
@@ -147,7 +198,10 @@ export function SalesTableModal({
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed inset-0 z-50 w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col">
+        <Dialog.Content 
+          className="fixed inset-0 z-50 w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-shrink-0">
               <Calendar className="h-5 w-5 text-primary" />
@@ -224,17 +278,97 @@ export function SalesTableModal({
               </select>
             </div>
 
+            {/* Export Button */}
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-muted transition-colors flex-shrink-0"
+            >
+              <Download className="h-3 w-3" />
+              Export
+            </button>
+
             <Dialog.Close className="rounded-full p-2 hover:bg-muted flex-shrink-0">
               <X className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Close</span>
             </Dialog.Close>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
-            <div className="flex items-center justify-between flex-shrink-0">
-              <p className="text-sm text-muted-foreground">{filteredAndSortedSales.length} total sales</p>
+          {/* Date Filters Row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Quick Filters */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleQuickFilter('all')}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  quickFilter === 'all'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => handleQuickFilter('today')}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  quickFilter === 'today'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => handleQuickFilter('week')}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  quickFilter === 'week'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => handleQuickFilter('month')}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  quickFilter === 'month'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                This Month
+              </button>
             </div>
 
+            {/* Custom Date Range */}
+            <div className="flex items-center gap-2 ml-auto">
+              <input
+                type="date"
+                className="rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setQuickFilter('all');
+                }}
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                className="rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setQuickFilter('all');
+                }}
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
             {/* Sales Table */}
             {sales.length > 0 ? (
               <div className="rounded-lg border border-border shadow-sm flex-1 overflow-hidden flex flex-col">
@@ -401,7 +535,7 @@ export function SalesTableModal({
                     <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                       <tr className="font-semibold">
                         <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
-                          TOTAL
+                          TOTAL - {filteredAndSortedSales.length} sales
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
                           R {totals.amount.toFixed(2)}
@@ -444,6 +578,15 @@ export function SalesTableModal({
           </div>
         </Dialog.Content>
       </Dialog.Portal>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        sales={filteredAndSortedSales}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </Dialog.Root>
   );
 }
