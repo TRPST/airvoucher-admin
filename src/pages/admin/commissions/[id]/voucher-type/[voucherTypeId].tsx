@@ -666,7 +666,7 @@ export default function VoucherAmountCommissions() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-md bg-blue-100 px-2.5 py-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              <div className="rounded-md bg-muted px-2.5 py-1.5">
                 <span className="text-base font-semibold">{(defaultRates.supplier_pct * 100).toFixed(2)}%</span>
               </div>
             )}
@@ -692,7 +692,7 @@ export default function VoucherAmountCommissions() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-md bg-green-100 px-2.5 py-1.5 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              <div className="rounded-md bg-muted px-2.5 py-1.5">
                 <span className="text-base font-semibold">
                   {(defaultRates.retailer_pct * 100).toFixed(2)}%
                 </span>
@@ -720,7 +720,7 @@ export default function VoucherAmountCommissions() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-md bg-purple-100 px-2.5 py-1.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+              <div className="rounded-md bg-muted px-2.5 py-1.5">
                 <span className="text-base font-semibold">
                   {(defaultRates.agent_pct * 100).toFixed(2)}%
                 </span>
@@ -802,10 +802,11 @@ export default function VoucherAmountCommissions() {
                     aria-label="Select all"
                   />
                 </th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Voucher Amount</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Supplier Commission %</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Retailer Commission %</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Agent Commission %</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Amount</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Supplier Com</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Retailer Com</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Agent Com</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">AV Profit</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Status</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Edit</th>
               </tr>
@@ -830,6 +831,18 @@ export default function VoucherAmountCommissions() {
                   rate.agent_pct !== defaultRates.agent_pct ||
                   (draft?.hasOverride ?? false);
 
+                // Calculate commission amounts in rands
+                const supplierAmount = rate.amount * rate.supplier_pct;
+                const retailerAmount = rate.amount * rate.retailer_pct;
+                const agentAmount = rate.amount * rate.agent_pct;
+                const avProfit = supplierAmount - retailerAmount - agentAmount;
+
+                // For editing mode, use draft values
+                const draftSupplierAmount = isRowEditing ? rate.amount * (typeof draft?.supplier_pct === 'number' ? draft.supplier_pct : 0) : supplierAmount;
+                const draftRetailerAmount = isRowEditing ? rate.amount * (typeof draft?.retailer_pct === 'number' ? draft.retailer_pct : 0) : retailerAmount;
+                const draftAgentAmount = isRowEditing ? rate.amount * (typeof draft?.agent_pct === 'number' ? draft.agent_pct : 0) : agentAmount;
+                const draftAvProfit = isRowEditing ? draftSupplierAmount - draftRetailerAmount - draftAgentAmount : avProfit;
+
                 return (
                   <tr key={rate.amount} className="border-b border-border transition-colors hover:bg-muted/50">
                     {/* Select */}
@@ -851,25 +864,28 @@ export default function VoucherAmountCommissions() {
                     {/* Supplier */}
                     <td className="whitespace-nowrap px-4 py-3">
                       {isRowEditing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier * 100)}
-                          onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
-                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={typeof draft?.supplier_pct === 'string' ? '' : formatToTwoDecimals(draftSupplier * 100)}
+                            onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
+                            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          />
+                          <div className="text-xs text-pink-600">R{draftSupplierAmount.toFixed(2)}</div>
+                        </div>
                       ) : (
                         <span
                           className={cn(
                             'rounded-md px-2 py-1',
                             rate.supplier_pct !== defaultRates.supplier_pct
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
                               : ''
                           )}
                         >
-                          {(rate.supplier_pct * 100).toFixed(2)}%
+                          {(rate.supplier_pct * 100).toFixed(2)}% (R{supplierAmount.toFixed(2)})
                         </span>
                       )}
                     </td>
@@ -877,29 +893,32 @@ export default function VoucherAmountCommissions() {
                     {/* Retailer */}
                     <td className="whitespace-nowrap px-4 py-3">
                       {isRowEditing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={
-                            typeof draft?.retailer_pct === 'string'
-                              ? ''
-                              : formatToTwoDecimals(draftRetailer * 100)
-                          }
-                          onChange={(e) => handleRowRateChange(rate.amount, 'retailer_pct', e.target.value)}
-                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={
+                              typeof draft?.retailer_pct === 'string'
+                                ? ''
+                                : formatToTwoDecimals(draftRetailer * 100)
+                            }
+                            onChange={(e) => handleRowRateChange(rate.amount, 'retailer_pct', e.target.value)}
+                            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          />
+                          <div className="text-xs text-purple-600">R{draftRetailerAmount.toFixed(2)}</div>
+                        </div>
                       ) : (
                         <span
                           className={cn(
                             'rounded-md px-2 py-1',
                             rate.retailer_pct !== defaultRates.retailer_pct
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                               : ''
                           )}
                         >
-                          {(rate.retailer_pct * 100).toFixed(2)}%
+                          {(rate.retailer_pct * 100).toFixed(2)}% (R{retailerAmount.toFixed(2)})
                         </span>
                       )}
                     </td>
@@ -907,29 +926,42 @@ export default function VoucherAmountCommissions() {
                     {/* Agent */}
                     <td className="whitespace-nowrap px-4 py-3">
                       {isRowEditing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={
-                            typeof draft?.agent_pct === 'string' ? '' : formatToTwoDecimals(draftAgent * 100)
-                          }
-                          onChange={(e) => handleRowRateChange(rate.amount, 'agent_pct', e.target.value)}
-                          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={
+                              typeof draft?.agent_pct === 'string' ? '' : formatToTwoDecimals(draftAgent * 100)
+                            }
+                            onChange={(e) => handleRowRateChange(rate.amount, 'agent_pct', e.target.value)}
+                            className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          />
+                          <div className="text-xs text-blue-600">R{draftAgentAmount.toFixed(2)}</div>
+                        </div>
                       ) : (
                         <span
                           className={cn(
                             'rounded-md px-2 py-1',
                             rate.agent_pct !== defaultRates.agent_pct
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                               : ''
                           )}
                         >
-                          {(rate.agent_pct * 100).toFixed(2)}%
+                          {(rate.agent_pct * 100).toFixed(2)}% (R{agentAmount.toFixed(2)})
                         </span>
                       )}
+                    </td>
+
+                    {/* AV Profit */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className={cn(
+                        'font-medium',
+                        (isRowEditing ? draftAvProfit : avProfit) >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        R{(isRowEditing ? draftAvProfit : avProfit).toFixed(2)}
+                      </span>
                     </td>
 
                     {/* Status */}

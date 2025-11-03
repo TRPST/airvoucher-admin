@@ -385,12 +385,12 @@ function SalesReportContent() {
 
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">Supplier Commission</p>
-            <p className="text-lg font-bold text-orange-600">R {stats.supplierCommission.toFixed(2)}</p>
+            <p className="text-lg font-bold text-pink-600">R {stats.supplierCommission.toFixed(2)}</p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">Retailer Commission</p>
-            <p className="text-lg font-bold text-green-600">R {stats.retailerCommission.toFixed(2)}</p>
+            <p className="text-lg font-bold text-purple-600">R {stats.retailerCommission.toFixed(2)}</p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
@@ -657,14 +657,14 @@ function SalesReportContent() {
                           <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
                             R {sale.amount.toFixed(2)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                            R {supplierCommissionAmount.toFixed(4)}
+                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
+                            R {supplierCommissionAmount.toFixed(3)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                            R {sale.retailer_commission.toFixed(4)}
+                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
+                            R {sale.retailer_commission.toFixed(3)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                            R {sale.agent_commission.toFixed(4)}
+                            R {sale.agent_commission.toFixed(3)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm">
                             <span
@@ -673,7 +673,7 @@ function SalesReportContent() {
                                 airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
                               )}
                             >
-                              R {airVoucherProfit.toFixed(4)}
+                              R {airVoucherProfit.toFixed(3)}
                             </span>
                           </td>
                         </tr>
@@ -688,14 +688,14 @@ function SalesReportContent() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
                         R {stats.totalAmount.toFixed(2)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
-                        R {stats.supplierCommission.toFixed(4)}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-pink-600">
+                        R {stats.supplierCommission.toFixed(3)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
-                        R {stats.retailerCommission.toFixed(4)}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-purple-600">
+                        R {stats.retailerCommission.toFixed(3)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                        R {stats.agentCommission.toFixed(4)}
+                        R {stats.agentCommission.toFixed(3)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <span
@@ -704,7 +704,7 @@ function SalesReportContent() {
                             stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
                           )}
                         >
-                          R {stats.profit.toFixed(4)}
+                          R {stats.profit.toFixed(3)}
                         </span>
                       </td>
                     </tr>
