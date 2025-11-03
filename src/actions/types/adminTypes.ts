@@ -115,6 +115,7 @@ export type SalesReport = {
   id: string;
   created_at: string;
   terminal_name: string;
+  terminal_short_code: string;
   retailer_name: string;
   agent_name: string;
   commission_group_name?: string;

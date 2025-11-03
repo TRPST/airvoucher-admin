@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download } from "lucide-react";
+import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download, HandCoins } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { fetchSalesReport, type SalesReport } from "@/actions";
 import { Layout } from "@/components/Layout";
@@ -24,6 +24,7 @@ function SalesReportContent() {
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
+  const [terminalFilter, setTerminalFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
 
   // Table state
@@ -62,11 +63,12 @@ function SalesReportContent() {
     loadSales();
   }, [startDate, endDate]);
 
-  // Get unique voucher types, retailers, agents, and commission groups
+  // Get unique voucher types, retailers, agents, commission groups, and terminals
   const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
   const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
   const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
   const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
+  const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
 
   // Quick filter handler
   const handleQuickFilter = (filter: QuickFilter) => {
@@ -131,6 +133,11 @@ function SalesReportContent() {
     // Apply commission group filter
     if (commissionGroupFilter !== 'all') {
       filtered = filtered.filter(sale => sale.commission_group_name === commissionGroupFilter);
+    }
+
+    // Apply terminal filter
+    if (terminalFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.terminal_short_code === terminalFilter);
     }
 
     // Apply sorting
@@ -212,7 +219,7 @@ function SalesReportContent() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div className="-mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         {/* Back button */}
         <Link href="/admin/reports">
           <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
@@ -361,7 +368,7 @@ function SalesReportContent() {
                 <p className="text-2xl font-bold">R {stats.totalAmount.toFixed(2)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-500" />
+                <HandCoins className="h-6 w-6 text-green-500" />
               </div>
             </div>
           </div>
@@ -385,12 +392,12 @@ function SalesReportContent() {
 
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">Supplier Commission</p>
-            <p className="text-lg font-bold text-orange-600">R {stats.supplierCommission.toFixed(2)}</p>
+            <p className="text-lg font-bold text-pink-600">R {stats.supplierCommission.toFixed(2)}</p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">Retailer Commission</p>
-            <p className="text-lg font-bold text-green-600">R {stats.retailerCommission.toFixed(2)}</p>
+            <p className="text-lg font-bold text-purple-600">R {stats.retailerCommission.toFixed(2)}</p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
@@ -473,6 +480,25 @@ function SalesReportContent() {
             {commissionGroups.map((group) => (
               <option key={group} value={group}>
                 {group}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="terminalFilter" className="block text-sm font-medium mb-2">
+            Filter by Terminal ID
+          </label>
+          <select
+            id="terminalFilter"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={terminalFilter}
+            onChange={(e) => setTerminalFilter(e.target.value)}
+          >
+            <option value="all">All Terminals</option>
+            {terminals.map((terminal) => (
+              <option key={terminal} value={terminal}>
+                {terminal}
               </option>
             ))}
           </select>
@@ -572,6 +598,7 @@ function SalesReportContent() {
                         </button>
                       </th>
                       <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                      <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
                       <th className="whitespace-nowrap px-4 py-3">
                         <button
                           onClick={() => handleSort('voucher_type')}
@@ -624,6 +651,7 @@ function SalesReportContent() {
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit',
+                              second: '2-digit',
                             })}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -634,6 +662,9 @@ function SalesReportContent() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             {sale.commission_group_name || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                            {sale.terminal_short_code || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
@@ -657,14 +688,14 @@ function SalesReportContent() {
                           <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
                             R {sale.amount.toFixed(2)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                            R {supplierCommissionAmount.toFixed(4)}
+                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
+                            R {supplierCommissionAmount.toFixed(3)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                            R {sale.retailer_commission.toFixed(4)}
+                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
+                            R {sale.retailer_commission.toFixed(3)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                            R {sale.agent_commission.toFixed(4)}
+                            R {sale.agent_commission.toFixed(3)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm">
                             <span
@@ -673,7 +704,7 @@ function SalesReportContent() {
                                 airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
                               )}
                             >
-                              R {airVoucherProfit.toFixed(4)}
+                              R {airVoucherProfit.toFixed(3)}
                             </span>
                           </td>
                         </tr>
@@ -682,20 +713,20 @@ function SalesReportContent() {
                   </tbody>
                   <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                     <tr className="font-semibold">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={5}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
                         TOTAL
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
                         R {stats.totalAmount.toFixed(2)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
-                        R {stats.supplierCommission.toFixed(4)}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-pink-600">
+                        R {stats.supplierCommission.toFixed(3)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
-                        R {stats.retailerCommission.toFixed(4)}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-purple-600">
+                        R {stats.retailerCommission.toFixed(3)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                        R {stats.agentCommission.toFixed(4)}
+                        R {stats.agentCommission.toFixed(3)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <span
@@ -704,7 +735,7 @@ function SalesReportContent() {
                             stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
                           )}
                         >
-                          R {stats.profit.toFixed(4)}
+                          R {stats.profit.toFixed(3)}
                         </span>
                       </td>
                     </tr>
