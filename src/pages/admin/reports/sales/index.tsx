@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download } from "lucide-react";
+import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download, HandCoins } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { fetchSalesReport, type SalesReport } from "@/actions";
 import { Layout } from "@/components/Layout";
@@ -212,7 +212,7 @@ function SalesReportContent() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div className="-mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         {/* Back button */}
         <Link href="/admin/reports">
           <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
@@ -361,7 +361,7 @@ function SalesReportContent() {
                 <p className="text-2xl font-bold">R {stats.totalAmount.toFixed(2)}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-500" />
+                <HandCoins className="h-6 w-6 text-green-500" />
               </div>
             </div>
           </div>
