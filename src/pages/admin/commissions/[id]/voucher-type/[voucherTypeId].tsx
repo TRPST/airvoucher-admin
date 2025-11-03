@@ -874,7 +874,7 @@ export default function VoucherAmountCommissions() {
                             onChange={(e) => handleRowRateChange(rate.amount, 'supplier_pct', e.target.value)}
                             className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                           />
-                          <div className="text-xs text-pink-600">R{draftSupplierAmount.toFixed(2)}</div>
+                          <div className="text-xs text-pink-600">R {draftSupplierAmount.toFixed(2)}</div>
                         </div>
                       ) : (
                         <span
@@ -885,7 +885,7 @@ export default function VoucherAmountCommissions() {
                               : ''
                           )}
                         >
-                          {(rate.supplier_pct * 100).toFixed(2)}% (R{supplierAmount.toFixed(2)})
+                          {(rate.supplier_pct * 100).toFixed(2)}% (R {supplierAmount.toFixed(2)})
                         </span>
                       )}
                     </td>
@@ -907,7 +907,7 @@ export default function VoucherAmountCommissions() {
                             onChange={(e) => handleRowRateChange(rate.amount, 'retailer_pct', e.target.value)}
                             className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                           />
-                          <div className="text-xs text-purple-600">R{draftRetailerAmount.toFixed(2)}</div>
+                          <div className="text-xs text-purple-600">R {draftRetailerAmount.toFixed(2)}</div>
                         </div>
                       ) : (
                         <span
@@ -918,7 +918,7 @@ export default function VoucherAmountCommissions() {
                               : ''
                           )}
                         >
-                          {(rate.retailer_pct * 100).toFixed(2)}% (R{retailerAmount.toFixed(2)})
+                          {(rate.retailer_pct * 100).toFixed(2)}% (R {retailerAmount.toFixed(2)})
                         </span>
                       )}
                     </td>
@@ -938,7 +938,7 @@ export default function VoucherAmountCommissions() {
                             onChange={(e) => handleRowRateChange(rate.amount, 'agent_pct', e.target.value)}
                             className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
                           />
-                          <div className="text-xs text-blue-600">R{draftAgentAmount.toFixed(2)}</div>
+                          <div className="text-xs text-blue-600">R {draftAgentAmount.toFixed(2)}</div>
                         </div>
                       ) : (
                         <span
@@ -949,7 +949,7 @@ export default function VoucherAmountCommissions() {
                               : ''
                           )}
                         >
-                          {(rate.agent_pct * 100).toFixed(2)}% (R{agentAmount.toFixed(2)})
+                          {(rate.agent_pct * 100).toFixed(2)}% (R {agentAmount.toFixed(2)})
                         </span>
                       )}
                     </td>
@@ -960,7 +960,7 @@ export default function VoucherAmountCommissions() {
                         'font-medium',
                         (isRowEditing ? draftAvProfit : avProfit) >= 0 ? 'text-green-600' : 'text-red-600'
                       )}>
-                        R{(isRowEditing ? draftAvProfit : avProfit).toFixed(2)}
+                        R {(isRowEditing ? draftAvProfit : avProfit).toFixed(2)}
                       </span>
                     </td>
 
