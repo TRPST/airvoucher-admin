@@ -111,12 +111,14 @@ BEGIN
   -- 1. AirVoucher gets commission from supplier based on sale amount
   airvoucher_commission := sale_amount * (final_supplier_pct / 100);
   
-  -- 2. Retailer and agent commissions are percentages of the sale amount (not AirVoucher commission)
-  -- Note: All final_*_pct values are now consistently whole numbers, so divide by 100
+  -- 2. Retailer commission is a percentage of the sale amount
   retailer_commission := sale_amount * (final_retailer_pct / 100);
-  agent_commission := sale_amount * (final_agent_pct / 100);
   
-  -- 3. Calculate profit (what AirVoucher keeps after paying retailer and agent)
+  -- 3. Agent commission is a percentage of what remains after retailer takes their commission
+  -- (i.e., agent gets a percentage of the net balance: supplier_commission - retailer_commission)
+  agent_commission := (airvoucher_commission - retailer_commission) * (final_agent_pct / 100);
+  
+  -- 4. Calculate profit (what AirVoucher keeps after paying retailer and agent)
   profit := airvoucher_commission - retailer_commission - agent_commission;
   
   -- Get voucher details

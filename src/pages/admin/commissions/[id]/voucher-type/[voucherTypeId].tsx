@@ -805,6 +805,7 @@ export default function VoucherAmountCommissions() {
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Amount</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Supplier Com</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Retailer Com</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Net Balance</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Agent Com</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">AV Profit</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-medium">Status</th>
@@ -834,14 +835,16 @@ export default function VoucherAmountCommissions() {
                 // Calculate commission amounts in rands
                 const supplierAmount = rate.amount * rate.supplier_pct;
                 const retailerAmount = rate.amount * rate.retailer_pct;
-                const agentAmount = rate.amount * rate.agent_pct;
-                const avProfit = supplierAmount - retailerAmount - agentAmount;
+                const netBalance = supplierAmount - retailerAmount;
+                const agentAmount = netBalance * rate.agent_pct;
+                const avProfit = netBalance - agentAmount;
 
                 // For editing mode, use draft values
                 const draftSupplierAmount = isRowEditing ? rate.amount * (typeof draft?.supplier_pct === 'number' ? draft.supplier_pct : 0) : supplierAmount;
                 const draftRetailerAmount = isRowEditing ? rate.amount * (typeof draft?.retailer_pct === 'number' ? draft.retailer_pct : 0) : retailerAmount;
-                const draftAgentAmount = isRowEditing ? rate.amount * (typeof draft?.agent_pct === 'number' ? draft.agent_pct : 0) : agentAmount;
-                const draftAvProfit = isRowEditing ? draftSupplierAmount - draftRetailerAmount - draftAgentAmount : avProfit;
+                const draftNetBalance = isRowEditing ? draftSupplierAmount - draftRetailerAmount : netBalance;
+                const draftAgentAmount = isRowEditing ? draftNetBalance * (typeof draft?.agent_pct === 'number' ? draft.agent_pct : 0) : agentAmount;
+                const draftAvProfit = isRowEditing ? draftNetBalance - draftAgentAmount : avProfit;
 
                 return (
                   <tr key={rate.amount} className="border-b border-border transition-colors hover:bg-muted/50">
@@ -879,9 +882,8 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span
                           className={cn(
-                            'rounded-md px-2 py-1',
                             rate.supplier_pct !== defaultRates.supplier_pct
-                              ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                              ? 'relative -mx-2 rounded-md bg-pink-100 px-2 py-1 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
                               : ''
                           )}
                         >
@@ -912,15 +914,21 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span
                           className={cn(
-                            'rounded-md px-2 py-1',
                             rate.retailer_pct !== defaultRates.retailer_pct
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              ? 'relative -mx-2 rounded-md bg-purple-100 px-2 py-1 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                               : ''
                           )}
                         >
                           {(rate.retailer_pct * 100).toFixed(2)}% (R {retailerAmount.toFixed(2)})
                         </span>
                       )}
+                    </td>
+
+                    {/* Net Balance */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        R {(isRowEditing ? draftNetBalance : netBalance).toFixed(2)}
+                      </span>
                     </td>
 
                     {/* Agent */}
@@ -943,9 +951,8 @@ export default function VoucherAmountCommissions() {
                       ) : (
                         <span
                           className={cn(
-                            'rounded-md px-2 py-1',
                             rate.agent_pct !== defaultRates.agent_pct
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              ? 'relative -mx-2 rounded-md bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                               : ''
                           )}
                         >
