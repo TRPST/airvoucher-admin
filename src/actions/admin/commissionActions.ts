@@ -17,7 +17,8 @@ export async function fetchCommissionGroups(): Promise<
   
   const { data: groups, error: groupsError } = await supabase
     .from("commission_groups")
-    .select("id, name, description");
+    .select("id, name, description")
+    .eq('is_active', true);
 
   if (groupsError) {
     return { data: null, error: groupsError };

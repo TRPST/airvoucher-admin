@@ -132,7 +132,7 @@ export function BalanceHistoryModal({
             {/* Deposit History Tab */}
             <Tabs.Content
               value="deposits"
-              className="flex overflow-y-auto min-h-0 mt-2"
+              className="flex items-center justify-center overflow-y-auto min-h-0 mt-2"
             >
               {isLoadingDeposits ? (
                 <div className="flex items-center justify-center py-12">
