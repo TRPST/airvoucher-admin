@@ -22,7 +22,7 @@ export function RetailerTable({ retailers }: RetailerTableProps) {
           </div>
           <div>
             <div className="font-medium">{retailer.name}</div>
-            <div className="text-xs text-muted-foreground">{retailer.email}</div>
+            {/* <div className="text-xs text-muted-foreground">{retailer.email}</div> */}
           </div>
         </div>
       ),
