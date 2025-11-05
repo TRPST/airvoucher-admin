@@ -12,29 +12,55 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [hasValidSession, setHasValidSession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
+  // Check if user has a valid recovery session
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const token = hashParams.get('access_token');
-      if (token) setAccessToken(token);
-      else setError('Invalid or missing reset token. Please request a new password reset.');
-    }
-  }, []);
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setError('Invalid or missing reset token. Please request a new password reset.');
+          setIsCheckingSession(false);
+          return;
+        }
 
-  // 🔹 Listen for Supabase password recovery event
+        if (session) {
+          console.log('✅ Valid recovery session found');
+          setHasValidSession(true);
+          setError(null);
+        } else {
+          console.log('❌ No valid session found');
+          setError('Invalid or missing reset token. Please request a new password reset.');
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setError('Failed to verify reset token. Please try again.');
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+  }, [supabase]);
+
+  // Listen for password recovery event
   useEffect(() => {
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event detected');
+        console.log('🔐 Password recovery event detected on reset page');
+        setHasValidSession(true);
+        setError(null);
       }
     });
-    return () => subscription.subscription.unsubscribe();
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +88,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (!accessToken) {
-      setError('Missing reset token');
+    if (!hasValidSession) {
+      setError('No valid reset session. Please request a new password reset.');
       setIsLoading(false);
       return;
     }
@@ -71,7 +97,13 @@ export default function ResetPasswordPage() {
     try {
       const { data, error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      
+      console.log('✅ Password updated successfully');
       setSuccess(true);
+      
+      // Sign out user for security
+      await supabase.auth.signOut();
+      
       setTimeout(() => {
         router.push('/auth');
       }, 3000);
@@ -101,7 +133,12 @@ export default function ResetPasswordPage() {
               </p>
             </div>
 
-            {success ? (
+            {isCheckingSession ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                <p className="text-sm text-muted-foreground">Verifying reset token...</p>
+              </div>
+            ) : success ? (
               <div className="flex flex-col gap-4">
                 <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-600 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
                   <p className="font-medium">Password reset successful!</p>
@@ -131,7 +168,7 @@ export default function ResetPasswordPage() {
                       required
                       className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                       placeholder="Enter new password"
-                      disabled={!accessToken || isLoading}
+                      disabled={!hasValidSession || isLoading}
                     />
                     <button
                       type="button"
@@ -170,7 +207,7 @@ export default function ResetPasswordPage() {
                       required
                       className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                       placeholder="Confirm new password"
-                      disabled={!accessToken || isLoading}
+                      disabled={!hasValidSession || isLoading}
                     />
                     <button
                       type="button"
@@ -202,7 +239,7 @@ export default function ResetPasswordPage() {
                 <div className="mt-6 flex flex-col gap-4">
                   <button
                     type="submit"
-                    disabled={isLoading || !accessToken}
+                    disabled={isLoading || !hasValidSession || isCheckingSession}
                     className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (

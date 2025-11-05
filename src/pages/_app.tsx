@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
 import { SWRConfig } from "swr";
+import { createClient } from "@/utils/supabase/client";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -16,6 +17,21 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Global listener for password recovery events
+  useEffect(() => {
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔐 Password recovery event detected, redirecting to reset-password page');
+        router.push('/auth/reset-password');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   // Check for portal pages (new portal routing structure)
   const isPortalAuthPage =
