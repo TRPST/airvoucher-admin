@@ -38,7 +38,7 @@ const COLORS = [
 export const SalesByVoucherTypeChart: React.FC<SalesByVoucherTypeChartProps> = ({
   data,
   isLoading = false,
-  height = 250,
+  height = 280,
 }) => {
   const [textColor, setTextColor] = useState("#333");
 
@@ -158,31 +158,22 @@ export const SalesByVoucherTypeChart: React.FC<SalesByVoucherTypeChartProps> = (
               layout="horizontal" 
               verticalAlign="bottom" 
               align="center"
+              iconSize={8}
               wrapperStyle={{ 
                 paddingTop: "10px",
                 color: "hsl(var(--card-foreground))"
               }}
-              formatter={(value) => (
-                <span style={{ color: textColor, fontSize: "14px" }}>{value}</span>
-              )}
+              formatter={(value, entry: any) => {
+                const item = dataWithPercent.find(d => d.name === value);
+                return (
+                  <span style={{ color: textColor, fontSize: "14px" }}>
+                    {value}: {item?.percent}%
+                  </span>
+                );
+              }}
             />
           </PieChart>
         </ResponsiveContainer>
-        
-        {/* Statistics overlay for better visibility */}
-        <div className="absolute top-2 right-2 space-y-1">
-          {dataWithPercent.map((item, index) => (
-            <div key={item.name} className="flex items-center gap-2 text-xs">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-              />
-              <span className="text-muted-foreground">
-                {item.name}: {item.percent}%
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

@@ -429,10 +429,11 @@ export async function fetchNetworkVoucherSummaries(): Promise<
   const supabase = createClient();
 
   try {
-    // Get all voucher types with categorization
+    // Get all active voucher types with categorization
     const { data: voucherTypes, error: typesError } = await supabase
       .from('voucher_types')
-      .select('*');
+      .select('*')
+      .eq('is_active', true);
 
     if (typesError) {
       return { data: null, error: typesError };

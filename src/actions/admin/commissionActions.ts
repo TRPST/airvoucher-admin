@@ -17,7 +17,8 @@ export async function fetchCommissionGroups(): Promise<
   
   const { data: groups, error: groupsError } = await supabase
     .from("commission_groups")
-    .select("id, name, description");
+    .select("id, name, description")
+    .eq('is_active', true);
 
   if (groupsError) {
     return { data: null, error: groupsError };
@@ -145,23 +146,34 @@ export async function upsertCommissionRate(
   groupId: string,
   typeId: string,
   retailerPct: number,
-  agentPct: number
+  agentPct: number,
+  supplierPct?: number
 ): Promise<ResponseType<{ id: string }>> {
   const supabase = createClient();
   
+  const upsertData: {
+    commission_group_id: string;
+    voucher_type_id: string;
+    retailer_pct: number;
+    agent_pct: number;
+    supplier_pct?: number;
+  } = {
+    commission_group_id: groupId,
+    voucher_type_id: typeId,
+    retailer_pct: retailerPct,
+    agent_pct: agentPct,
+  };
+
+  // Only include supplier_pct if provided
+  if (supplierPct !== undefined) {
+    upsertData.supplier_pct = supplierPct;
+  }
+
   const { data, error } = await supabase
     .from("commission_group_rates")
-    .upsert(
-      {
-        commission_group_id: groupId,
-        voucher_type_id: typeId,
-        retailer_pct: retailerPct,
-        agent_pct: agentPct,
-      },
-      {
-        onConflict: "commission_group_id,voucher_type_id",
-      }
-    )
+    .upsert(upsertData, {
+      onConflict: "commission_group_id,voucher_type_id",
+    })
     .select("id")
     .single();
 

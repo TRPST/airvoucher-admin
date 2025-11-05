@@ -1,62 +1,35 @@
 import { useState } from 'react';
 import {
-  Filter,
-  Search,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   ChevronDown,
   Activity,
+  Maximize2,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { SalesFilterPanel } from './SalesFilterPanel';
-import { SortDirection, SortField } from '@/utils/salesDataUtils';
-import { SalesReport } from '@/actions/adminActions';
+import type { SalesReport } from '@/actions';
+
+type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
+type SortDirection = 'asc' | 'desc';
 
 interface SalesTableProps {
-  salesData: SalesReport[];
-  voucherTypes: string[];
-  retailerNames: string[];
+  sales: SalesReport[];
+  isLoading: boolean;
+  error: string | null;
+  onOpenModal?: () => void;
+  onExport?: () => void;
 }
 
-export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTableProps) {
+export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: SalesTableProps) {
   // Table state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
-  const [retailerNameFilter, setRetailerNameFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  // Filter and sort sales data
-  const filteredAndSortedSales = (() => {
-    let filtered = [...salesData];
+  // Sort sales data
+  const sortedSales = (() => {
+    const sorted = [...sales];
 
-    // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        sale =>
-          sale.voucher_type?.toLowerCase().includes(term) ||
-          sale.retailer_name?.toLowerCase().includes(term) ||
-          sale.id.toLowerCase().includes(term)
-      );
-    }
-
-    // Apply voucher type filter
-    if (voucherTypeFilter !== 'all') {
-      filtered = filtered.filter(sale => sale.voucher_type === voucherTypeFilter);
-    }
-
-    // Apply retailer name filter
-    if (retailerNameFilter !== 'all') {
-      filtered = filtered.filter(sale => sale.retailer_name === retailerNameFilter);
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
+    sorted.sort((a, b) => {
       let aValue: string | number | Date;
       let bValue: string | number | Date;
 
@@ -69,13 +42,17 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
           aValue = a.voucher_type || '';
           bValue = b.voucher_type || '';
           break;
-        case 'amount':
-          aValue = a.amount;
-          bValue = b.amount;
-          break;
         case 'retailer_name':
           aValue = a.retailer_name || '';
           bValue = b.retailer_name || '';
+          break;
+        case 'agent_name':
+          aValue = a.agent_name || '';
+          bValue = b.agent_name || '';
+          break;
+        case 'amount':
+          aValue = a.amount;
+          bValue = b.amount;
           break;
         default:
           return 0;
@@ -86,64 +63,34 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
       return 0;
     });
 
-    return filtered;
+    return sorted;
   })();
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedSales.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSales = filteredAndSortedSales.slice(startIndex, startIndex + itemsPerPage);
+  // Calculate totals
+  const totals = (() => {
+    return sortedSales.reduce(
+      (acc, sale) => {
+        const supplierCommissionAmount =
+          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+        const airVoucherProfit = sale.profit || 0;
 
-  // Table data formatting
-  const tableData = paginatedSales.map(sale => {
-    // Use the profit field directly from the database
-    const airVoucherProfit = sale.profit || 0;
-
-    // Use the stored supplier commission amount (accounts for overrides)
-    const supplierCommissionAmount =
-      sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
-
-    return {
-      Date: new Date(sale.created_at).toLocaleString('en-ZA', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      Type: (
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              'h-2 w-2 rounded-full',
-              sale.voucher_type === 'Mobile'
-                ? 'bg-primary'
-                : sale.voucher_type === 'OTT'
-                  ? 'bg-purple-500'
-                  : sale.voucher_type === 'Hollywoodbets'
-                    ? 'bg-green-500'
-                    : sale.voucher_type === 'Ringa'
-                      ? 'bg-amber-500'
-                      : 'bg-pink-500'
-            )}
-          />
-          <span>{sale.voucher_type || 'Unknown'}</span>
-        </div>
-      ),
-      Amount: `R ${sale.amount.toFixed(2)}`,
-      Retailer: sale.retailer_name || 'Unknown',
-      'Supp. Com.': `R ${supplierCommissionAmount.toFixed(2)}`,
-      'Ret. Com.': `R ${sale.retailer_commission.toFixed(2)}`,
-      'Agent Com.': `R ${sale.agent_commission.toFixed(2)}`,
-      'AV Profit': (
-        <span
-          className={cn('font-medium', airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600')}
-        >
-          R {airVoucherProfit.toFixed(2)}
-        </span>
-      ),
-    };
-  });
+        return {
+          totalAmount: acc.totalAmount + sale.amount,
+          supplierCommission: acc.supplierCommission + supplierCommissionAmount,
+          retailerCommission: acc.retailerCommission + sale.retailer_commission,
+          agentCommission: acc.agentCommission + sale.agent_commission,
+          profit: acc.profit + airVoucherProfit,
+        };
+      },
+      {
+        totalAmount: 0,
+        supplierCommission: 0,
+        retailerCommission: 0,
+        agentCommission: 0,
+        profit: 0,
+      }
+    );
+  })();
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -153,69 +100,66 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
       setSortField(field);
       setSortDirection('desc');
     }
-    setCurrentPage(1);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Recent Sales</h2>
-        <p className="text-sm text-muted-foreground">{filteredAndSortedSales.length} total sales</p>
-      </div>
-
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search sales..."
-              className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              'inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm',
-              showFilters
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-input bg-background hover:bg-muted'
-            )}
-          >
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </button>
+        <h2 className="text-xl font-semibold">Sales</h2>
+        <div className="flex items-center gap-2">
+          {onOpenModal && (
+            <button
+              onClick={onOpenModal}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Open Modal
+            </button>
+          )}
+          {onExport && (
+            <button
+              onClick={onExport}
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Filter Panel */}
-      {showFilters && (
-        <SalesFilterPanel
-          voucherTypeFilter={voucherTypeFilter}
-          setVoucherTypeFilter={setVoucherTypeFilter}
-          retailerNameFilter={retailerNameFilter}
-          setRetailerNameFilter={setRetailerNameFilter}
-          voucherTypes={voucherTypes}
-          retailerNames={retailerNames}
-        />
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex h-60 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="text-center">
+            <div className="mb-3 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            <p className="text-sm text-muted-foreground">Loading sales data...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="flex h-60 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="text-center">
+            <p className="text-sm text-red-500">{error}</p>
+          </div>
+        </div>
       )}
 
       {/* Sortable Table */}
-      {salesData.length > 0 ? (
+      {!isLoading && !error && sales.length > 0 ? (
         <div className="rounded-lg border border-border shadow-sm">
-          <div className="overflow-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full border-collapse">
-              <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="whitespace-nowrap px-4 py-3">
                     <button
                       onClick={() => handleSort('date')}
                       className="flex items-center gap-1 hover:text-foreground"
                     >
-                      Date
+                      DATE
                       {sortField === 'date' &&
                         (sortDirection === 'asc' ? (
                           <ChevronUp className="h-3 w-3" />
@@ -226,10 +170,40 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
                   </th>
                   <th className="whitespace-nowrap px-4 py-3">
                     <button
+                      onClick={() => handleSort('retailer_name')}
+                      className="flex items-center gap-1 hover:text-foreground"
+                    >
+                      RETAILER
+                      {sortField === 'retailer_name' &&
+                        (sortDirection === 'asc' ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3">
+                    <button
+                      onClick={() => handleSort('agent_name')}
+                      className="flex items-center gap-1 hover:text-foreground"
+                    >
+                      AGENT
+                      {sortField === 'agent_name' &&
+                        (sortDirection === 'asc' ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                  <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
+                  <th className="whitespace-nowrap px-4 py-3">
+                    <button
                       onClick={() => handleSort('voucher_type')}
                       className="flex items-center gap-1 hover:text-foreground"
                     >
-                      Type
+                      TYPE
                       {sortField === 'voucher_type' &&
                         (sortDirection === 'asc' ? (
                           <ChevronUp className="h-3 w-3" />
@@ -243,22 +217,8 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
                       onClick={() => handleSort('amount')}
                       className="flex items-center gap-1 hover:text-foreground"
                     >
-                      Amount
+                      AMOUNT
                       {sortField === 'amount' &&
-                        (sortDirection === 'asc' ? (
-                          <ChevronUp className="h-3 w-3" />
-                        ) : (
-                          <ChevronDown className="h-3 w-3" />
-                        ))}
-                    </button>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3">
-                    <button
-                      onClick={() => handleSort('retailer_name')}
-                      className="flex items-center gap-1 hover:text-foreground"
-                    >
-                      Retailer
-                      {sortField === 'retailer_name' &&
                         (sortDirection === 'asc' ? (
                           <ChevronUp className="h-3 w-3" />
                         ) : (
@@ -273,83 +233,126 @@ export function SalesTable({ salesData, voucherTypes, retailerNames }: SalesTabl
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tableData.map((row, index) => (
-                  <tr
-                    key={`row-${startIndex + index}`}
-                    className="border-b border-border transition-colors hover:bg-muted/30"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Date}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Type}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                      {row.Amount}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">{row.Retailer}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                      {row['Supp. Com.']}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                      {row['Ret. Com.']}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                      {row['Agent Com.']}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm">{row['AV Profit']}</td>
-                  </tr>
-                ))}
+                {sortedSales.map((sale, index) => {
+                  const airVoucherProfit = sale.profit || 0;
+                  const supplierCommissionAmount =
+                    sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+
+                  return (
+                    <tr
+                      key={`row-${index}`}
+                      className="transition-colors hover:bg-muted/30"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {new Date(sale.created_at).toLocaleString('en-ZA', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {sale.retailer_name || 'Unknown'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {sale.agent_name || '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {sale.commission_group_name || '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                        {sale.terminal_short_code || '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              sale.voucher_type === 'Mobile'
+                                ? 'bg-primary'
+                                : sale.voucher_type === 'OTT'
+                                  ? 'bg-purple-500'
+                                  : sale.voucher_type === 'Hollywoodbets'
+                                    ? 'bg-green-500'
+                                    : sale.voucher_type === 'Ringa'
+                                      ? 'bg-amber-500'
+                                      : 'bg-pink-500'
+                            )}
+                          />
+                          <span>{sale.voucher_type || 'Unknown'}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                        R {sale.amount.toFixed(2)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
+                        R {supplierCommissionAmount.toFixed(3)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
+                        R {sale.retailer_commission.toFixed(3)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
+                        R {sale.agent_commission.toFixed(3)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-sm">
+                        <span
+                          className={cn(
+                            'font-medium',
+                            airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                          )}
+                        >
+                          R {airVoucherProfit.toFixed(3)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
+              <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+                <tr className="font-semibold">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
+                    TOTAL
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
+                    R {totals.totalAmount.toFixed(2)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-pink-600">
+                    R {totals.supplierCommission.toFixed(3)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-purple-600">
+                    R {totals.retailerCommission.toFixed(3)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
+                    R {totals.agentCommission.toFixed(3)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm">
+                    <span
+                      className={cn(
+                        'font-bold',
+                        totals.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}
+                    >
+                      R {totals.profit.toFixed(3)}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border px-4 py-3">
-              {/* Results text - condensed on mobile */}
-              <div className="text-sm text-muted-foreground">
-                <span className="hidden sm:inline">Showing </span>
-                {startIndex + 1} to{' '}
-                {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of{' '}
-                {filteredAndSortedSales.length}
-                <span className="hidden sm:inline"> results</span>
-              </div>
-
-              {/* Navigation controls */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="ml-1 hidden sm:inline">Previous</span>
-                </button>
-
-                <span className="whitespace-nowrap text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className="mr-1 hidden sm:inline">Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      ) : (
+      ) : !isLoading && !error ? (
         <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
           <div className="mb-3 rounded-full bg-muted p-3">
             <Activity className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="mb-1 text-lg font-medium">No sales data</h3>
           <p className="mb-4 text-muted-foreground">
-            No sales have been recorded in the last 30 days.
+            No sales match the selected filters.
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

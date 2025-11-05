@@ -7,7 +7,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
 
@@ -26,7 +25,7 @@ type SalesOverTimeChartProps = {
 export const SalesOverTimeChart: React.FC<SalesOverTimeChartProps> = ({
   data,
   isLoading = false,
-  height = 250,
+  height = 280,
 }) => {
   if (isLoading) {
     return (
@@ -89,7 +88,6 @@ export const SalesOverTimeChart: React.FC<SalesOverTimeChartProps> = ({
             }}
             cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
           />
-          <Legend wrapperStyle={{ paddingTop: 10 }} />
           <Bar
             dataKey="amount"
             name="Voucher Sales"

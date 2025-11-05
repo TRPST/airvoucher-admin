@@ -13,15 +13,16 @@ CREATE OR REPLACE FUNCTION complete_voucher_sale(
 DECLARE
   sale_id UUID;
   voucher_supplier_commission_pct NUMERIC(5,2);
-  airvoucher_commission NUMERIC(12,2);
-  retailer_commission NUMERIC(12,2);
-  agent_commission NUMERIC(12,2);
-  profit NUMERIC(12,2);
+  airvoucher_commission NUMERIC(12,4);
+  retailer_commission NUMERIC(12,4);
+  agent_commission NUMERIC(12,4);
+  profit NUMERIC(12,4);
   voucher_pin TEXT;
   voucher_serial TEXT;
   retailer_balance NUMERIC(12,2);
   retailer_credit_limit NUMERIC(12,2);
   new_balance NUMERIC(12,2);
+  retailer_commission_group_id UUID;
   agent_profile_id UUID;
   terminal_name TEXT;
   retailer_name TEXT;
@@ -32,12 +33,12 @@ DECLARE
   help TEXT;
   website_url TEXT;
   -- Commission override variables
-  override_supplier_pct NUMERIC(5,2);
-  override_retailer_pct NUMERIC(5,2);
-  override_agent_pct NUMERIC(5,2);
-  final_supplier_pct NUMERIC(5,2);
-  final_retailer_pct NUMERIC(5,2);
-  final_agent_pct NUMERIC(5,2);
+  override_supplier_pct NUMERIC(6,4);
+  override_retailer_pct NUMERIC(6,4);
+  override_agent_pct NUMERIC(6,4);
+  final_supplier_pct NUMERIC(6,4);
+  final_retailer_pct NUMERIC(6,4);
+  final_agent_pct NUMERIC(6,4);
 BEGIN
   -- Check if voucher is available
   PERFORM id FROM voucher_inventory 
@@ -49,8 +50,8 @@ BEGIN
   END IF;
   
   -- Get retailer details
-  SELECT r.balance, r.credit_limit, r.agent_profile_id, r.name 
-    INTO retailer_balance, retailer_credit_limit, agent_profile_id, retailer_name
+  SELECT r.balance, r.credit_limit, r.commission_group_id, r.agent_profile_id, r.name 
+    INTO retailer_balance, retailer_credit_limit, retailer_commission_group_id, agent_profile_id, retailer_name
     FROM retailers r
     WHERE r.id = retailer_id;
   
@@ -88,14 +89,16 @@ BEGIN
     INTO override_supplier_pct, override_retailer_pct, override_agent_pct
     FROM voucher_commission_overrides
     WHERE voucher_commission_overrides.voucher_type_id = in_voucher_type_id
-    AND voucher_commission_overrides.amount = sale_amount;
+    AND voucher_commission_overrides.amount = sale_amount
+    AND voucher_commission_overrides.commission_group_id = retailer_commission_group_id;
 
   -- Use override values if they exist, otherwise use the original values
   IF FOUND THEN
-    -- Override exists, use override values (stored as whole numbers 0-100)
-    final_supplier_pct := override_supplier_pct;
-    final_retailer_pct := override_retailer_pct;
-    final_agent_pct := override_agent_pct;
+    -- Override exists, all stored as decimals
+    -- Multiply by 100 to convert to whole numbers for consistent calculation
+    final_supplier_pct := override_supplier_pct * 100;
+    final_retailer_pct := override_retailer_pct * 100;
+    final_agent_pct := override_agent_pct * 100;
   ELSE
     -- No override, use original values
     -- Note: supplier_commission_pct is stored as whole number, but retailer/agent rates are decimals
@@ -108,12 +111,14 @@ BEGIN
   -- 1. AirVoucher gets commission from supplier based on sale amount
   airvoucher_commission := sale_amount * (final_supplier_pct / 100);
   
-  -- 2. Retailer and agent commissions are percentages of what AirVoucher receives
-  -- Note: All final_*_pct values are now consistently whole numbers, so divide by 100
-  retailer_commission := airvoucher_commission * (final_retailer_pct / 100);
-  agent_commission := airvoucher_commission * (final_agent_pct / 100);
+  -- 2. Retailer commission is a percentage of the sale amount
+  retailer_commission := sale_amount * (final_retailer_pct / 100);
   
-  -- 3. Calculate profit (what AirVoucher keeps)
+  -- 3. Agent commission is a percentage of what remains after retailer takes their commission
+  -- (i.e., agent gets a percentage of the net balance: supplier_commission - retailer_commission)
+  agent_commission := (airvoucher_commission - retailer_commission) * (final_agent_pct / 100);
+  
+  -- 4. Calculate profit (what AirVoucher keeps after paying retailer and agent)
   profit := airvoucher_commission - retailer_commission - agent_commission;
   
   -- Get voucher details
