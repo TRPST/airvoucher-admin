@@ -18,33 +18,19 @@ export default function ResetPasswordPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
-  // Check for both implicit flow (hash) and PKCE (query) tokens
   useEffect(() => {
     const checkToken = () => {
       if (typeof window === 'undefined') return;
       
-      // Check for implicit flow token in hash
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
-      
-      // Check for PKCE code in query params
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      
-      console.log('🔍 Checking for auth tokens');
-      console.log('Hash (implicit):', { accessToken: !!accessToken, type });
-      console.log('Query (PKCE):', { code: !!code });
       
       if (accessToken && type === 'recovery') {
         console.log('✅ Implicit flow recovery token found in hash');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
-      } else if (code) {
-        console.log('🔑 PKCE code detected - Supabase will auto-exchange via PASSWORD_RECOVERY event');
-        // Don't try to exchange manually - let Supabase handle it
-        // Just wait for the PASSWORD_RECOVERY event
       } else {
         console.log('⏳ No token yet, waiting for PASSWORD_RECOVERY event...');
       }
@@ -56,9 +42,7 @@ export default function ResetPasswordPage() {
   // Listen for auth events (PASSWORD_RECOVERY for implicit, SIGNED_IN for PKCE)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Auth state change:', event, 'Session:', !!session);
-      
-      // Check if this is a password recovery flow
+      // console.log('🔔 Auth state change:', event, 'Session:', !!session);
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -66,7 +50,6 @@ export default function ResetPasswordPage() {
       const isRecoveryFlow = code || type === 'recovery';
       
       if ((event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) && session) {
-        console.log('🔐 Password recovery flow detected - session established!');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
