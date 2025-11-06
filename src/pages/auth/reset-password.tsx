@@ -116,11 +116,13 @@ export default function ResetPasswordPage() {
 
     try {
       const { data, error } = await supabase.auth.updateUser({ password });
-      if (data) console.log('✅ Password updated successfully', JSON.stringify(data, null, 2));
+      if (data) console.log('✅ Password updated successfully', data);
       if (error) throw error;
       
+      console.log('✅ Password updated successfully');
       setSuccess(true);
       
+      // Sign out user for security
       await supabase.auth.signOut();
       
       setTimeout(() => {
