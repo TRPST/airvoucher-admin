@@ -18,30 +18,39 @@ export default function ResetPasswordPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
-  // Check for implicit flow token in URL hash
+  // Check for both implicit flow (hash) and PKCE (query) tokens
   useEffect(() => {
-    const checkImplicitToken = () => {
+    const checkToken = () => {
       if (typeof window === 'undefined') return;
       
+      // Check for implicit flow token in hash
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
       
-      console.log('🔍 Checking URL hash for implicit flow token');
-      console.log('Hash params:', { accessToken: !!accessToken, type });
+      // Check for PKCE code in query params
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      console.log('🔍 Checking for auth tokens');
+      console.log('Hash (implicit):', { accessToken: !!accessToken, type });
+      console.log('Query (PKCE):', { code: !!code });
       
       if (accessToken && type === 'recovery') {
         console.log('✅ Implicit flow recovery token found in hash');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
-      } else if (!accessToken) {
-        console.log('⏳ No token in hash yet, waiting for PASSWORD_RECOVERY event...');
-        // Don't immediately show error - wait for the PASSWORD_RECOVERY event
+      } else if (code) {
+        console.log('🔑 PKCE code detected - Supabase will auto-exchange via PASSWORD_RECOVERY event');
+        // Don't try to exchange manually - let Supabase handle it
+        // Just wait for the PASSWORD_RECOVERY event
+      } else {
+        console.log('⏳ No token yet, waiting for PASSWORD_RECOVERY event...');
       }
     };
     
-    checkImplicitToken();
+    checkToken();
   }, []);
 
   // Listen for password recovery event (fires when Supabase detects token in hash)
