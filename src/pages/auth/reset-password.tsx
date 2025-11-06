@@ -19,36 +19,36 @@ export default function ResetPasswordPage() {
   const [supabase] = useState(() => createClient());
 
   // Check if user has a valid recovery session
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // useEffect(() => {
+  //   const checkSession = async () => {
+  //     try {
+  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError('Invalid or missing reset token. Please request a new password reset.');
-          setIsCheckingSession(false);
-          return;
-        }
+  //       if (sessionError) {
+  //         console.error('Session error:', sessionError);
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //         setIsCheckingSession(false);
+  //         return;
+  //       }
 
-        if (session) {
-          console.log('✅ Valid recovery session found');
-          setHasValidSession(true);
-          setError(null);
-        } else {
-          console.log('❌ No valid session found');
-          setError('Invalid or missing reset token. Please request a new password reset.');
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setError('Failed to verify reset token. Please try again.');
-      } finally {
-        setIsCheckingSession(false);
-      }
-    };
+  //       if (session) {
+  //         console.log('✅ Valid recovery session found');
+  //         setHasValidSession(true);
+  //         setError(null);
+  //       } else {
+  //         console.log('❌ No valid session found');
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //       }
+  //     } catch (err) {
+  //       console.error('Error checking session:', err);
+  //       setError('Failed to verify reset token. Please try again.');
+  //     } finally {
+  //       setIsCheckingSession(false);
+  //     }
+  //   };
 
-    checkSession();
-  }, [supabase]);
+  //   checkSession();
+  // }, [supabase]);
 
   // Listen for password recovery event
   useEffect(() => {
@@ -73,20 +73,20 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      setIsLoading(false);
-      return;
-    }
+    // if (password.length < 8) {
+    //   setError('Password must be at least 8 characters long');
+    //   setIsLoading(false);
+    //   return;
+    // }
 
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    if (!hasUpper || !hasLower || !hasNumber) {
-      setError('Password must contain at least one uppercase, one lowercase, and one number');
-      setIsLoading(false);
-      return;
-    }
+    // const hasUpper = /[A-Z]/.test(password);
+    // const hasLower = /[a-z]/.test(password);
+    // const hasNumber = /[0-9]/.test(password);
+    // if (!hasUpper || !hasLower || !hasNumber) {
+    //   setError('Password must contain at least one uppercase, one lowercase, and one number');
+    //   setIsLoading(false);
+    //   return;
+    // }
 
     if (!hasValidSession) {
       setError('No valid reset session. Please request a new password reset.');
@@ -101,7 +101,6 @@ export default function ResetPasswordPage() {
       console.log('✅ Password updated successfully');
       setSuccess(true);
       
-      // Sign out user for security
       await supabase.auth.signOut();
       
       setTimeout(() => {
@@ -189,9 +188,9 @@ export default function ResetPasswordPage() {
                       )}
                     </button>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  {/* <p className="mt-1 text-xs text-muted-foreground">
                     Must be at least 8 characters with uppercase, lowercase, and numbers
-                  </p>
+                  </p> */}
                 </div>
 
                 <div>

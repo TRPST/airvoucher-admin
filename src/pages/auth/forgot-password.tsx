@@ -18,8 +18,7 @@ export default function ForgotPasswordPage() {
     setSuccess(false);
 
     try {
-      const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://admin.arv-shop.com'}/auth/reset-password`;      
-      // const redirectUrl = `${'https://admin.arv-shop.com'}/auth/reset-password`;      
+      const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://admin.arv-shop.com'}/auth/reset-password`;
       const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
