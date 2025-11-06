@@ -73,20 +73,20 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      setIsLoading(false);
-      return;
-    }
+    // if (password.length < 8) {
+    //   setError('Password must be at least 8 characters long');
+    //   setIsLoading(false);
+    //   return;
+    // }
 
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    if (!hasUpper || !hasLower || !hasNumber) {
-      setError('Password must contain at least one uppercase, one lowercase, and one number');
-      setIsLoading(false);
-      return;
-    }
+    // const hasUpper = /[A-Z]/.test(password);
+    // const hasLower = /[a-z]/.test(password);
+    // const hasNumber = /[0-9]/.test(password);
+    // if (!hasUpper || !hasLower || !hasNumber) {
+    //   setError('Password must contain at least one uppercase, one lowercase, and one number');
+    //   setIsLoading(false);
+    //   return;
+    // }
 
     if (!hasValidSession) {
       setError('No valid reset session. Please request a new password reset.');
@@ -101,7 +101,6 @@ export default function ResetPasswordPage() {
       console.log('✅ Password updated successfully');
       setSuccess(true);
       
-      // Sign out user for security
       await supabase.auth.signOut();
       
       setTimeout(() => {
@@ -189,9 +188,9 @@ export default function ResetPasswordPage() {
                       )}
                     </button>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  {/* <p className="mt-1 text-xs text-muted-foreground">
                     Must be at least 8 characters with uppercase, lowercase, and numbers
-                  </p>
+                  </p> */}
                 </div>
 
                 <div>
