@@ -19,61 +19,61 @@ export default function ResetPasswordPage() {
   const [supabase] = useState(() => createClient());
 
   // Handle PKCE code exchange and session validation
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const code = router.query.code as string | undefined;
+  // useEffect(() => {
+  //   const checkSession = async () => {
+  //     try {
+  //       const code = router.query.code as string | undefined;
         
-        if (code) {
-          console.log('🔑 PKCE code detected in URL:', code);
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  //       if (code) {
+  //         console.log('🔑 PKCE code detected in URL:', code);
+  //         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           
-          if (exchangeError) {
-            console.error('❌ Error exchanging code for session:', exchangeError);
-            setError('Invalid or expired reset token. Please request a new password reset.');
-            setIsCheckingSession(false);
-            return;
-          }
+  //         if (exchangeError) {
+  //           console.error('❌ Error exchanging code for session:', exchangeError);
+  //           setError('Invalid or expired reset token. Please request a new password reset.');
+  //           setIsCheckingSession(false);
+  //           return;
+  //         }
           
-          if (data.session) {
-            console.log('✅ Successfully exchanged PKCE code for session');
-            setHasValidSession(true);
-            setError(null);
-            setIsCheckingSession(false);
-            router.replace('/auth/reset-password', undefined, { shallow: true });
-            return;
-          }
-        }
+  //         if (data.session) {
+  //           console.log('✅ Successfully exchanged PKCE code for session');
+  //           setHasValidSession(true);
+  //           setError(null);
+  //           setIsCheckingSession(false);
+  //           router.replace('/auth/reset-password', undefined, { shallow: true });
+  //           return;
+  //         }
+  //       }
         
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError('Invalid or missing reset token. Please request a new password reset.');
-          setIsCheckingSession(false);
-          return;
-        }
+  //       if (sessionError) {
+  //         console.error('Session error:', sessionError);
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //         setIsCheckingSession(false);
+  //         return;
+  //       }
 
-        if (session) {
-          console.log('✅ Valid recovery session found');
-          setHasValidSession(true);
-          setError(null);
-        } else {
-          console.log('❌ No valid session found');
-          setError('Invalid or missing reset token. Please request a new password reset.');
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setError('Failed to verify reset token. Please try again.');
-      } finally {
-        setIsCheckingSession(false);
-      }
-    };
+  //       if (session) {
+  //         console.log('✅ Valid recovery session found');
+  //         setHasValidSession(true);
+  //         setError(null);
+  //       } else {
+  //         console.log('❌ No valid session found');
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //       }
+  //     } catch (err) {
+  //       console.error('Error checking session:', err);
+  //       setError('Failed to verify reset token. Please try again.');
+  //     } finally {
+  //       setIsCheckingSession(false);
+  //     }
+  //   };
     
-    if (router.isReady) {
-      checkSession();
-    }
-  }, [supabase, router.isReady, router.query.code, router]);
+  //   if (router.isReady) {
+  //     checkSession();
+  //   }
+  // }, [supabase, router.isReady, router.query.code, router]);
 
   // Listen for password recovery event
   useEffect(() => {
