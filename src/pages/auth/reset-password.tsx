@@ -13,65 +13,102 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [hasValidSession, setHasValidSession] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
-  // Check if user has a valid recovery session
-  // useEffect(() => {
-  //   const checkSession = async () => {
-  //     try {
-  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-  //       if (sessionError) {
-  //         console.error('Session error:', sessionError);
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //         setIsCheckingSession(false);
-  //         return;
-  //       }
-
-  //       if (session) {
-  //         console.log('✅ Valid recovery session found');
-  //         setHasValidSession(true);
-  //         setError(null);
-  //       } else {
-  //         console.log('❌ No valid session found');
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //       }
-  //     } catch (err) {
-  //       console.error('Error checking session:', err);
-  //       setError('Failed to verify reset token. Please try again.');
-  //     } finally {
-  //       setIsCheckingSession(false);
-  //     }
-  //   };
-
-  //   checkSession();
-  // }, [supabase]);
-
-  // Listen for password recovery event
-  // useEffect(() => {
-  //   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-  //     if (event === 'PASSWORD_RECOVERY') {
-  //       console.log('🔐 Password recovery event detected on reset page');
-  //       setHasValidSession(true);
-  //       setIsCheckingSession(false);
-  //       setError(null);
-  //     }
-  //   });
-  //   return () => subscription.unsubscribe();
-  // }, [supabase]);
-
+  // Check for recovery code/token and establish session
   useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event == "PASSWORD_RECOVERY") {
-        setHasValidSession(true);
+    const handleRecoverySession = async () => {
+      try {
+        await supabase.auth.signOut();
+        console.log('🔓 Cleared any existing sessions');
+
+        // Check for PKCE code in URL query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        if (code) {
+          console.log('🔐 PKCE code found in URL, exchanging for session...');
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            console.error('❌ Code exchange error:', exchangeError);
+            setError('Invalid or expired reset token. Please request a new password reset.');
+            setIsCheckingSession(false);
+            return;
+          }
+
+          if (data.session) {
+            console.log('✅ Valid recovery session established for:', data.session.user.email);
+            setHasValidSession(true);
+            setUserEmail(data.session.user.email || '');
+            setError(null);
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } else {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          const type = hashParams.get('type');
+
+          if (type === 'recovery' && accessToken && refreshToken) {
+            console.log('🔐 Hash tokens found, establishing session...');
+            
+            const { data, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (sessionError) {
+              console.error('❌ Session error:', sessionError);
+              setError('Invalid or expired reset token. Please request a new password reset.');
+              setIsCheckingSession(false);
+              return;
+            }
+
+            if (data.session) {
+              console.log('✅ Valid recovery session for:', data.session.user.email);
+              setHasValidSession(true);
+              setUserEmail(data.session.user.email || '');
+              setError(null);
+              
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          } else {
+            console.log('❌ No recovery code or tokens in URL');
+            setError('Invalid or missing reset token. Please request a new password reset.');
+          }
+        }
+      } catch (err) {
+        console.error('Error handling recovery session:', err);
+        setError('Failed to verify reset token. Please try again.');
+      } finally {
         setIsCheckingSession(false);
-        setError(null);
       }
-    })
-  }, [])
+    };
+
+    handleRecoverySession();
+  }, [supabase]);
+
+  // Backup: Listen for password recovery event
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔐 PASSWORD_RECOVERY event detected');
+        if (session) {
+          console.log('✅ Recovery session for:', session.user.email);
+          setHasValidSession(true);
+          setUserEmail(session.user.email || '');
+          setError(null);
+          setIsCheckingSession(false);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,20 +121,20 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // if (password.length < 8) {
-    //   setError('Password must be at least 8 characters long');
-    //   setIsLoading(false);
-    //   return;
-    // }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      setIsLoading(false);
+      return;
+    }
 
-    // const hasUpper = /[A-Z]/.test(password);
-    // const hasLower = /[a-z]/.test(password);
-    // const hasNumber = /[0-9]/.test(password);
-    // if (!hasUpper || !hasLower || !hasNumber) {
-    //   setError('Password must contain at least one uppercase, one lowercase, and one number');
-    //   setIsLoading(false);
-    //   return;
-    // }
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasUpper || !hasLower || !hasNumber) {
+      setError('Password must contain at least one uppercase, one lowercase, and one number');
+      setIsLoading(false);
+      return;
+    }
 
     if (!hasValidSession) {
       setError('No valid reset session. Please request a new password reset.');
@@ -106,16 +143,24 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const { data, error } = await supabase.auth.updateUser({ password });
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Session expired. Please request a new password reset link.');
+      }
+
+      console.log('🔄 Updating password for:', session.user.email);
+
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       
-      console.log('✅ Password updated successfully');
+      console.log('✅ Password updated successfully for:', session.user.email);
       setSuccess(true);
       
       await supabase.auth.signOut();
       
       setTimeout(() => {
-        router.push('/auth');
+        router.push('/auth?message=Password reset successful. Please log in with your new password.');
       }, 3000);
     } catch (err: any) {
       console.error('Error resetting password:', err);
@@ -199,9 +244,9 @@ export default function ResetPasswordPage() {
                       )}
                     </button>
                   </div>
-                  {/* <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Must be at least 8 characters with uppercase, lowercase, and numbers
-                  </p> */}
+                  </p>
                 </div>
 
                 <div>
