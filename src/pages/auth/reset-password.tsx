@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
   // Listen for password recovery event
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' && session) {
         console.log('🔐 Password recovery event detected on reset page');
         setHasValidSession(true);
         setError(null);
