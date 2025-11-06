@@ -51,16 +51,27 @@ export default function ResetPasswordPage() {
   // }, [supabase]);
 
   // Listen for password recovery event
+  // useEffect(() => {
+  //   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+  //     if (event === 'PASSWORD_RECOVERY') {
+  //       console.log('🔐 Password recovery event detected on reset page');
+  //       setHasValidSession(true);
+  //       setIsCheckingSession(false);
+  //       setError(null);
+  //     }
+  //   });
+  //   return () => subscription.unsubscribe();
+  // }, [supabase]);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('🔐 Password recovery event detected on reset page');
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event == "PASSWORD_RECOVERY") {
         setHasValidSession(true);
+        setIsCheckingSession(false);
         setError(null);
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
