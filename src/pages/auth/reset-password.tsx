@@ -53,19 +53,29 @@ export default function ResetPasswordPage() {
     checkToken();
   }, []);
 
-  // Listen for password recovery event (fires when Supabase detects token in hash)
+  // Listen for auth events (PASSWORD_RECOVERY for implicit, SIGNED_IN for PKCE)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔔 Auth state change:', event, 'Session:', !!session);
       
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        console.log('🔐 PASSWORD_RECOVERY event detected - implicit flow complete!');
+      // Check if this is a password recovery flow
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get('type');
+      const isRecoveryFlow = code || type === 'recovery';
+      
+      if ((event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) && session) {
+        console.log('🔐 Password recovery flow detected - session established!');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
         
-        // Clean up hash from URL
+        // Clean up URL
         if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        if (code) {
           window.history.replaceState(null, '', window.location.pathname);
         }
       }
