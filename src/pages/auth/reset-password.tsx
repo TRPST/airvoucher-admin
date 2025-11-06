@@ -19,36 +19,36 @@ export default function ResetPasswordPage() {
   const [supabase] = useState(() => createClient());
 
   // Check if user has a valid recovery session
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // useEffect(() => {
+  //   const checkSession = async () => {
+  //     try {
+  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError('Invalid or missing reset token. Please request a new password reset.');
-          setIsCheckingSession(false);
-          return;
-        }
+  //       if (sessionError) {
+  //         console.error('Session error:', sessionError);
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //         setIsCheckingSession(false);
+  //         return;
+  //       }
 
-        if (session) {
-          console.log('✅ Valid recovery session found');
-          setHasValidSession(true);
-          setError(null);
-        } else {
-          console.log('❌ No valid session found');
-          setError('Invalid or missing reset token. Please request a new password reset.');
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setError('Failed to verify reset token. Please try again.');
-      } finally {
-        setIsCheckingSession(false);
-      }
-    };
+  //       if (session) {
+  //         console.log('✅ Valid recovery session found');
+  //         setHasValidSession(true);
+  //         setError(null);
+  //       } else {
+  //         console.log('❌ No valid session found');
+  //         setError('Invalid or missing reset token. Please request a new password reset.');
+  //       }
+  //     } catch (err) {
+  //       console.error('Error checking session:', err);
+  //       setError('Failed to verify reset token. Please try again.');
+  //     } finally {
+  //       setIsCheckingSession(false);
+  //     }
+  //   };
 
-    checkSession();
-  }, [supabase]);
+  //   checkSession();
+  // }, [supabase]);
 
   // Listen for password recovery event
   useEffect(() => {
