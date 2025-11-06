@@ -18,71 +18,56 @@ export default function ResetPasswordPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
-  // Handle PKCE code exchange and session validation
-  // useEffect(() => {
-  //   const checkSession = async () => {
-  //     try {
-  //       const code = router.query.code as string | undefined;
-        
-  //       if (code) {
-  //         console.log('🔑 PKCE code detected in URL:', code);
-  //         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          
-  //         if (exchangeError) {
-  //           console.error('❌ Error exchanging code for session:', exchangeError);
-  //           setError('Invalid or expired reset token. Please request a new password reset.');
-  //           setIsCheckingSession(false);
-  //           return;
-  //         }
-          
-  //         if (data.session) {
-  //           console.log('✅ Successfully exchanged PKCE code for session');
-  //           setHasValidSession(true);
-  //           setError(null);
-  //           setIsCheckingSession(false);
-  //           router.replace('/auth/reset-password', undefined, { shallow: true });
-  //           return;
-  //         }
-  //       }
-        
-  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-  //       if (sessionError) {
-  //         console.error('Session error:', sessionError);
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //         setIsCheckingSession(false);
-  //         return;
-  //       }
-
-  //       if (session) {
-  //         console.log('✅ Valid recovery session found');
-  //         setHasValidSession(true);
-  //         setError(null);
-  //       } else {
-  //         console.log('❌ No valid session found');
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //       }
-  //     } catch (err) {
-  //       console.error('Error checking session:', err);
-  //       setError('Failed to verify reset token. Please try again.');
-  //     } finally {
-  //       setIsCheckingSession(false);
-  //     }
-  //   };
-    
-  //   if (router.isReady) {
-  //     checkSession();
-  //   }
-  // }, [supabase, router.isReady, router.query.code, router]);
-
-  // Listen for password recovery event
+  // Check for both implicit flow (hash) and PKCE (query) tokens
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        console.log('🔐 Password recovery event detected on reset page');
+    const checkToken = () => {
+      if (typeof window === 'undefined') return;
+      
+      // Check for implicit flow token in hash
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+      
+      // Check for PKCE code in query params
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      console.log('🔍 Checking for auth tokens');
+      console.log('Hash (implicit):', { accessToken: !!accessToken, type });
+      console.log('Query (PKCE):', { code: !!code });
+      
+      if (accessToken && type === 'recovery') {
+        console.log('✅ Implicit flow recovery token found in hash');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
+      } else if (code) {
+        console.log('🔑 PKCE code detected - Supabase will auto-exchange via PASSWORD_RECOVERY event');
+        // Don't try to exchange manually - let Supabase handle it
+        // Just wait for the PASSWORD_RECOVERY event
+      } else {
+        console.log('⏳ No token yet, waiting for PASSWORD_RECOVERY event...');
+      }
+    };
+    
+    checkToken();
+  }, []);
+
+  // Listen for password recovery event (fires when Supabase detects token in hash)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 Auth state change:', event, 'Session:', !!session);
+      
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        console.log('🔐 PASSWORD_RECOVERY event detected - implicit flow complete!');
+        setHasValidSession(true);
+        setError(null);
+        setIsCheckingSession(false);
+        
+        // Clean up hash from URL
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
       }
     });
     return () => subscription.unsubscribe();
