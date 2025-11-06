@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { updateSession } from '@/utils/supabase/middleware';
 
-// This middleware now focuses on security and common headers
-// Actual routing is handled by next.config.js rewrites for better hydration compatibility
-
-export function middleware(request: NextRequest) {
+// Middleware handles auth session management and routing
+export async function middleware(request: NextRequest) {
   // Add debug logging
   console.log('Middleware triggered for path:', request.nextUrl.pathname);
   console.log('Hostname:', request.headers.get('host'));
   
-  // We'll use this middleware for future auth/security needs
-  // But for now, the routing is handled by next.config.js
-  return NextResponse.next();
+  // Update Supabase auth session
+  return await updateSession(request);
 }
 
 export const config = {

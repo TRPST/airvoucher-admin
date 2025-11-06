@@ -18,71 +18,47 @@ export default function ResetPasswordPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [supabase] = useState(() => createClient());
 
-  // Handle PKCE code exchange and session validation
-  // useEffect(() => {
-  //   const checkSession = async () => {
-  //     try {
-  //       const code = router.query.code as string | undefined;
-        
-  //       if (code) {
-  //         console.log('🔑 PKCE code detected in URL:', code);
-  //         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          
-  //         if (exchangeError) {
-  //           console.error('❌ Error exchanging code for session:', exchangeError);
-  //           setError('Invalid or expired reset token. Please request a new password reset.');
-  //           setIsCheckingSession(false);
-  //           return;
-  //         }
-          
-  //         if (data.session) {
-  //           console.log('✅ Successfully exchanged PKCE code for session');
-  //           setHasValidSession(true);
-  //           setError(null);
-  //           setIsCheckingSession(false);
-  //           router.replace('/auth/reset-password', undefined, { shallow: true });
-  //           return;
-  //         }
-  //       }
-        
-  //       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-  //       if (sessionError) {
-  //         console.error('Session error:', sessionError);
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //         setIsCheckingSession(false);
-  //         return;
-  //       }
-
-  //       if (session) {
-  //         console.log('✅ Valid recovery session found');
-  //         setHasValidSession(true);
-  //         setError(null);
-  //       } else {
-  //         console.log('❌ No valid session found');
-  //         setError('Invalid or missing reset token. Please request a new password reset.');
-  //       }
-  //     } catch (err) {
-  //       console.error('Error checking session:', err);
-  //       setError('Failed to verify reset token. Please try again.');
-  //     } finally {
-  //       setIsCheckingSession(false);
-  //     }
-  //   };
-    
-  //   if (router.isReady) {
-  //     checkSession();
-  //   }
-  // }, [supabase, router.isReady, router.query.code, router]);
-
-  // Listen for password recovery event
+  // Check for implicit flow token in URL hash
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        console.log('🔐 Password recovery event detected on reset page');
+    const checkImplicitToken = () => {
+      if (typeof window === 'undefined') return;
+      
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+      
+      console.log('🔍 Checking URL hash for implicit flow token');
+      console.log('Hash params:', { accessToken: !!accessToken, type });
+      
+      if (accessToken && type === 'recovery') {
+        console.log('✅ Implicit flow recovery token found in hash');
         setHasValidSession(true);
         setError(null);
         setIsCheckingSession(false);
+      } else if (!accessToken) {
+        console.log('⏳ No token in hash yet, waiting for PASSWORD_RECOVERY event...');
+        // Don't immediately show error - wait for the PASSWORD_RECOVERY event
+      }
+    };
+    
+    checkImplicitToken();
+  }, []);
+
+  // Listen for password recovery event (fires when Supabase detects token in hash)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 Auth state change:', event, 'Session:', !!session);
+      
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        console.log('🔐 PASSWORD_RECOVERY event detected - implicit flow complete!');
+        setHasValidSession(true);
+        setError(null);
+        setIsCheckingSession(false);
+        
+        // Clean up hash from URL
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
       }
     });
     return () => subscription.unsubscribe();
