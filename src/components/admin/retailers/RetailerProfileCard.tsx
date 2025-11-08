@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { Store, Clock } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { RetailerDetailsProps } from "./types";
 
@@ -13,6 +13,16 @@ export function RetailerProfileCard({
   onCommissionGroupClick, 
   onAgentClick 
 }: RetailerProfileCardProps) {
+  const lastUpdated = retailer.updated_at
+    ? new Intl.DateTimeFormat('en-ZA', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(retailer.updated_at))
+    : null;
+
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
@@ -20,7 +30,20 @@ export function RetailerProfileCard({
           <Store className="h-8 w-8 md:h-10 md:w-10" />
         </div>
         <div className="flex-1">
-          <h2 className="text-xl font-bold md:text-2xl">{retailer.name}</h2>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+            <h2 className="text-xl font-bold md:text-2xl">{retailer.name}</h2>
+            {retailer.short_code && (
+              <span className="inline-flex items-center gap-1 self-start rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                RETAILER ID: {retailer.short_code}
+              </span>
+            )}
+          </div>
+          {lastUpdated && (
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Last updated {lastUpdated}</span>
+            </div>
+          )}
           <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-2 text-sm md:grid-cols-2">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Contact Person:</span>

@@ -14,6 +14,8 @@ export type Retailer = {
   status: 'active' | 'suspended' | 'inactive';
   full_name: string;
   email: string;
+  short_code?: string;
+  updated_at?: string;
   agent_name?: string;
   commission_group_name?: string;
   agent_profile_id?: string;

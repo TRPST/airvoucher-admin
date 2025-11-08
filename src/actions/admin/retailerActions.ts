@@ -28,6 +28,8 @@ export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
       status,
       agent_profile_id,
       commission_group_id,
+      short_code,
+      updated_at,
       profiles!retailers_user_profile_id_fkey(full_name, email),
       agent_profiles:profiles!retailers_agent_profile_id_fkey(id, full_name)
     `)
@@ -72,6 +74,8 @@ export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
       status: retailer.status as "active" | "suspended" | "inactive",
       full_name: retailer.profiles?.full_name || "",
       email: retailer.profiles?.email || "",
+      short_code: retailer.short_code || undefined,
+      updated_at: retailer.updated_at || undefined,
       agent_name: retailer.agent_profiles?.full_name,
       commission_group_name: retailer.commission_group_id
         ? groupMap[retailer.commission_group_id] || undefined
