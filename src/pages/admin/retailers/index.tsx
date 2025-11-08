@@ -257,27 +257,41 @@ export default function AdminRetailers() {
 
   const filteredRetailers = (() => {
     const term = debouncedSearch.trim().toLowerCase();
-    if (!term) return retailerList;
-    return retailerList.filter((r) => {
+
+    const matchesSearch = (retailer: AdminRetailer) => {
+      if (!term) return true;
+
       const values = [
-        r.name,
-        (r as any).contact_name,
-        r.secondary_contact_name,
-        r.email,
-        (r as any).contact_email,
-        (r as any).location,
-        r.agent_name,
-        r.commission_group_name,
-        r.status,
+        retailer.name,
+        (retailer as any).contact_name,
+        retailer.secondary_contact_name,
+        retailer.email,
+        (retailer as any).contact_email,
+        (retailer as any).location,
+        retailer.agent_name,
+        retailer.commission_group_name,
+        retailer.status,
+        retailer.short_code,
       ]
         .filter(Boolean)
         .map((v) => String(v).toLowerCase());
-      return values.some((v) => v.includes(term));
-    });
+
+      return values.some((value) => value.includes(term));
+    };
+
+    const parsedShortCode = (shortCode?: string) => {
+      if (!shortCode) return -Infinity;
+      const numericPart = parseInt(shortCode.replace(/\D+/g, ''), 10);
+      return Number.isFinite(numericPart) ? numericPart : -Infinity;
+    };
+
+    return retailerList
+      .filter(matchesSearch)
+      .sort((a, b) => parsedShortCode(b.short_code) - parsedShortCode(a.short_code));
   })();
 
   return (
-    <div className="flex flex-col gap-6" style={{height: '75vh'}}>
+    <div className="flex flex-col gap-6 min-h-[80vh]">
       {/* Sticky header section */}
       <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -322,7 +336,7 @@ export default function AdminRetailers() {
         </div>
       </div>
 
-      <div className="flex-1 h-full">
+      <div className="flex-1 min-h-[70vh]">
         <RetailerTable retailers={filteredRetailers} />
       </div>
 

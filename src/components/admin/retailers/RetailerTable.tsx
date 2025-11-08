@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Store } from 'lucide-react';
+import { Store, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { TablePlaceholder } from '@/components/ui/table-placeholder';
 import { cn } from '@/utils/cn';
@@ -10,12 +10,32 @@ interface RetailerTableProps {
 }
 
 export function RetailerTable({ retailers }: RetailerTableProps) {
+  const dateFormatter = React.useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-ZA', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    []
+  );
+
   // Format data for the table
   const tableData = retailers.map(retailer => {
     const availableCredit = retailer.credit_limit - (retailer.credit_used || 0);
+    const formattedUpdatedAt = retailer.updated_at
+      ? dateFormatter.format(new Date(retailer.updated_at))
+      : '—';
 
     const row = {
-      Name: (
+      'Retailer ID': (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground/80">
+          {retailer.short_code ?? '—'}
+        </span>
+      ),
+      'Retailer Name': (
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Store className="h-4 w-4" />
@@ -27,9 +47,15 @@ export function RetailerTable({ retailers }: RetailerTableProps) {
         </div>
       ),
       Agent: retailer.agent_name || 'None',
-      'Commission Group': retailer.commission_group_name || 'None',
+      'Com Group': retailer.commission_group_name || 'None',
       Balance: `R ${retailer.balance.toFixed(2)}`,
-      'Available Credit': `R ${availableCredit.toFixed(2)}`,
+      Credit: `R ${availableCredit.toFixed(2)}`,
+      Updated: (
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span>{formattedUpdatedAt}</span>
+        </div>
+      ),
       Status: (
         <div
           className={cn(
@@ -66,7 +92,16 @@ export function RetailerTable({ retailers }: RetailerTableProps) {
 
   return (
     <TablePlaceholder
-      columns={['Name', 'Agent', 'Commission Group', 'Balance', 'Available Credit', 'Status']}
+      columns={[
+        'Retailer ID',
+        'Retailer Name',
+        'Agent',
+        'Com Group',
+        'Balance',
+        'Credit',
+        'Updated',
+        'Status',
+      ]}
       data={tableData}
       rowsClickable={true}
       className="h-full"
