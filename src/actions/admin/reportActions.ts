@@ -26,6 +26,7 @@ export async function fetchSalesReport({
       short_code,
       retailer:retailers (
         name,
+        short_code,
         commission_group:commission_groups (
           id,
           name
@@ -63,6 +64,7 @@ export async function fetchSalesReport({
     terminal_name: sale.terminal?.name || '',
     terminal_short_code: sale.terminal?.short_code || '',
     retailer_name: sale.terminal?.retailer?.name || '',
+    retailer_short_code: sale.terminal?.retailer?.short_code || '',
     agent_name: sale.terminal?.retailer?.agent_profile?.full_name || '',
     commission_group_name: sale.terminal?.retailer?.commission_group?.name || '',
     commission_group_id: sale.terminal?.retailer?.commission_group?.id || '',

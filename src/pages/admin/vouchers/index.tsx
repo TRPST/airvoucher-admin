@@ -68,12 +68,13 @@ const VOUCHER_DISPLAY_ORDER = [
 // Main component separated to handle errors properly
 function VouchersPageContent() {
   // SWR: fetch enhanced voucher summaries with network categorization
-  const {
-    data,
-    error,
-  } = useSWR(SwrKeys.networkVoucherSummaries(), networkVoucherSummariesFetcher, {
-    revalidateOnFocus: true,
-  });
+  const { data, error } = useSWR(
+    SwrKeys.networkVoucherSummaries(),
+    networkVoucherSummariesFetcher,
+    {
+      revalidateOnFocus: true,
+    }
+  );
 
   // Correct loading gate: show loader only when no data and no error
   const isLoading = !data && !error;
@@ -154,8 +155,7 @@ function VouchersPageContent() {
       totalVoucherValue:
         networkTotals.totalValue + otherTotals.totalValue + billPaymentTotals.totalValue,
       totalSoldVouchers: otherTotals.soldVouchers + billPaymentTotals.soldVouchers, // Networks don't track sold separately yet
-      totalDisabledVouchers:
-        otherTotals.disabledVouchers + billPaymentTotals.disabledVouchers, // Networks don't track disabled separately yet
+      totalDisabledVouchers: otherTotals.disabledVouchers + billPaymentTotals.disabledVouchers, // Networks don't track disabled separately yet
     };
   }, [networkSummaries, sortedOtherVouchers, sortedBillPaymentVouchers]);
 
@@ -195,7 +195,10 @@ function VouchersPageContent() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div
+        className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8"
+        style={{ marginTop: -40 }}
+      >
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Voucher Inventory</h1>
         <p className="text-muted-foreground">Manage voucher stock and upload new vouchers.</p>
       </div>
@@ -248,7 +251,7 @@ function VouchersPageContent() {
           </div>
         </div>
       )}
-      
+
       {/* Other Voucher Types Section */}
       {sortedOtherVouchers.length > 0 && (
         <div className="space-y-4">
@@ -277,14 +280,15 @@ function VouchersPageContent() {
       {networkSummaries.length === 0 &&
         sortedOtherVouchers.length === 0 &&
         sortedBillPaymentVouchers.length === 0 && (
-        <div className="rounded-lg border border-border bg-card p-10 text-center">
-          <CreditCard className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h3 className="mb-2 text-lg font-medium">No Voucher Types Found</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            There are no voucher types in the system. Contact an administrator to add voucher types.
-          </p>
-        </div>
-      )}
+          <div className="rounded-lg border border-border bg-card p-10 text-center">
+            <CreditCard className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-medium">No Voucher Types Found</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              There are no voucher types in the system. Contact an administrator to add voucher
+              types.
+            </p>
+          </div>
+        )}
     </div>
   );
 }
@@ -296,7 +300,7 @@ const VoucherTypeCard = React.memo(({ summary }: { summary: VoucherTypeSummary }
   // Memoize logo path and background color based on voucher type
   const { logoPath, iconBgColor } = React.useMemo(() => {
     const name = summary.name.toLowerCase();
-    
+
     if (name.includes('ringa')) {
       return {
         logoPath: '/assets/vouchers/ringas-logo.jpg',
@@ -321,11 +325,73 @@ const VoucherTypeCard = React.memo(({ summary }: { summary: VoucherTypeSummary }
         iconBgColor: 'bg-orange-100 dark:bg-orange-900/20',
       };
     }
+    if (name.includes('swt')) {
+      return {
+        logoPath: '/assets/vouchers/swt-logo.jpeg',
+        iconBgColor: 'bg-white dark:bg-white',
+        padding: true,
+      };
+    }
+    if (name.includes('unipin')) {
+      return {
+        logoPath: '/assets/vouchers/unipin-logo.png',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+        padding: true,
+      };
+    }
+    if (name.includes('globalairtime') || name.includes('global airtime')) {
+      return {
+        logoPath: '/assets/vouchers/global-airtime-logo.jpg',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+        padding: true,
+      };
+    }
+    if (name.includes('electricity') || name.includes('eskom')) {
+      return {
+        logoPath: '/assets/vouchers/eskom-logo.jpg',
+        iconBgColor: 'bg-red-100 dark:bg-red-900/20',
+      };
+    }
+    if (name.includes('dstv')) {
+      return {
+        logoPath: '/assets/vouchers/dstv-logo.png',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      };
+    }
+    if (name.includes('hellopaisa') || name.includes('hello paisa')) {
+      return {
+        logoPath: '/assets/vouchers/hellopaisa-logo.png',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+        padding: true,
+      };
+    }
+    if (name.includes('mukuru')) {
+      return {
+        logoPath: '/assets/vouchers/mukuru-logo.jpg',
+        iconBgColor: 'bg-purple-100 dark:bg-purple-900/20',
+        padding: true,
+      };
+    }
+    if (name.includes('ecocash')) {
+      return {
+        logoPath: '/assets/vouchers/ecocash-logo.png',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+        padding: true,
+      };
+    }
+    if (name.includes('mangaung')) {
+      return {
+        logoPath: '/assets/vouchers/mangaung-logo.jpg',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+        padding: true,
+      };
+    }
 
     // Default - no logo
     return {
       logoPath: null,
       iconBgColor: 'bg-gray-100 dark:bg-gray-900/20',
+      padding: false,
     };
   }, [summary.name]);
 
@@ -335,24 +401,25 @@ const VoucherTypeCard = React.memo(({ summary }: { summary: VoucherTypeSummary }
 
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/50"
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
       onClick={handleClick}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden', iconBgColor)}>
+      <div className="mb-3 flex items-center justify-between">
+        <div
+          className={cn(
+            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg',
+            iconBgColor
+          )}
+        >
           {logoPath ? (
-            <img
-              src={logoPath}
-              alt={summary.name}
-              className="h-full w-full object-contain"
-            />
+            <img src={logoPath} alt={summary.name} className="h-full w-full object-cover" />
           ) : (
             <div className="h-5 w-5 rounded bg-gray-300" />
           )}
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-      
+
       <h3 className="mb-3 text-base font-medium">{summary.name}</h3>
 
       <div className="space-y-2">
@@ -423,24 +490,25 @@ const NetworkCard = React.memo(({ network }: { network: NetworkVoucherSummary })
 
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/50"
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
       onClick={handleClick}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden', iconBgColor)}>
+      <div className="mb-3 flex items-center justify-between">
+        <div
+          className={cn(
+            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg',
+            iconBgColor
+          )}
+        >
           {logoPath ? (
-            <img
-              src={logoPath}
-              alt={network.name}
-              className="h-full w-full object-contain"
-            />
+            <img src={logoPath} alt={network.name} className="h-full w-full object-contain" />
           ) : (
             <Phone className="h-5 w-5" />
           )}
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-      
+
       <h3 className="mb-3 text-base font-medium">
         {network.name === 'Mtn' ? network.name.toUpperCase() : network.name}
       </h3>

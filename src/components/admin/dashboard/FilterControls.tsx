@@ -14,11 +14,13 @@ interface FilterControlsProps {
   // Dropdown filters
   voucherTypeFilter: string;
   retailerFilter: string;
+  retailerShortCodeFilter: string;
   agentFilter: string;
   commissionGroupFilter: string;
   terminalFilter: string;
   onVoucherTypeFilterChange: (value: string) => void;
   onRetailerFilterChange: (value: string) => void;
+  onRetailerShortCodeFilterChange: (value: string) => void;
   onAgentFilterChange: (value: string) => void;
   onCommissionGroupFilterChange: (value: string) => void;
   onTerminalFilterChange: (value: string) => void;
@@ -26,6 +28,7 @@ interface FilterControlsProps {
   // Filter options
   voucherTypes: string[];
   retailers: string[];
+  retailerShortCodes: string[];
   agents: string[];
   commissionGroups: string[];
   terminals: string[];
@@ -43,16 +46,19 @@ export function FilterControls({
   onQuickFilterChange,
   voucherTypeFilter,
   retailerFilter,
+  retailerShortCodeFilter,
   agentFilter,
   commissionGroupFilter,
   terminalFilter,
   onVoucherTypeFilterChange,
   onRetailerFilterChange,
+  onRetailerShortCodeFilterChange,
   onAgentFilterChange,
   onCommissionGroupFilterChange,
   onTerminalFilterChange,
   voucherTypes,
   retailers,
+  retailerShortCodes,
   agents,
   commissionGroups,
   terminals,
@@ -158,6 +164,19 @@ export function FilterControls({
           {voucherTypes.map((type) => (
             <option key={type} value={type}>
               {type}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="w-32 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          value={retailerShortCodeFilter}
+          onChange={(e) => onRetailerShortCodeFilterChange(e.target.value)}
+        >
+          <option value="all">All Retailer IDs</option>
+          {retailerShortCodes.map((shortCode) => (
+            <option key={shortCode} value={shortCode}>
+              {shortCode}
             </option>
           ))}
         </select>

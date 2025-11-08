@@ -33,7 +33,7 @@ export function VoucherTypeCommissionCard({
   // Determine logo path and background color based on voucher type
   const { logoPath, iconBgColor } = React.useMemo(() => {
     const name = voucherTypeName.toLowerCase();
-    
+
     // Network-based styling
     if (networkProvider) {
       switch (networkProvider) {
@@ -85,6 +85,60 @@ export function VoucherTypeCommissionCard({
         iconBgColor: 'bg-orange-100 dark:bg-orange-900/20',
       };
     }
+    if (name.includes('swt')) {
+      return {
+        logoPath: '/assets/vouchers/swt-logo.jpeg',
+        iconBgColor: 'bg-white dark:bg-white',
+      };
+    }
+    if (name.includes('unipin')) {
+      return {
+        logoPath: '/assets/vouchers/unipin-logo.png',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      };
+    }
+    if (name.includes('globalairtime') || name.includes('global airtime')) {
+      return {
+        logoPath: '/assets/vouchers/global-airtime-logo.jpg',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+      };
+    }
+    if (name.includes('electricity') || name.includes('eskom')) {
+      return {
+        logoPath: '/assets/vouchers/eskom-logo.jpg',
+        iconBgColor: 'bg-red-100 dark:bg-red-900/20',
+      };
+    }
+    if (name.includes('dstv')) {
+      return {
+        logoPath: '/assets/vouchers/dstv-logo.png',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      };
+    }
+    if (name.includes('hellopaisa') || name.includes('hello paisa')) {
+      return {
+        logoPath: '/assets/vouchers/hellopaisa-logo.png',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+      };
+    }
+    if (name.includes('mukuru')) {
+      return {
+        logoPath: '/assets/vouchers/mukuru-logo.jpg',
+        iconBgColor: 'bg-purple-100 dark:bg-purple-900/20',
+      };
+    }
+    if (name.includes('ecocash')) {
+      return {
+        logoPath: '/assets/vouchers/ecocash-logo.png',
+        iconBgColor: 'bg-green-100 dark:bg-green-900/20',
+      };
+    }
+    if (name.includes('mangaung')) {
+      return {
+        logoPath: '/assets/vouchers/mangaung-logo.jpg',
+        iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      };
+    }
 
     // Default - no logo
     return {
@@ -103,17 +157,18 @@ export function VoucherTypeCommissionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       onClick={handleClick}
-      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/50"
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
     >
       {/* Logo and Arrow */}
       <div className="mb-3 flex items-center justify-between">
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden', iconBgColor)}>
+        <div
+          className={cn(
+            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg',
+            iconBgColor
+          )}
+        >
           {logoPath ? (
-            <img
-              src={logoPath}
-              alt={voucherTypeName}
-              className="h-full w-full object-contain"
-            />
+            <img src={logoPath} alt={voucherTypeName} className="h-full w-full object-cover" />
           ) : (
             <div className="h-5 w-5 rounded bg-gray-300" />
           )}

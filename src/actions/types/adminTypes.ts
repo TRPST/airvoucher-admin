@@ -117,6 +117,7 @@ export type SalesReport = {
   terminal_name: string;
   terminal_short_code: string;
   retailer_name: string;
+  retailer_short_code?: string;
   agent_name: string;
   commission_group_name?: string;
   commission_group_id?: string;
