@@ -7,7 +7,13 @@ import { Layout } from "@/components/Layout";
 import { SalesTableModal } from "@/components/admin/reports/SalesTableModal";
 import { ExportModal } from "@/components/admin/reports/ExportModal";
 
-type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
+type SortField =
+  | 'date'
+  | 'voucher_type'
+  | 'amount'
+  | 'retailer_name'
+  | 'retailer_short_code'
+  | 'agent_name';
 type SortDirection = 'asc' | 'desc';
 type QuickFilter = 'all' | 'today' | 'week' | 'month' | 'lastMonth' | 'year';
 
@@ -22,6 +28,7 @@ function SalesReportContent() {
   const [endDate, setEndDate] = useState<string>('');
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
+  const [retailerShortCodeFilter, setRetailerShortCodeFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
@@ -66,6 +73,7 @@ function SalesReportContent() {
   // Get unique voucher types, retailers, agents, commission groups, and terminals
   const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
   const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
+  const retailerShortCodes = Array.from(new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))) as string[];
   const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
   const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
   const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
@@ -125,6 +133,10 @@ function SalesReportContent() {
       filtered = filtered.filter(sale => sale.retailer_name === retailerFilter);
     }
 
+    if (retailerShortCodeFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.retailer_short_code === retailerShortCodeFilter);
+    }
+
     // Apply agent filter
     if (agentFilter !== 'all') {
       filtered = filtered.filter(sale => sale.agent_name === agentFilter);
@@ -157,6 +169,10 @@ function SalesReportContent() {
         case 'retailer_name':
           aValue = a.retailer_name || '';
           bValue = b.retailer_name || '';
+          break;
+        case 'retailer_short_code':
+          aValue = a.retailer_short_code || '';
+          bValue = b.retailer_short_code || '';
           break;
         case 'agent_name':
           aValue = a.agent_name || '';
@@ -408,7 +424,7 @@ function SalesReportContent() {
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <label htmlFor="voucherTypeFilter" className="block text-sm font-medium mb-2">
             Filter by Voucher Type
@@ -442,6 +458,25 @@ function SalesReportContent() {
             {retailers.map((retailer) => (
               <option key={retailer} value={retailer}>
                 {retailer}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="retailerShortCodeFilter" className="block text-sm font-medium mb-2">
+            Filter by Retailer ID
+          </label>
+          <select
+            id="retailerShortCodeFilter"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={retailerShortCodeFilter}
+            onChange={(e) => setRetailerShortCodeFilter(e.target.value)}
+          >
+            <option value="all">All Retailer IDs</option>
+            {retailerShortCodes.map((shortCode) => (
+              <option key={shortCode} value={shortCode}>
+                {shortCode}
               </option>
             ))}
           </select>
@@ -550,7 +585,7 @@ function SalesReportContent() {
           </div>
 
           {filteredAndSortedSales.length > 0 ? (
-            <div className="rounded-lg border border-border shadow-sm">
+            <div className="rounded-lg border border-border shadow-sm overflow-hidden">
               <div className="overflow-x-auto max-h-[95vh] overflow-y-auto">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -576,6 +611,20 @@ function SalesReportContent() {
                         >
                           RETAILER
                           {sortField === 'retailer_name' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('retailer_short_code')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          RETAILER ID
+                          {sortField === 'retailer_short_code' &&
                             (sortDirection === 'asc' ? (
                               <ChevronUp className="h-3 w-3" />
                             ) : (
@@ -658,6 +707,9 @@ function SalesReportContent() {
                             {sale.retailer_name || 'Unknown'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.retailer_short_code || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
                             {sale.agent_name || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -713,7 +765,7 @@ function SalesReportContent() {
                   </tbody>
                   <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                     <tr className="font-semibold">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
                         TOTAL
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
@@ -762,7 +814,7 @@ function SalesReportContent() {
         isOpen={showTableModal}
         onClose={() => setShowTableModal(false)}
         sales={filteredAndSortedSales}
-        initialSortField={sortField}
+        initialSortField={sortField === 'retailer_short_code' ? 'retailer_name' : sortField}
         initialSortDirection={sortDirection}
       />
 

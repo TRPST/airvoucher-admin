@@ -9,7 +9,13 @@ import {
 import { cn } from '@/utils/cn';
 import type { SalesReport } from '@/actions';
 
-type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
+type SortField =
+  | 'date'
+  | 'voucher_type'
+  | 'amount'
+  | 'retailer_name'
+  | 'retailer_short_code'
+  | 'agent_name';
 type SortDirection = 'asc' | 'desc';
 
 interface SalesTableProps {
@@ -45,6 +51,10 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
         case 'retailer_name':
           aValue = a.retailer_name || '';
           bValue = b.retailer_name || '';
+          break;
+        case 'retailer_short_code':
+          aValue = a.retailer_short_code || '';
+          bValue = b.retailer_short_code || '';
           break;
         case 'agent_name':
           aValue = a.agent_name || '';
@@ -149,7 +159,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
 
       {/* Sortable Table */}
       {!isLoading && !error && sales.length > 0 ? (
-        <div className="rounded-lg border border-border shadow-sm">
+        <div className="rounded-lg border border-border shadow-sm overflow-hidden">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full border-collapse">
               <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -161,6 +171,20 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                     >
                       DATE
                       {sortField === 'date' &&
+                        (sortDirection === 'asc' ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        ))}
+                    </button>
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3">
+                    <button
+                      onClick={() => handleSort('retailer_short_code')}
+                      className="flex items-center gap-1 hover:text-foreground"
+                    >
+                      RETAILER ID
+                      {sortField === 'retailer_short_code' &&
                         (sortDirection === 'asc' ? (
                           <ChevronUp className="h-3 w-3" />
                         ) : (
@@ -254,6 +278,9 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                         })}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        {sale.retailer_short_code || '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {sale.retailer_name || 'Unknown'}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -312,7 +339,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
               </tbody>
               <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
                 <tr className="font-semibold">
-                  <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
                     TOTAL
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">

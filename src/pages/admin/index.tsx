@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   const [endDate, setEndDate] = useState<string>('');
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
+  const [retailerShortCodeFilter, setRetailerShortCodeFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
@@ -79,6 +80,10 @@ export default function AdminDashboard() {
   );
   const retailers = useMemo(() => 
     Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[],
+    [sales]
+  );
+  const retailerShortCodes = useMemo(() =>
+    Array.from(new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))) as string[],
     [sales]
   );
   const agents = useMemo(() => 
@@ -149,6 +154,10 @@ export default function AdminDashboard() {
       filtered = filtered.filter(sale => sale.retailer_name === retailerFilter);
     }
 
+    if (retailerShortCodeFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.retailer_short_code === retailerShortCodeFilter);
+    }
+
     // Apply agent filter
     if (agentFilter !== 'all') {
       filtered = filtered.filter(sale => sale.agent_name === agentFilter);
@@ -165,7 +174,15 @@ export default function AdminDashboard() {
     }
 
     return filtered;
-  }, [sales, voucherTypeFilter, retailerFilter, agentFilter, commissionGroupFilter, terminalFilter]);
+  }, [
+    sales,
+    voucherTypeFilter,
+    retailerFilter,
+    retailerShortCodeFilter,
+    agentFilter,
+    commissionGroupFilter,
+    terminalFilter,
+  ]);
 
   // Calculate dashboard metrics
   const todaySalesTotal = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
@@ -232,16 +249,19 @@ export default function AdminDashboard() {
         onQuickFilterChange={handleQuickFilter}
         voucherTypeFilter={voucherTypeFilter}
         retailerFilter={retailerFilter}
+        retailerShortCodeFilter={retailerShortCodeFilter}
         agentFilter={agentFilter}
         commissionGroupFilter={commissionGroupFilter}
         terminalFilter={terminalFilter}
         onVoucherTypeFilterChange={setVoucherTypeFilter}
         onRetailerFilterChange={setRetailerFilter}
+        onRetailerShortCodeFilterChange={setRetailerShortCodeFilter}
         onAgentFilterChange={setAgentFilter}
         onCommissionGroupFilterChange={setCommissionGroupFilter}
         onTerminalFilterChange={setTerminalFilter}
         voucherTypes={voucherTypes}
         retailers={retailers}
+        retailerShortCodes={retailerShortCodes}
         agents={agents}
         commissionGroups={commissionGroups}
         terminals={terminals}
