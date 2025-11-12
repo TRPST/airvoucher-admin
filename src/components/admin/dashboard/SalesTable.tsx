@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  ChevronUp,
-  ChevronDown,
-  Activity,
-  Maximize2,
-  Download,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, Activity, Maximize2, Download } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { SalesReport } from '@/actions';
 
@@ -120,7 +114,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
           {onOpenModal && (
             <button
               onClick={onOpenModal}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
             >
               <Maximize2 className="h-4 w-4" />
               Open Modal
@@ -129,7 +123,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
           {onExport && (
             <button
               onClick={onExport}
-              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
             >
               <Download className="h-4 w-4" />
               Export
@@ -159,8 +153,8 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
 
       {/* Sortable Table */}
       {!isLoading && !error && sales.length > 0 ? (
-        <div className="rounded-lg border border-border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+        <div className="overflow-hidden rounded-lg border border-border shadow-sm">
+          <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
             <table className="w-full border-collapse">
               <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <tr className="border-b border-border">
@@ -263,10 +257,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                     sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
 
                   return (
-                    <tr
-                      key={`row-${index}`}
-                      className="transition-colors hover:bg-muted/30"
-                    >
+                    <tr key={`row-${index}`} className="transition-colors hover:bg-muted/30">
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {new Date(sale.created_at).toLocaleString('en-ZA', {
                           day: 'numeric',
@@ -309,10 +300,24 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                             )}
                           />
                           <span>{sale.voucher_type || 'Unknown'}</span>
+                          {sale.quantity && sale.quantity > 1 && (
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                              x{sale.quantity}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                        R {sale.amount.toFixed(2)}
+                        {sale.quantity && sale.quantity > 1 ? (
+                          <div className="flex flex-col">
+                            <span>R {(sale.amount / sale.quantity).toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              R {sale.amount.toFixed(2)} total
+                            </span>
+                          </div>
+                        ) : (
+                          <span>R {sale.amount.toFixed(2)}</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
                         R {supplierCommissionAmount.toFixed(3)}
@@ -337,7 +342,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                   );
                 })}
               </tbody>
-              <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+              <tfoot className="sticky bottom-0 z-10 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
                 <tr className="font-semibold">
                   <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
                     TOTAL
@@ -375,9 +380,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
             <Activity className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-          <p className="mb-4 text-muted-foreground">
-            No sales match the selected filters.
-          </p>
+          <p className="mb-4 text-muted-foreground">No sales match the selected filters.</p>
         </div>
       ) : null}
     </div>
