@@ -51,6 +51,7 @@ export {
   createTerminal,
   createTerminalWithUser,
   updateTerminal,
+  resetTerminalPassword,
   fetchVoucherInventory,
   uploadVouchers,
   disableVoucher,
@@ -101,10 +102,7 @@ export type {
   ProcessCreditAdjustmentParams,
 } from './admin/creditActions';
 
-export {
-  processCreditLimitAdjustment,
-  fetchRetailerCreditHistory,
-} from './admin/creditActions';
+export { processCreditLimitAdjustment, fetchRetailerCreditHistory } from './admin/creditActions';
 
 // Retailer exports
 export type {
