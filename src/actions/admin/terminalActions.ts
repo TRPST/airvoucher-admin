@@ -129,7 +129,6 @@ export async function createTerminalWithUser({
 
     if (linkError) throw linkError;
 
-
     return { data: { id: terminal.id, aliasEmail }, error: null };
   } catch (err) {
     console.log(`${JSON.stringify(err, null, 2)}`);
@@ -188,4 +187,34 @@ export async function updateTerminal(
   };
 
   return { data: terminal, error: null };
+}
+
+/**
+ * Reset a terminal's password
+ */
+export async function resetTerminalPassword(
+  terminalId: string,
+  password?: string
+): Promise<ResponseType<{ password: string; shortCode: string }>> {
+  try {
+    const response = await fetch('/api/admin/reset-terminal-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ terminalId, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to reset password');
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    console.error('Error resetting terminal password:', err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
 }

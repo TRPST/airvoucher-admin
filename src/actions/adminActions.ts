@@ -28,7 +28,13 @@ export {
 } from './admin/agentActions';
 
 // Re-export terminal actions
-export { fetchTerminals, createTerminal, createTerminalWithUser, updateTerminal } from './admin/terminalActions';
+export {
+  fetchTerminals,
+  createTerminal,
+  createTerminalWithUser,
+  updateTerminal,
+  resetTerminalPassword,
+} from './admin/terminalActions';
 
 // Re-export voucher actions
 export {

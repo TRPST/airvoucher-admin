@@ -31,7 +31,7 @@ export function RetailerTable({ retailers }: RetailerTableProps) {
 
     const row = {
       'Retailer ID': (
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground/80">
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide dark:text-primary-foreground/80">
           {retailer.short_code ?? '—'}
         </span>
       ),
