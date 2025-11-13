@@ -6,6 +6,7 @@ import { TablePlaceholder } from '@/components/ui/table-placeholder';
 import { cn } from '@/utils/cn';
 import type { AdminTerminal } from '@/actions';
 import { ResetTerminalPasswordModal } from './ResetTerminalPasswordModal';
+import { EditTerminalModal } from './EditTerminalModal';
 
 interface TerminalsModalProps {
   isOpen: boolean;
@@ -25,11 +26,28 @@ export function TerminalsModal({
   onTerminalsUpdate,
 }: TerminalsModalProps) {
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+  const [editTerminalModalOpen, setEditTerminalModalOpen] = useState(false);
   const [selectedTerminal, setSelectedTerminal] = useState<AdminTerminal | null>(null);
 
   const handleResetPassword = (terminal: AdminTerminal) => {
     setSelectedTerminal(terminal);
     setResetPasswordModalOpen(true);
+  };
+
+  const handleEditTerminal = (terminal: AdminTerminal) => {
+    setSelectedTerminal(terminal);
+    setEditTerminalModalOpen(true);
+  };
+
+  const handleTerminalUpdated = async () => {
+    // Refresh terminals list
+    if (typeof retailerId === 'string') {
+      const { fetchAdminTerminals } = await import('@/actions');
+      const { data: terminalsData } = await fetchAdminTerminals(retailerId);
+      if (terminalsData) {
+        onTerminalsUpdate(terminalsData);
+      }
+    }
   };
 
   // Format terminal data for table
@@ -70,6 +88,12 @@ export function TerminalsModal({
               className="z-50 min-w-[180px] rounded-md border border-border bg-card p-1 shadow-md"
               align="end"
             >
+              <DropdownMenu.Item
+                className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted"
+                onSelect={() => handleEditTerminal(terminal)}
+              >
+                Edit Terminal
+              </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted"
                 onSelect={() => handleResetPassword(terminal)}
@@ -130,11 +154,19 @@ export function TerminalsModal({
       </Dialog.Portal>
 
       {selectedTerminal && (
-        <ResetTerminalPasswordModal
-          isOpen={resetPasswordModalOpen}
-          onClose={() => setResetPasswordModalOpen(false)}
-          terminal={selectedTerminal}
-        />
+        <>
+          <EditTerminalModal
+            isOpen={editTerminalModalOpen}
+            onClose={() => setEditTerminalModalOpen(false)}
+            terminal={selectedTerminal}
+            onTerminalUpdated={handleTerminalUpdated}
+          />
+          <ResetTerminalPasswordModal
+            isOpen={resetPasswordModalOpen}
+            onClose={() => setResetPasswordModalOpen(false)}
+            terminal={selectedTerminal}
+          />
+        </>
       )}
     </Dialog.Root>
   );
