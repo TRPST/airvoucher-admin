@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 
 import {
   LoadingState,
@@ -20,7 +20,7 @@ import {
   CreditLimitModal,
   BalanceHistoryModal,
   RetailerUpdateModal,
-} from "@/components/admin/retailers";
+} from '@/components/admin/retailers';
 
 import {
   fetchRetailers,
@@ -29,7 +29,7 @@ import {
   type AdminRetailer,
   type AdminTerminal,
   type SalesReport,
-} from "@/actions";
+} from '@/actions';
 
 export default function RetailerDetails() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function RetailerDetails() {
   // Load retailer data
   useEffect(() => {
     async function loadRetailerData() {
-      if (typeof id !== "string") return;
+      if (typeof id !== 'string') return;
 
       setIsLoading(true);
       setError(null);
@@ -69,9 +69,9 @@ export default function RetailerDetails() {
           throw new Error(`Failed to load retailer: ${retailerError.message}`);
         }
 
-        const foundRetailer = retailersData?.find((r) => r.id === id) || null;
+        const foundRetailer = retailersData?.find(r => r.id === id) || null;
         if (!foundRetailer) {
-          throw new Error("Retailer not found");
+          throw new Error('Retailer not found');
         }
 
         setRetailer(foundRetailer);
@@ -80,7 +80,7 @@ export default function RetailerDetails() {
         const { data: terminalsData, error: terminalsError } = await fetchAdminTerminals(id);
 
         if (terminalsError) {
-          console.error("Error loading terminals:", terminalsError);
+          console.error('Error loading terminals:', terminalsError);
         } else {
           setTerminals(terminalsData || []);
         }
@@ -89,18 +89,16 @@ export default function RetailerDetails() {
         const { data: salesData, error: salesError } = await fetchSalesReport({});
 
         if (salesError) {
-          console.error("Error loading sales:", salesError);
+          console.error('Error loading sales:', salesError);
         } else {
           // Filter sales for this retailer
           const retailerSales =
-            salesData?.filter((sale) => sale.retailer_name === foundRetailer.name) || [];
+            salesData?.filter(sale => sale.retailer_name === foundRetailer.name) || [];
           setSales(retailerSales);
         }
       } catch (err) {
-        console.error("Error in retailer details:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to load retailer data"
-        );
+        console.error('Error in retailer details:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load retailer data');
       } finally {
         setIsLoading(false);
       }
@@ -120,7 +118,7 @@ export default function RetailerDetails() {
 
   const handleTerminalAdded = async () => {
     // Refresh terminals list
-    if (typeof id === "string") {
+    if (typeof id === 'string') {
       const { data: terminalsData } = await fetchAdminTerminals(id);
       if (terminalsData) {
         setTerminals(terminalsData);
@@ -142,10 +140,7 @@ export default function RetailerDetails() {
     }
   };
 
-  const handleAgentUpdate = (
-    agentId: string | undefined,
-    agentName: string | undefined
-  ) => {
+  const handleAgentUpdate = (agentId: string | undefined, agentName: string | undefined) => {
     if (retailer) {
       setRetailer({
         ...retailer,
@@ -191,31 +186,24 @@ export default function RetailerDetails() {
   return (
     <div className="space-y-6">
       <Link href="/admin/retailers">
-        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+        <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
+          <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
           Back to retailers
         </button>
       </Link>
-      
+
       <div style={{ marginTop: 10 }} className="flex items-center justify-between">
         <div className="flex-col items-center">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Retailer Details
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage retailer information.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Retailer Details</h1>
+          <p className="text-muted-foreground">View and manage retailer information.</p>
         </div>
         <button
           onClick={() => setShowUpdateModal(true)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
         >
-          Update
+          Edit Retailer
         </button>
-
       </div>
-
-      
 
       {/* Profile Card */}
       <RetailerProfileCard
@@ -233,25 +221,19 @@ export default function RetailerDetails() {
       />
 
       {/* Cards Section */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Sales History Card */}
-        <SalesHistoryCard
-          sales={sales}
-          onClick={() => setShowSalesHistoryModal(true)}
-        />
+        <SalesHistoryCard sales={sales} onClick={() => setShowSalesHistoryModal(true)} />
 
         {/* Terminals Card */}
-        <TerminalsCard
-          terminals={terminals}
-          onClick={() => setShowTerminalsModal(true)}
-        />
+        <TerminalsCard terminals={terminals} onClick={() => setShowTerminalsModal(true)} />
       </div>
 
       {/* Modals */}
       <TerminalsModal
         isOpen={showTerminalsModal}
         onClose={() => setShowTerminalsModal(false)}
-        retailerId={typeof id === "string" ? id : ""}
+        retailerId={typeof id === 'string' ? id : ''}
         terminals={terminals}
         onAddTerminal={() => {
           setShowTerminalsModal(false);
@@ -270,7 +252,7 @@ export default function RetailerDetails() {
       <AddTerminalModal
         isOpen={showAddTerminalModal}
         onClose={() => setShowAddTerminalModal(false)}
-        retailerId={typeof id === "string" ? id : ""}
+        retailerId={typeof id === 'string' ? id : ''}
         onTerminalAdded={handleTerminalAdded}
       />
 

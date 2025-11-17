@@ -15,11 +15,7 @@ import { RetailerTable } from '@/components/admin/retailers/RetailerTable';
 import { LocationAutocompleteInput } from '@/components/admin/retailers/LocationAutocompleteInput';
 import useSWR, { useSWRConfig } from 'swr';
 import { SwrKeys } from '@/lib/swr/keys';
-import {
-  retailersFetcher,
-  agentsFetcher,
-  commissionGroupsFetcher,
-} from '@/lib/swr/fetchers';
+import { retailersFetcher, agentsFetcher, commissionGroupsFetcher } from '@/lib/swr/fetchers';
 
 export default function AdminRetailers() {
   // Protect this route - only allow admin role
@@ -47,9 +43,7 @@ export default function AdminRetailers() {
 
   // Derived loading and error states
   const isLoading =
-    (retailersLoading as boolean) ||
-    (groupsLoading as boolean) ||
-    (agentsLoading as boolean);
+    (retailersLoading as boolean) || (groupsLoading as boolean) || (agentsLoading as boolean);
 
   const error =
     (retailersError as any)?.message ||
@@ -66,7 +60,9 @@ export default function AdminRetailers() {
   const [formData, setFormData] = React.useState<{
     businessName: string;
     contactName: string;
+    contactPhone: string;
     secondaryContactName: string;
+    secondaryContactPhone: string;
     email: string;
     location: string;
     agentId: string;
@@ -78,7 +74,9 @@ export default function AdminRetailers() {
   }>({
     businessName: '',
     contactName: '',
+    contactPhone: '',
     secondaryContactName: '',
+    secondaryContactPhone: '',
     email: '',
     location: '',
     agentId: '',
@@ -92,8 +90,6 @@ export default function AdminRetailers() {
   // Search state with URL sync
   const [search, setSearch] = React.useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
-
-
 
   // Handler for input changes in the form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -177,7 +173,9 @@ export default function AdminRetailers() {
       const retailerData: RetailerData = {
         name: formData.businessName,
         contact_name: formData.contactName,
+        contact_phone: formData.contactPhone || undefined,
         secondary_contact_name: formData.secondaryContactName || undefined,
+        secondary_contact_phone: formData.secondaryContactPhone || undefined,
         contact_email: formData.email,
         location: formData.location,
         agent_profile_id: formData.agentId || undefined,
@@ -210,7 +208,9 @@ export default function AdminRetailers() {
         setFormData({
           businessName: '',
           contactName: '',
+          contactPhone: '',
           secondaryContactName: '',
+          secondaryContactPhone: '',
           email: '',
           location: '',
           agentId: '',
@@ -274,9 +274,9 @@ export default function AdminRetailers() {
         retailer.short_code,
       ]
         .filter(Boolean)
-        .map((v) => String(v).toLowerCase());
+        .map(v => String(v).toLowerCase());
 
-      return values.some((value) => value.includes(term));
+      return values.some(value => value.includes(term));
     };
 
     const parsedShortCode = (shortCode?: string) => {
@@ -291,9 +291,12 @@ export default function AdminRetailers() {
   })();
 
   return (
-    <div className="flex flex-col gap-6 min-h-[80vh]">
+    <div className="flex min-h-[80vh] flex-col gap-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div
+        className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8"
+        style={{ marginTop: -40 }}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Retailers</h1>
@@ -318,7 +321,7 @@ export default function AdminRetailers() {
             placeholder="Search retailers..."
             className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-8 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
           {search && (
             <button
@@ -336,18 +339,16 @@ export default function AdminRetailers() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-[70vh]">
+      <div className="min-h-[70vh] flex-1">
         <RetailerTable retailers={filteredRetailers} />
       </div>
 
       <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid max-h-[90vh] w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
             <div className="flex items-center justify-between">
-              <Dialog.Title className="text-lg font-semibold">
-                Add New Retailer
-              </Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold">Add New Retailer</Dialog.Title>
               <Dialog.Close className="rounded-full p-2 hover:bg-muted">
                 <X className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">Close</span>
@@ -355,9 +356,9 @@ export default function AdminRetailers() {
             </div>
             <div className="mt-2 space-y-6">
               {formError && (
-                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                   <div className="flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <AlertCircle className="mr-2 h-4 w-4" />
                     {formError}
                   </div>
                 </div>
@@ -365,31 +366,54 @@ export default function AdminRetailers() {
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Business Name</label>
+                    <label className="text-sm font-medium">Retailer Name</label>
                     <input
                       type="text"
                       name="businessName"
                       value={formData.businessName}
                       onChange={handleInputChange}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Enter business name"
+                      placeholder="Enter retailer name"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Contact Name</label>
+                    <label className="text-sm font-medium">Primary Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Contact email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Primary Contact Name</label>
                     <input
                       type="text"
                       name="contactName"
                       value={formData.contactName}
                       onChange={handleInputChange}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Enter contact name"
+                      placeholder="Enter primary contact name"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Second Contact Person</label>
+                    <label className="text-sm font-medium">Primary Contact Phone</label>
+                    <input
+                      type="tel"
+                      name="contactPhone"
+                      value={formData.contactPhone}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Primary contact phone"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Secondary Contact Name</label>
                     <input
                       type="text"
                       name="secondaryContactName"
@@ -400,15 +424,14 @@ export default function AdminRetailers() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Email</label>
+                    <label className="text-sm font-medium">Secondary Contact Phone</label>
                     <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
+                      type="tel"
+                      name="secondaryContactPhone"
+                      value={formData.secondaryContactPhone}
                       onChange={handleInputChange}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Contact email"
-                      required
+                      placeholder="Optional secondary phone"
                     />
                   </div>
                   <div className="space-y-1">
@@ -488,7 +511,10 @@ export default function AdminRetailers() {
                           onChange={handleInputChange}
                           className="mr-2 h-4 w-4 rounded border-gray-300"
                         />
-                        <label htmlFor="autoGeneratePassword" className="text-sm text-muted-foreground">
+                        <label
+                          htmlFor="autoGeneratePassword"
+                          className="text-sm text-muted-foreground"
+                        >
                           Auto-generate password
                         </label>
                       </div>
@@ -501,7 +527,9 @@ export default function AdminRetailers() {
                         onChange={handleInputChange}
                         disabled={formData.autoGeneratePassword}
                         className="w-full rounded-md rounded-r-none border border-input bg-background px-3 py-2 text-sm"
-                        placeholder={formData.autoGeneratePassword ? 'Auto-generated password' : 'Set password'}
+                        placeholder={
+                          formData.autoGeneratePassword ? 'Auto-generated password' : 'Set password'
+                        }
                         required
                       />
                       {formData.autoGeneratePassword && (
@@ -515,16 +543,18 @@ export default function AdminRetailers() {
                       )}
                     </div>
                     {formData.autoGeneratePassword && (
-                      <p className="text-xs text-muted-foreground">This password will be used for the retailer's login account.</p>
+                      <p className="text-xs text-muted-foreground">
+                        This password will be used for the retailer's login account.
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-4 flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 pt-4">
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+                      className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
                       Cancel
                     </button>
@@ -532,7 +562,7 @@ export default function AdminRetailers() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
