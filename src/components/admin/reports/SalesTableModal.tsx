@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { X, Calendar, ChevronUp, ChevronDown, Activity, Download } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { cn } from "@/utils/cn";
-import type { SalesReport } from "@/actions";
-import { ExportModal } from "./ExportModal";
+import { useState } from 'react';
+import { X, Calendar, ChevronUp, ChevronDown, Activity, Download } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/utils/cn';
+import type { SalesReport } from '@/actions';
+import { ExportModal } from './ExportModal';
 
 interface SalesTableModalProps {
   isOpen: boolean;
@@ -31,7 +31,9 @@ export function SalesTableModal({
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all');
+  const [quickFilter, setQuickFilter] = useState<
+    'all' | 'today' | 'week' | 'month' | 'year' | 'custom'
+  >('all');
 
   // Table state
   const [sortField, setSortField] = useState<SortField>(initialSortField);
@@ -41,17 +43,27 @@ export function SalesTableModal({
   const [showExportModal, setShowExportModal] = useState(false);
 
   // Get unique values for filters
-  const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
-  const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
-  const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
-  const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
-  const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
+  const voucherTypes = Array.from(
+    new Set(sales.map(sale => sale.voucher_type).filter(Boolean))
+  ) as string[];
+  const retailers = Array.from(
+    new Set(sales.map(sale => sale.retailer_name).filter(Boolean))
+  ) as string[];
+  const agents = Array.from(
+    new Set(sales.map(sale => sale.agent_name).filter(Boolean))
+  ) as string[];
+  const commissionGroups = Array.from(
+    new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))
+  ) as string[];
+  const terminals = Array.from(
+    new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))
+  ) as string[];
 
   // Quick filter handler
   const handleQuickFilter = (filter: 'all' | 'today' | 'week' | 'month' | 'year' | 'custom') => {
     setQuickFilter(filter);
     const now = new Date();
-    
+
     switch (filter) {
       case 'today':
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -167,15 +179,14 @@ export function SalesTableModal({
   const totals = (() => {
     return filteredAndSortedSales.reduce(
       (acc, sale) => {
-        const supplierCommissionAmount =
-          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+        const supplierCommissionAmount = sale.supplier_commission;
         const airVoucherProfit = sale.profit || 0;
 
         return {
           amount: acc.amount + sale.amount,
-          supplierCommission: acc.supplierCommission + supplierCommissionAmount,
-          retailerCommission: acc.retailerCommission + sale.retailer_commission,
-          agentCommission: acc.agentCommission + sale.agent_commission,
+          supplierCommission: acc.supplierCommission + (supplierCommissionAmount ?? 0),
+          retailerCommission: acc.retailerCommission + (sale.retailer_commission ?? 0),
+          agentCommission: acc.agentCommission + (sale.agent_commission ?? 0),
           profit: acc.profit + airVoucherProfit,
         };
       },
@@ -203,16 +214,16 @@ export function SalesTableModal({
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content 
-          className="fixed inset-0 z-50 w-full h-screen gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 overflow-hidden flex flex-col"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+        <Dialog.Content
+          className="fixed inset-0 z-50 flex h-screen w-full flex-col gap-4 overflow-hidden border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          onOpenAutoFocus={e => e.preventDefault()}
         >
           {/* Row 1: Title + Date Filters */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-shrink-0 items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                <Dialog.Title className="text-lg font-semibold whitespace-nowrap">
+                <Dialog.Title className="whitespace-nowrap text-lg font-semibold">
                   Sales Report
                 </Dialog.Title>
               </div>
@@ -222,10 +233,10 @@ export function SalesTableModal({
                 <button
                   onClick={() => handleQuickFilter('all')}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                     quickFilter === 'all'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
                   )}
                 >
                   All Time
@@ -233,10 +244,10 @@ export function SalesTableModal({
                 <button
                   onClick={() => handleQuickFilter('today')}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                     quickFilter === 'today'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
                   )}
                 >
                   Today
@@ -244,10 +255,10 @@ export function SalesTableModal({
                 <button
                   onClick={() => handleQuickFilter('week')}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                     quickFilter === 'week'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
                   )}
                 >
                   This Week
@@ -255,10 +266,10 @@ export function SalesTableModal({
                 <button
                   onClick={() => handleQuickFilter('month')}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                     quickFilter === 'month'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
                   )}
                 >
                   This Month
@@ -266,10 +277,10 @@ export function SalesTableModal({
                 <button
                   onClick={() => handleQuickFilter('year')}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                     quickFilter === 'year'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
                   )}
                 >
                   This Year
@@ -279,7 +290,7 @@ export function SalesTableModal({
                   className="rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={startDate}
                   onFocus={() => setQuickFilter('custom')}
-                  onChange={(e) => {
+                  onChange={e => {
                     setStartDate(e.target.value);
                     setQuickFilter('custom');
                   }}
@@ -290,7 +301,7 @@ export function SalesTableModal({
                   className="rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={endDate}
                   onFocus={() => setQuickFilter('custom')}
-                  onChange={(e) => {
+                  onChange={e => {
                     setEndDate(e.target.value);
                     setQuickFilter('custom');
                   }}
@@ -299,7 +310,7 @@ export function SalesTableModal({
               </div>
             </div>
 
-            <Dialog.Close className="rounded-full p-2 hover:bg-muted flex-shrink-0">
+            <Dialog.Close className="flex-shrink-0 rounded-full p-2 hover:bg-muted">
               <X className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Close</span>
             </Dialog.Close>
@@ -308,14 +319,14 @@ export function SalesTableModal({
           {/* Row 2: Filter Dropdowns + Export Button */}
           <div className="flex items-center justify-between gap-3">
             {/* Compact Filters */}
-            <div className="flex items-center gap-2 flex-1 overflow-x-auto">
+            <div className="flex flex-1 items-center gap-2 overflow-x-auto">
               <select
                 className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={voucherTypeFilter}
-                onChange={(e) => setVoucherTypeFilter(e.target.value)}
+                onChange={e => setVoucherTypeFilter(e.target.value)}
               >
                 <option value="all">All Types</option>
-                {voucherTypes.map((type) => (
+                {voucherTypes.map(type => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -325,10 +336,10 @@ export function SalesTableModal({
               <select
                 className="w-32 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={retailerFilter}
-                onChange={(e) => setRetailerFilter(e.target.value)}
+                onChange={e => setRetailerFilter(e.target.value)}
               >
                 <option value="all">All Retailers</option>
-                {retailers.map((retailer) => (
+                {retailers.map(retailer => (
                   <option key={retailer} value={retailer}>
                     {retailer}
                   </option>
@@ -338,10 +349,10 @@ export function SalesTableModal({
               <select
                 className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={agentFilter}
-                onChange={(e) => setAgentFilter(e.target.value)}
+                onChange={e => setAgentFilter(e.target.value)}
               >
                 <option value="all">All Agents</option>
-                {agents.map((agent) => (
+                {agents.map(agent => (
                   <option key={agent} value={agent}>
                     {agent}
                   </option>
@@ -351,10 +362,10 @@ export function SalesTableModal({
               <select
                 className="w-28 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={commissionGroupFilter}
-                onChange={(e) => setCommissionGroupFilter(e.target.value)}
+                onChange={e => setCommissionGroupFilter(e.target.value)}
               >
                 <option value="all">All Groups</option>
-                {commissionGroups.map((group) => (
+                {commissionGroups.map(group => (
                   <option key={group} value={group}>
                     {group}
                   </option>
@@ -364,10 +375,10 @@ export function SalesTableModal({
               <select
                 className="w-32 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={terminalFilter}
-                onChange={(e) => setTerminalFilter(e.target.value)}
+                onChange={e => setTerminalFilter(e.target.value)}
               >
                 <option value="all">All Terminals</option>
-                {terminals.map((terminal) => (
+                {terminals.map(terminal => (
                   <option key={terminal} value={terminal}>
                     {terminal}
                   </option>
@@ -378,18 +389,18 @@ export function SalesTableModal({
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-muted transition-colors flex-shrink-0"
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted"
             >
               <Download className="h-3 w-3" />
               Export
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
             {/* Sales Table */}
             {sales.length > 0 ? (
-              <div className="rounded-lg border border-border shadow-sm flex-1 overflow-hidden flex flex-col">
-                <div className="overflow-x-auto overflow-y-auto flex-1">
+              <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border shadow-sm">
+                <div className="flex-1 overflow-x-auto overflow-y-auto">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       <tr className="border-b border-border">
@@ -421,28 +432,28 @@ export function SalesTableModal({
                               ))}
                           </button>
                         </th>
-                      <th className="whitespace-nowrap px-4 py-3">
-                        <button
-                          onClick={() => handleSort('agent_name')}
-                          className="flex items-center gap-1 hover:text-foreground"
-                        >
-                          AGENT
-                          {sortField === 'agent_name' &&
-                            (sortDirection === 'asc' ? (
-                              <ChevronUp className="h-3 w-3" />
-                            ) : (
-                              <ChevronDown className="h-3 w-3" />
-                            ))}
-                        </button>
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
-                      <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
-                      <th className="whitespace-nowrap px-4 py-3">
-                        <button
-                          onClick={() => handleSort('voucher_type')}
-                          className="flex items-center gap-1 hover:text-foreground"
-                        >
-                          TYPE
+                        <th className="whitespace-nowrap px-4 py-3">
+                          <button
+                            onClick={() => handleSort('agent_name')}
+                            className="flex items-center gap-1 hover:text-foreground"
+                          >
+                            AGENT
+                            {sortField === 'agent_name' &&
+                              (sortDirection === 'asc' ? (
+                                <ChevronUp className="h-3 w-3" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3" />
+                              ))}
+                          </button>
+                        </th>
+                        <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                        <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
+                        <th className="whitespace-nowrap px-4 py-3">
+                          <button
+                            onClick={() => handleSort('voucher_type')}
+                            className="flex items-center gap-1 hover:text-foreground"
+                          >
+                            TYPE
                             {sortField === 'voucher_type' &&
                               (sortDirection === 'asc' ? (
                                 <ChevronUp className="h-3 w-3" />
@@ -475,7 +486,8 @@ export function SalesTableModal({
                       {filteredAndSortedSales.map((sale, index) => {
                         const airVoucherProfit = sale.profit || 0;
                         const supplierCommissionAmount =
-                          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+                          sale.supplier_commission ||
+                          sale.amount * (sale.supplier_commission_pct / 100);
 
                         return (
                           <tr
@@ -527,29 +539,39 @@ export function SalesTableModal({
                               R {sale.amount.toFixed(2)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                              R {supplierCommissionAmount.toFixed(3)}
+                              {supplierCommissionAmount !== null
+                                ? `R ${supplierCommissionAmount.toFixed(3)}`
+                                : '-'}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                              R {sale.retailer_commission.toFixed(3)}
+                              {sale.retailer_commission !== null
+                                ? `R ${sale.retailer_commission.toFixed(3)}`
+                                : '-'}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                              R {sale.agent_commission.toFixed(3)}
+                              {sale.agent_commission !== null
+                                ? `R ${sale.agent_commission.toFixed(3)}`
+                                : '-'}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm">
-                              <span
-                                className={cn(
-                                  'font-medium',
-                                  airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                                )}
-                              >
-                                R {airVoucherProfit.toFixed(3)}
-                              </span>
+                              {sale.profit !== null ? (
+                                <span
+                                  className={cn(
+                                    'font-medium',
+                                    airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                                  )}
+                                >
+                                  R {airVoucherProfit.toFixed(3)}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
                             </td>
                           </tr>
                         );
                       })}
                     </tbody>
-                    <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+                    <tfoot className="sticky bottom-0 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
                       <tr className="font-semibold">
                         <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
                           TOTAL: {filteredAndSortedSales.length} sales
@@ -587,9 +609,7 @@ export function SalesTableModal({
                   <Activity className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-                <p className="mb-4 text-muted-foreground">
-                  No sales match the selected filters.
-                </p>
+                <p className="mb-4 text-muted-foreground">No sales match the selected filters.</p>
               </div>
             )}
           </div>

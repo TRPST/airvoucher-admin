@@ -74,15 +74,14 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
   const totals = (() => {
     return sortedSales.reduce(
       (acc, sale) => {
-        const supplierCommissionAmount =
-          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+        const supplierCommissionAmount = sale.supplier_commission;
         const airVoucherProfit = sale.profit || 0;
 
         return {
           totalAmount: acc.totalAmount + sale.amount,
-          supplierCommission: acc.supplierCommission + supplierCommissionAmount,
-          retailerCommission: acc.retailerCommission + sale.retailer_commission,
-          agentCommission: acc.agentCommission + sale.agent_commission,
+          supplierCommission: acc.supplierCommission + (supplierCommissionAmount ?? 0),
+          retailerCommission: acc.retailerCommission + (sale.retailer_commission ?? 0),
+          agentCommission: acc.agentCommission + (sale.agent_commission ?? 0),
           profit: acc.profit + airVoucherProfit,
         };
       },
@@ -253,8 +252,8 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
               <tbody className="divide-y divide-border">
                 {sortedSales.map((sale, index) => {
                   const airVoucherProfit = sale.profit || 0;
-                  const supplierCommissionAmount =
-                    sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+                  const supplierCommissionAmount = sale.supplier_commission;
+                  const isReprint = sale.ref_number?.endsWith('-REPRINT');
 
                   return (
                     <tr key={`row-${index}`} className="transition-colors hover:bg-muted/30">
@@ -300,6 +299,11 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                             )}
                           />
                           <span>{sale.voucher_type || 'Unknown'}</span>
+                          {isReprint && (
+                            <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                              REPRINT
+                            </span>
+                          )}
                           {sale.quantity && sale.quantity > 1 && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                               x{sale.quantity}
@@ -320,23 +324,33 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
-                        R {supplierCommissionAmount.toFixed(3)}
+                        {supplierCommissionAmount !== null
+                          ? `R ${supplierCommissionAmount.toFixed(3)}`
+                          : '-'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
-                        R {sale.retailer_commission.toFixed(3)}
+                        {sale.retailer_commission !== null
+                          ? `R ${sale.retailer_commission.toFixed(3)}`
+                          : '-'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                        R {sale.agent_commission.toFixed(3)}
+                        {sale.agent_commission !== null
+                          ? `R ${sale.agent_commission.toFixed(3)}`
+                          : '-'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
-                        <span
-                          className={cn(
-                            'font-medium',
-                            airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                          )}
-                        >
-                          R {airVoucherProfit.toFixed(3)}
-                        </span>
+                        {sale.profit !== null ? (
+                          <span
+                            className={cn(
+                              'font-medium',
+                              airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                            )}
+                          >
+                            R {airVoucherProfit.toFixed(3)}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                     </tr>
                   );

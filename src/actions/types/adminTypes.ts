@@ -130,6 +130,7 @@ export type SalesReport = {
   retailer_commission: number;
   agent_commission: number;
   profit: number;
+  ref_number?: string;
   // Grouped sale fields
   quantity?: number;
   sale_ids?: string[];
