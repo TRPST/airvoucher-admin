@@ -20,6 +20,8 @@ export function EditTerminalModal({
   const [formData, setFormData] = useState({
     name: terminal.name,
     status: terminal.status,
+    serial_number: terminal.serial_number || '',
+    imei_number: terminal.imei_number || '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -61,6 +63,8 @@ export function EditTerminalModal({
       const { data, error: updateError } = await updateTerminal(terminal.id, {
         name: formData.name,
         status: formData.status as 'active' | 'inactive',
+        serial_number: formData.serial_number || undefined,
+        imei_number: formData.imei_number || undefined,
       });
 
       if (updateError) {
@@ -88,6 +92,8 @@ export function EditTerminalModal({
     setFormData({
       name: terminal.name,
       status: terminal.status,
+      serial_number: terminal.serial_number || '',
+      imei_number: terminal.imei_number || '',
     });
     setError(null);
     onClose();
@@ -159,6 +165,36 @@ export function EditTerminalModal({
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+
+                <div>
+                  <label htmlFor="serial_number" className="text-sm font-medium">
+                    Serial Number
+                  </label>
+                  <input
+                    type="text"
+                    id="serial_number"
+                    name="serial_number"
+                    value={formData.serial_number}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Enter serial number"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="imei_number" className="text-sm font-medium">
+                    IMEI Number
+                  </label>
+                  <input
+                    type="text"
+                    id="imei_number"
+                    name="imei_number"
+                    value={formData.imei_number}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Enter IMEI number"
+                  />
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">

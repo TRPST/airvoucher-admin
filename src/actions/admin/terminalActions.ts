@@ -15,7 +15,9 @@ export async function fetchTerminals(retailerId: string): Promise<ResponseType<T
       name,
       last_active,
       status,
-      short_code
+      short_code,
+      serial_number,
+      imei_number
     `
     )
     .eq('retailer_id', retailerId);
@@ -33,6 +35,8 @@ export async function fetchTerminals(retailerId: string): Promise<ResponseType<T
     short_code: terminal.short_code,
     auth_user_id: '', // No longer in the database
     email: '', // Email not available in the current query
+    serial_number: terminal.serial_number,
+    imei_number: terminal.imei_number,
   }));
 
   return { data: terminals, error: null };
@@ -72,22 +76,41 @@ export async function createTerminalWithUser({
   name,
   retailer_id,
   password,
+  serial_number,
+  imei_number,
 }: {
   name: string;
   retailer_id: string;
   password: string;
+  serial_number?: string;
+  imei_number?: string;
 }): Promise<ResponseType<{ id: string; aliasEmail: string }>> {
   const supabase = createClient();
 
   try {
     // Step 1: create terminal first
+    const terminalData: {
+      name: string;
+      retailer_id: string;
+      status: string;
+      serial_number?: string;
+      imei_number?: string;
+    } = {
+      name,
+      retailer_id,
+      status: 'active',
+    };
+
+    if (serial_number) {
+      terminalData.serial_number = serial_number;
+    }
+    if (imei_number) {
+      terminalData.imei_number = imei_number;
+    }
+
     const { data: terminal, error: terminalError } = await supabase
       .from('terminals')
-      .insert({
-        name,
-        retailer_id,
-        status: 'active',
-      })
+      .insert(terminalData)
       .select('id, short_code')
       .single();
 
@@ -145,7 +168,7 @@ export async function createTerminalWithUser({
  */
 export async function updateTerminal(
   terminalId: string,
-  updates: Partial<Pick<Terminal, 'name' | 'status'>>
+  updates: Partial<Pick<Terminal, 'name' | 'status' | 'serial_number' | 'imei_number'>>
 ): Promise<ResponseType<Terminal>> {
   const supabase = createClient();
 
@@ -155,6 +178,12 @@ export async function updateTerminal(
   }
   if (typeof updates.status !== 'undefined') {
     payload.status = updates.status;
+  }
+  if (typeof updates.serial_number !== 'undefined') {
+    payload.serial_number = updates.serial_number;
+  }
+  if (typeof updates.imei_number !== 'undefined') {
+    payload.imei_number = updates.imei_number;
   }
 
   const { data, error } = await supabase
@@ -167,7 +196,9 @@ export async function updateTerminal(
       name,
       last_active,
       status,
-      short_code
+      short_code,
+      serial_number,
+      imei_number
     `
     )
     .single();
@@ -184,6 +215,8 @@ export async function updateTerminal(
     short_code: data.short_code,
     auth_user_id: '',
     email: '',
+    serial_number: data.serial_number,
+    imei_number: data.imei_number,
   };
 
   return { data: terminal, error: null };

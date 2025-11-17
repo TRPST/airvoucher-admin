@@ -48,6 +48,8 @@ export type Terminal = {
   short_code: string;
   auth_user_id?: string; // Now optional since it's been removed from the database
   email?: string; // Optional since we're not fetching it anymore
+  serial_number?: string; // Optional serial number of the terminal device
+  imei_number?: string; // Optional IMEI number of the terminal device
 };
 
 export type VoucherInventory = {

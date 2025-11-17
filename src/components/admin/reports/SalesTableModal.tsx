@@ -488,6 +488,8 @@ export function SalesTableModal({
                         const supplierCommissionAmount =
                           sale.supplier_commission ||
                           sale.amount * (sale.supplier_commission_pct / 100);
+                        const isReprint = sale.ref_number?.endsWith('-REPRINT');
+                        const isReverse = sale.ref_number?.endsWith('-REVERSE');
 
                         return (
                           <tr
@@ -533,22 +535,49 @@ export function SalesTableModal({
                                   )}
                                 />
                                 <span>{sale.voucher_type || 'Unknown'}</span>
+                                {isReprint && (
+                                  <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    REPRINT
+                                  </span>
+                                )}
+                                {isReverse && (
+                                  <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                                    REVERSE
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                              R {sale.amount.toFixed(2)}
+                              <span className={cn(isReverse && 'text-red-600')}>
+                                R {sale.amount.toFixed(2)}
+                              </span>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
+                            <td
+                              className={cn(
+                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                                isReverse ? 'text-red-600' : 'text-orange-600'
+                              )}
+                            >
                               {supplierCommissionAmount !== null
                                 ? `R ${supplierCommissionAmount.toFixed(3)}`
                                 : '-'}
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
+                            <td
+                              className={cn(
+                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                                isReverse ? 'text-red-600' : 'text-green-600'
+                              )}
+                            >
                               {sale.retailer_commission !== null
                                 ? `R ${sale.retailer_commission.toFixed(3)}`
                                 : '-'}
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
+                            <td
+                              className={cn(
+                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                                isReverse ? 'text-red-600' : 'text-blue-600'
+                              )}
+                            >
                               {sale.agent_commission !== null
                                 ? `R ${sale.agent_commission.toFixed(3)}`
                                 : '-'}

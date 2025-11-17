@@ -15,6 +15,8 @@ export function AddTerminalModal({
     name: '',
     password: '',
     autoGeneratePassword: false,
+    serial_number: '',
+    imei_number: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -27,7 +29,9 @@ export function AddTerminalModal({
     if (typeof err === 'string') return err;
     if (err instanceof Error) return err.message || 'An unexpected error occurred';
     if (typeof err === 'object') {
-      const candidate = (err as { message?: unknown; error?: unknown }).message ?? (err as { message?: unknown; error?: unknown }).error;
+      const candidate =
+        (err as { message?: unknown; error?: unknown }).message ??
+        (err as { message?: unknown; error?: unknown }).error;
       if (typeof candidate === 'string' && candidate.trim().length > 0) {
         return candidate;
       }
@@ -69,6 +73,8 @@ export function AddTerminalModal({
         name: formData.name,
         retailer_id: retailerId,
         password: formData.password,
+        serial_number: formData.serial_number || undefined,
+        imei_number: formData.imei_number || undefined,
       });
 
       if (createError) {
@@ -101,6 +107,8 @@ export function AddTerminalModal({
       name: '',
       password: '',
       autoGeneratePassword: false,
+      serial_number: '',
+      imei_number: '',
     });
     setError(null);
     setCreatedTerminal(null);
@@ -248,6 +256,30 @@ export function AddTerminalModal({
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       placeholder="Enter password"
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Serial Number (Optional)</label>
+                    <input
+                      type="text"
+                      name="serial_number"
+                      value={formData.serial_number}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Enter serial number"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">IMEI Number (Optional)</label>
+                    <input
+                      type="text"
+                      name="imei_number"
+                      value={formData.imei_number}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Enter IMEI number"
                     />
                   </div>
                 </div>
