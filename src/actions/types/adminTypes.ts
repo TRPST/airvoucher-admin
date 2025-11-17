@@ -5,8 +5,10 @@ export type Retailer = {
   name: string;
   contact_name: string;
   contact_email: string;
+  contact_phone?: string;
   location?: string;
   secondary_contact_name?: string;
+  secondary_contact_phone?: string;
   balance: number;
   credit_limit: number;
   credit_used: number;
@@ -164,8 +166,10 @@ export type RetailerData = {
   name: string;
   contact_name?: string;
   contact_email?: string;
+  contact_phone?: string;
   location?: string;
   secondary_contact_name?: string;
+  secondary_contact_phone?: string;
   agent_profile_id?: string;
   commission_group_id?: string;
   initial_balance?: number;

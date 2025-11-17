@@ -58,6 +58,17 @@ export function RetailerForm({
         />
       </div>
       <div className="mb-4 space-y-2">
+        <label className="text-sm font-medium">Location</label>
+        <input
+          type="text"
+          name="location"
+          value={formData.location}
+          onChange={onInputChange}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="Business location"
+        />
+      </div>
+      <div className="mb-4 space-y-2">
         <label className="text-sm font-medium">Contact Person</label>
         <input
           type="text"
@@ -90,17 +101,6 @@ export function RetailerForm({
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           placeholder="Contact email"
           required
-        />
-      </div>
-      <div className="mb-4 space-y-2">
-        <label className="text-sm font-medium">Location</label>
-        <input
-          type="text"
-          name="location"
-          value={formData.location}
-          onChange={onInputChange}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          placeholder="Business location"
         />
       </div>
       <div className="mb-4 space-y-2">

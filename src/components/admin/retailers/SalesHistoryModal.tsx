@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { X, Calendar, ChevronUp, ChevronDown, Activity } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { cn } from "@/utils/cn";
-import type { SalesReport } from "@/actions";
+import { useState } from 'react';
+import { X, Calendar, ChevronUp, ChevronDown, Activity } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/utils/cn';
+import type { SalesReport } from '@/actions';
 
 interface SalesHistoryModalProps {
   isOpen: boolean;
@@ -26,7 +26,9 @@ export function SalesHistoryModal({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Get unique voucher types from sales data
-  const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
+  const voucherTypes = Array.from(
+    new Set(sales.map(sale => sale.voucher_type).filter(Boolean))
+  ) as string[];
 
   // Filter and sort sales data
   const filteredAndSortedSales = (() => {
@@ -113,7 +115,7 @@ export function SalesHistoryModal({
     <Dialog.Root open={isOpen} onOpenChange={handleClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 flex grid max-h-[90vh] w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] flex-col gap-4 overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -127,9 +129,11 @@ export function SalesHistoryModal({
             </Dialog.Close>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 pb-10">
+          <div className="flex-1 space-y-2 overflow-y-auto pb-10">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{filteredAndSortedSales.length} total sales</p>
+              <p className="text-sm text-muted-foreground">
+                {filteredAndSortedSales.length} total sales
+              </p>
             </div>
 
             {/* Filter Controls */}
@@ -139,7 +143,7 @@ export function SalesHistoryModal({
               </label>
               <select
                 id="voucherTypeFilter"
-                className="w-full sm:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-64"
                 value={voucherTypeFilter}
                 onChange={e => setVoucherTypeFilter(e.target.value)}
               >
@@ -154,8 +158,8 @@ export function SalesHistoryModal({
 
             {/* Sales Table */}
             {sales.length > 0 ? (
-              <div className="rounded-lg border border-border shadow-sm mb-2.5">
-                <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
+              <div className="mb-2.5 rounded-lg border border-border shadow-sm">
+                <div className="max-h-[500px] overflow-x-auto overflow-y-auto">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       <tr className="border-b border-border">
@@ -211,7 +215,8 @@ export function SalesHistoryModal({
                       {filteredAndSortedSales.map((sale, index) => {
                         const airVoucherProfit = sale.profit || 0;
                         const supplierCommissionAmount =
-                          sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+                          sale.supplier_commission ||
+                          sale.amount * (sale.supplier_commission_pct / 100);
 
                         return (
                           <tr
@@ -250,13 +255,13 @@ export function SalesHistoryModal({
                               R {sale.amount.toFixed(2)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-orange-600">
-                              R {supplierCommissionAmount.toFixed(3)}
+                              R {supplierCommissionAmount?.toFixed(3)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-green-600">
-                              R {sale.retailer_commission.toFixed(3)}
+                              R {sale.retailer_commission?.toFixed(3)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                              R {sale.agent_commission.toFixed(3)}
+                              R {sale.agent_commission?.toFixed(3)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-sm">
                               <span
@@ -272,7 +277,7 @@ export function SalesHistoryModal({
                         );
                       })}
                     </tbody>
-                    <tfoot className="sticky bottom-0 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+                    <tfoot className="sticky bottom-0 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
                       <tr className="font-semibold">
                         <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={2}>
                           TOTAL
@@ -317,9 +322,9 @@ export function SalesHistoryModal({
             )}
           </div>
 
-          <div className="flex justify-end pt-4 border-border">
+          <div className="flex justify-end border-border pt-4">
             <Dialog.Close asChild>
-              <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
+              <button className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted">
                 Close
               </button>
             </Dialog.Close>
