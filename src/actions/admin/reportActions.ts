@@ -3,7 +3,7 @@ import { SalesReport, EarningsSummary, InventoryReport, ResponseType } from '../
 
 /**
  * Fetch sales report with optional date filtering
- * Uses grouped sales RPC function to combine bulk sales
+ * Returns individual sales without grouping
  */
 export async function fetchSalesReport({
   startDate,
@@ -14,36 +14,76 @@ export async function fetchSalesReport({
 }): Promise<ResponseType<SalesReport[]>> {
   const supabase = createClient();
 
-  // Call the grouped sales RPC function
-  const { data, error } = await supabase.rpc('get_grouped_sales_report', {
-    start_date: startDate || null,
-    end_date: endDate || null,
-  });
+  // Fetch individual sales directly from the sales table
+  let query = supabase.from('sales').select(`
+    id,
+    created_at,
+    sale_amount,
+    supplier_commission,
+    retailer_commission,
+    agent_commission,
+    profit,
+    ref_number,
+    terminals!inner (
+      name,
+      short_code,
+      retailers!inner (
+        name,
+        short_code,
+        commission_group_id,
+        profiles!retailers_agent_profile_id_fkey (
+          full_name
+        ),
+        commission_groups (
+          name
+        )
+      )
+    ),
+    voucher_inventory!inner (
+      amount,
+      voucher_types!inner (
+        name,
+        supplier_commission_pct
+      )
+    )
+  `);
+
+  if (startDate) {
+    query = query.gte('created_at', startDate);
+  }
+
+  if (endDate) {
+    query = query.lte('created_at', endDate);
+  }
+
+  // Order by newest first
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
 
   if (error) {
     return { data: null, error };
   }
 
-  // Map the RPC response to SalesReport format
+  // Map the response to SalesReport format
   const salesReport: SalesReport[] = (data || []).map((sale: any) => ({
-    id: sale.first_sale_id || sale.group_id,
+    id: sale.id,
     created_at: sale.created_at,
-    terminal_name: sale.terminal_name || '',
-    terminal_short_code: sale.terminal_short_code || '',
-    retailer_name: sale.retailer_name || '',
-    retailer_short_code: sale.retailer_short_code || '',
-    agent_name: sale.agent_name || '',
-    commission_group_name: sale.commission_group_name || '',
-    commission_group_id: sale.commission_group_id || '',
-    voucher_type: sale.voucher_type || '',
-    supplier_commission_pct: sale.supplier_commission_pct || 0,
-    supplier_commission: sale.total_supplier_commission || 0,
-    amount: sale.total_amount || 0,
-    retailer_commission: sale.total_retailer_commission || 0,
-    agent_commission: sale.total_agent_commission || 0,
-    profit: sale.total_profit || 0,
-    quantity: sale.quantity || 1,
-    sale_ids: sale.sale_ids || [],
+    terminal_name: sale.terminals?.name || '',
+    terminal_short_code: sale.terminals?.short_code || '',
+    retailer_name: sale.terminals?.retailers?.name || '',
+    retailer_short_code: sale.terminals?.retailers?.short_code || '',
+    agent_name: sale.terminals?.retailers?.profiles?.full_name || '',
+    commission_group_name: sale.terminals?.retailers?.commission_groups?.name || '',
+    commission_group_id: sale.terminals?.retailers?.commission_group_id || '',
+    voucher_type: sale.voucher_inventory?.voucher_types?.name || '',
+    supplier_commission_pct: sale.voucher_inventory?.voucher_types?.supplier_commission_pct || 0,
+    supplier_commission: sale.supplier_commission,
+    amount: sale.sale_amount || 0,
+    retailer_commission: sale.retailer_commission,
+    agent_commission: sale.agent_commission,
+    profit: sale.profit,
+    ref_number: sale.ref_number,
   }));
 
   return { data: salesReport, error: null };
