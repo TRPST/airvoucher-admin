@@ -254,6 +254,7 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                   const airVoucherProfit = sale.profit || 0;
                   const supplierCommissionAmount = sale.supplier_commission;
                   const isReprint = sale.ref_number?.endsWith('-REPRINT');
+                  const isReverse = sale.ref_number?.endsWith('-REVERSE');
 
                   return (
                     <tr key={`row-${index}`} className="transition-colors hover:bg-muted/30">
@@ -304,6 +305,11 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                               REPRINT
                             </span>
                           )}
+                          {isReverse && (
+                            <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                              REVERSE
+                            </span>
+                          )}
                           {sale.quantity && sale.quantity > 1 && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                               x{sale.quantity}
@@ -314,26 +320,45 @@ export function SalesTable({ sales, isLoading, error, onOpenModal, onExport }: S
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
                         {sale.quantity && sale.quantity > 1 ? (
                           <div className="flex flex-col">
-                            <span>R {(sale.amount / sale.quantity).toFixed(2)}</span>
+                            <span className={cn(isReverse && 'text-red-600')}>
+                              R {(sale.amount / sale.quantity).toFixed(2)}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               R {sale.amount.toFixed(2)} total
                             </span>
                           </div>
                         ) : (
-                          <span>R {sale.amount.toFixed(2)}</span>
+                          <span className={cn(isReverse && 'text-red-600')}>
+                            R {sale.amount.toFixed(2)}
+                          </span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
+                      <td
+                        className={cn(
+                          'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                          isReverse ? 'text-red-600' : 'text-pink-600'
+                        )}
+                      >
                         {supplierCommissionAmount !== null
                           ? `R ${supplierCommissionAmount.toFixed(3)}`
                           : '-'}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
+                      <td
+                        className={cn(
+                          'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                          isReverse ? 'text-red-600' : 'text-purple-600'
+                        )}
+                      >
                         {sale.retailer_commission !== null
                           ? `R ${sale.retailer_commission.toFixed(3)}`
                           : '-'}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
+                      <td
+                        className={cn(
+                          'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                          isReverse ? 'text-red-600' : 'text-blue-600'
+                        )}
+                      >
                         {sale.agent_commission !== null
                           ? `R ${sale.agent_commission.toFixed(3)}`
                           : '-'}

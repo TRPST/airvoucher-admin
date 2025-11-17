@@ -1,11 +1,23 @@
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { ChevronLeft, Calendar, ChevronUp, ChevronDown, Activity, TrendingUp, DollarSign, ShoppingCart, Maximize2, Download, HandCoins } from "lucide-react";
-import { cn } from "@/utils/cn";
-import { fetchSalesReport, type SalesReport } from "@/actions";
-import { Layout } from "@/components/Layout";
-import { SalesTableModal } from "@/components/admin/reports/SalesTableModal";
-import { ExportModal } from "@/components/admin/reports/ExportModal";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  ChevronLeft,
+  Calendar,
+  ChevronUp,
+  ChevronDown,
+  Activity,
+  TrendingUp,
+  DollarSign,
+  ShoppingCart,
+  Maximize2,
+  Download,
+  HandCoins,
+} from 'lucide-react';
+import { cn } from '@/utils/cn';
+import { fetchSalesReport, type SalesReport } from '@/actions';
+import { Layout } from '@/components/Layout';
+import { SalesTableModal } from '@/components/admin/reports/SalesTableModal';
+import { ExportModal } from '@/components/admin/reports/ExportModal';
 
 type SortField =
   | 'date'
@@ -71,18 +83,30 @@ function SalesReportContent() {
   }, [startDate, endDate]);
 
   // Get unique voucher types, retailers, agents, commission groups, and terminals
-  const voucherTypes = Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[];
-  const retailers = Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[];
-  const retailerShortCodes = Array.from(new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))) as string[];
-  const agents = Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[];
-  const commissionGroups = Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[];
-  const terminals = Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[];
+  const voucherTypes = Array.from(
+    new Set(sales.map(sale => sale.voucher_type).filter(Boolean))
+  ) as string[];
+  const retailers = Array.from(
+    new Set(sales.map(sale => sale.retailer_name).filter(Boolean))
+  ) as string[];
+  const retailerShortCodes = Array.from(
+    new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))
+  ) as string[];
+  const agents = Array.from(
+    new Set(sales.map(sale => sale.agent_name).filter(Boolean))
+  ) as string[];
+  const commissionGroups = Array.from(
+    new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))
+  ) as string[];
+  const terminals = Array.from(
+    new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))
+  ) as string[];
 
   // Quick filter handler
   const handleQuickFilter = (filter: QuickFilter) => {
     setQuickFilter(filter);
     const now = new Date();
-    
+
     switch (filter) {
       case 'today':
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -235,22 +259,23 @@ function SalesReportContent() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="-mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div
+        className="-mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8"
+        style={{ marginTop: -40 }}
+      >
         {/* Back button */}
         <Link href="/admin/reports">
-          <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
-            <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+          <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
+            <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
             Back to reports
           </button>
         </Link>
 
         {/* Header */}
         <div className="mt-2">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Sales Report
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Sales Report</h1>
           </div>
           <p className="text-muted-foreground">
             Comprehensive view of all sales transactions with detailed breakdowns.
@@ -263,10 +288,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('all')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'all'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           All Time
@@ -274,10 +299,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('today')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'today'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           Today
@@ -285,10 +310,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('week')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'week'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           This Week
@@ -296,10 +321,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('month')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'month'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           This Month
@@ -307,10 +332,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('lastMonth')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'lastMonth'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           Last Month
@@ -318,10 +343,10 @@ function SalesReportContent() {
         <button
           onClick={() => handleQuickFilter('year')}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
             quickFilter === 'year'
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-muted/80"
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
           )}
         >
           This Year
@@ -329,9 +354,9 @@ function SalesReportContent() {
       </div>
 
       {/* Custom Date Range */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="startDate" className="block text-sm font-medium mb-2">
+          <label htmlFor="startDate" className="mb-2 block text-sm font-medium">
             Start Date
           </label>
           <input
@@ -339,14 +364,14 @@ function SalesReportContent() {
             id="startDate"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={startDate}
-            onChange={(e) => {
+            onChange={e => {
               setStartDate(e.target.value);
               setQuickFilter('all');
             }}
           />
         </div>
         <div>
-          <label htmlFor="endDate" className="block text-sm font-medium mb-2">
+          <label htmlFor="endDate" className="mb-2 block text-sm font-medium">
             End Date
           </label>
           <input
@@ -354,7 +379,7 @@ function SalesReportContent() {
             id="endDate"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={endDate}
-            onChange={(e) => {
+            onChange={e => {
               setEndDate(e.target.value);
               setQuickFilter('all');
             }}
@@ -364,14 +389,14 @@ function SalesReportContent() {
 
       {/* Statistics Cards */}
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Sales</p>
                 <p className="text-2xl font-bold">{stats.totalSales}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 <ShoppingCart className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -383,7 +408,7 @@ function SalesReportContent() {
                 <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
                 <p className="text-2xl font-bold">R {stats.totalAmount.toFixed(2)}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
                 <HandCoins className="h-6 w-6 text-green-500" />
               </div>
             </div>
@@ -393,50 +418,56 @@ function SalesReportContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">AirVoucher Profit</p>
-                <p className={cn(
-                  "text-2xl font-bold",
-                  stats.profit >= 0 ? "text-green-600" : "text-red-600"
-                )}>
+                <p
+                  className={cn(
+                    'text-2xl font-bold',
+                    stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                  )}
+                >
                   R {stats.profit.toFixed(2)}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
                 <TrendingUp className="h-6 w-6 text-amber-500" />
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-medium text-muted-foreground mb-1">Supplier Commission</p>
-            <p className="text-lg font-bold text-pink-600">R {stats.supplierCommission.toFixed(2)}</p>
+            <p className="mb-1 text-sm font-medium text-muted-foreground">Supplier Commission</p>
+            <p className="text-lg font-bold text-pink-600">
+              R {stats.supplierCommission.toFixed(2)}
+            </p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-medium text-muted-foreground mb-1">Retailer Commission</p>
-            <p className="text-lg font-bold text-purple-600">R {stats.retailerCommission.toFixed(2)}</p>
+            <p className="mb-1 text-sm font-medium text-muted-foreground">Retailer Commission</p>
+            <p className="text-lg font-bold text-purple-600">
+              R {stats.retailerCommission.toFixed(2)}
+            </p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-medium text-muted-foreground mb-1">Agent Commission</p>
+            <p className="mb-1 text-sm font-medium text-muted-foreground">Agent Commission</p>
             <p className="text-lg font-bold text-blue-600">R {stats.agentCommission.toFixed(2)}</p>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         <div>
-          <label htmlFor="voucherTypeFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="voucherTypeFilter" className="mb-2 block text-sm font-medium">
             Filter by Voucher Type
           </label>
           <select
             id="voucherTypeFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={voucherTypeFilter}
-            onChange={(e) => setVoucherTypeFilter(e.target.value)}
+            onChange={e => setVoucherTypeFilter(e.target.value)}
           >
             <option value="all">All Types</option>
-            {voucherTypes.map((type) => (
+            {voucherTypes.map(type => (
               <option key={type} value={type}>
                 {type}
               </option>
@@ -445,17 +476,17 @@ function SalesReportContent() {
         </div>
 
         <div>
-          <label htmlFor="retailerFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="retailerFilter" className="mb-2 block text-sm font-medium">
             Filter by Retailer
           </label>
           <select
             id="retailerFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={retailerFilter}
-            onChange={(e) => setRetailerFilter(e.target.value)}
+            onChange={e => setRetailerFilter(e.target.value)}
           >
             <option value="all">All Retailers</option>
-            {retailers.map((retailer) => (
+            {retailers.map(retailer => (
               <option key={retailer} value={retailer}>
                 {retailer}
               </option>
@@ -464,17 +495,17 @@ function SalesReportContent() {
         </div>
 
         <div>
-          <label htmlFor="retailerShortCodeFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="retailerShortCodeFilter" className="mb-2 block text-sm font-medium">
             Filter by Retailer ID
           </label>
           <select
             id="retailerShortCodeFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={retailerShortCodeFilter}
-            onChange={(e) => setRetailerShortCodeFilter(e.target.value)}
+            onChange={e => setRetailerShortCodeFilter(e.target.value)}
           >
             <option value="all">All Retailer IDs</option>
-            {retailerShortCodes.map((shortCode) => (
+            {retailerShortCodes.map(shortCode => (
               <option key={shortCode} value={shortCode}>
                 {shortCode}
               </option>
@@ -483,17 +514,17 @@ function SalesReportContent() {
         </div>
 
         <div>
-          <label htmlFor="agentFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="agentFilter" className="mb-2 block text-sm font-medium">
             Filter by Agent
           </label>
           <select
             id="agentFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={agentFilter}
-            onChange={(e) => setAgentFilter(e.target.value)}
+            onChange={e => setAgentFilter(e.target.value)}
           >
             <option value="all">All Agents</option>
-            {agents.map((agent) => (
+            {agents.map(agent => (
               <option key={agent} value={agent}>
                 {agent}
               </option>
@@ -502,17 +533,17 @@ function SalesReportContent() {
         </div>
 
         <div>
-          <label htmlFor="commissionGroupFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="commissionGroupFilter" className="mb-2 block text-sm font-medium">
             Filter by Commission Group
           </label>
           <select
             id="commissionGroupFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={commissionGroupFilter}
-            onChange={(e) => setCommissionGroupFilter(e.target.value)}
+            onChange={e => setCommissionGroupFilter(e.target.value)}
           >
             <option value="all">All Groups</option>
-            {commissionGroups.map((group) => (
+            {commissionGroups.map(group => (
               <option key={group} value={group}>
                 {group}
               </option>
@@ -521,17 +552,17 @@ function SalesReportContent() {
         </div>
 
         <div>
-          <label htmlFor="terminalFilter" className="block text-sm font-medium mb-2">
+          <label htmlFor="terminalFilter" className="mb-2 block text-sm font-medium">
             Filter by Terminal ID
           </label>
           <select
             id="terminalFilter"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={terminalFilter}
-            onChange={(e) => setTerminalFilter(e.target.value)}
+            onChange={e => setTerminalFilter(e.target.value)}
           >
             <option value="all">All Terminals</option>
-            {terminals.map((terminal) => (
+            {terminals.map(terminal => (
               <option key={terminal} value={terminal}>
                 {terminal}
               </option>
@@ -569,14 +600,14 @@ function SalesReportContent() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowTableModal(true)}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
               >
                 <Maximize2 className="h-4 w-4" />
                 Open Modal
               </button>
               <button
                 onClick={() => setShowExportModal(true)}
-                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted transition-colors"
+                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted"
               >
                 <Download className="h-4 w-4" />
                 Export
@@ -585,8 +616,8 @@ function SalesReportContent() {
           </div>
 
           {filteredAndSortedSales.length > 0 ? (
-            <div className="rounded-lg border border-border shadow-sm overflow-hidden">
-              <div className="overflow-x-auto max-h-[95vh] overflow-y-auto">
+            <div className="overflow-hidden rounded-lg border border-border shadow-sm">
+              <div className="max-h-[95vh] overflow-x-auto overflow-y-auto">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <tr className="border-b border-border">
@@ -686,13 +717,13 @@ function SalesReportContent() {
                     {filteredAndSortedSales.map((sale, index) => {
                       const airVoucherProfit = sale.profit || 0;
                       const supplierCommissionAmount =
-                        sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
+                        sale.supplier_commission ||
+                        sale.amount * (sale.supplier_commission_pct / 100);
+                      const isReprint = sale.ref_number?.endsWith('-REPRINT');
+                      const isReverse = sale.ref_number?.endsWith('-REVERSE');
 
                       return (
-                        <tr
-                          key={`row-${index}`}
-                          className="transition-colors hover:bg-muted/30"
-                        >
+                        <tr key={`row-${index}`} className="transition-colors hover:bg-muted/30">
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             {new Date(sale.created_at).toLocaleString('en-ZA', {
                               day: 'numeric',
@@ -735,35 +766,66 @@ function SalesReportContent() {
                                 )}
                               />
                               <span>{sale.voucher_type || 'Unknown'}</span>
+                              {isReprint && (
+                                <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  REPRINT
+                                </span>
+                              )}
+                              {isReverse && (
+                                <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                                  REVERSE
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                            R {sale.amount.toFixed(2)}
+                            <span className={cn(isReverse && 'text-red-600')}>
+                              R {sale.amount.toFixed(2)}
+                            </span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-pink-600">
-                            R {supplierCommissionAmount.toFixed(3)}
+                          <td
+                            className={cn(
+                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                              isReverse ? 'text-red-600' : 'text-pink-600'
+                            )}
+                          >
+                            {isReprint ? '-' : `R ${supplierCommissionAmount?.toFixed(3)}`}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-purple-600">
-                            R {sale.retailer_commission.toFixed(3)}
+                          <td
+                            className={cn(
+                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                              isReverse ? 'text-red-600' : 'text-purple-600'
+                            )}
+                          >
+                            {isReprint ? '-' : `R ${sale.retailer_commission?.toFixed(3)}`}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-blue-600">
-                            R {sale.agent_commission.toFixed(3)}
+                          <td
+                            className={cn(
+                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
+                              isReverse ? 'text-red-600' : 'text-blue-600'
+                            )}
+                          >
+                            {isReprint ? '-' : `R ${sale.agent_commission?.toFixed(3)}`}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-sm">
-                            <span
-                              className={cn(
-                                'font-medium',
-                                airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                              )}
-                            >
-                              R {airVoucherProfit.toFixed(3)}
-                            </span>
+                            {isReprint ? (
+                              '-'
+                            ) : (
+                              <span
+                                className={cn(
+                                  'font-medium',
+                                  airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                                )}
+                              >
+                                R {airVoucherProfit.toFixed(3)}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                  <tfoot className="sticky bottom-0 z-10 bg-muted/80 backdrop-blur-sm border-t-2 border-border">
+                  <tfoot className="sticky bottom-0 z-10 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
                     <tr className="font-semibold">
                       <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
                         TOTAL
@@ -801,9 +863,7 @@ function SalesReportContent() {
                 <Activity className="h-6 w-6 text-muted-foreground" />
               </div>
               <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-              <p className="mb-4 text-muted-foreground">
-                No sales match the selected filters.
-              </p>
+              <p className="mb-4 text-muted-foreground">No sales match the selected filters.</p>
             </div>
           )}
         </>
