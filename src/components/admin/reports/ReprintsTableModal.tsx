@@ -1,28 +1,34 @@
-import { useState } from 'react';
-import { X, Calendar, ChevronUp, ChevronDown, Activity, Download, Search } from 'lucide-react';
+import { X, Download, Calendar, Printer, ChevronUp, ChevronDown, Search } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { useState, useMemo } from 'react';
 import { cn } from '@/utils/cn';
 import type { SalesReport } from '@/actions';
-import { ExportModal } from './ExportModal';
+import { ReprintsExportModal } from './ReprintsExportModal';
 
-interface SalesTableModalProps {
+type SortField =
+  | 'date'
+  | 'voucher_type'
+  | 'amount'
+  | 'retailer_name'
+  | 'retailer_short_code'
+  | 'agent_name';
+type SortDirection = 'asc' | 'desc';
+
+interface ReprintsTableModalProps {
   isOpen: boolean;
   onClose: () => void;
   sales: SalesReport[];
-  initialSortField?: 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
-  initialSortDirection?: 'asc' | 'desc';
+  initialSortField?: SortField;
+  initialSortDirection?: SortDirection;
 }
 
-type SortField = 'date' | 'voucher_type' | 'amount' | 'retailer_name' | 'agent_name';
-type SortDirection = 'asc' | 'desc';
-
-export function SalesTableModal({
+export function ReprintsTableModal({
   isOpen,
   onClose,
   sales,
   initialSortField = 'date',
   initialSortDirection = 'desc',
-}: SalesTableModalProps) {
+}: ReprintsTableModalProps) {
   // Filter state
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>('all');
   const [retailerFilter, setRetailerFilter] = useState<string>('all');
@@ -39,8 +45,6 @@ export function SalesTableModal({
   // Table state
   const [sortField, setSortField] = useState<SortField>(initialSortField);
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
-
-  // Modal state
   const [showExportModal, setShowExportModal] = useState(false);
 
   // Get unique values for filters
@@ -96,7 +100,7 @@ export function SalesTableModal({
   };
 
   // Filter and sort sales data
-  const filteredAndSortedSales = (() => {
+  const filteredAndSortedSales = useMemo(() => {
     let filtered = [...sales];
 
     // Apply search filter
@@ -123,11 +127,7 @@ export function SalesTableModal({
           sale.terminal_short_code?.toLowerCase().includes(searchLower) ||
           sale.voucher_type?.toLowerCase().includes(searchLower) ||
           sale.amount.toString().includes(searchLower) ||
-          sale.ref_number?.toLowerCase().includes(searchLower) ||
-          sale.supplier_commission?.toString().includes(searchLower) ||
-          sale.retailer_commission?.toString().includes(searchLower) ||
-          sale.agent_commission?.toString().includes(searchLower) ||
-          sale.profit?.toString().includes(searchLower)
+          sale.ref_number?.toLowerCase().includes(searchLower)
         );
       });
     }
@@ -189,6 +189,10 @@ export function SalesTableModal({
           aValue = a.retailer_name || '';
           bValue = b.retailer_name || '';
           break;
+        case 'retailer_short_code':
+          aValue = a.retailer_short_code || '';
+          bValue = b.retailer_short_code || '';
+          break;
         case 'agent_name':
           aValue = a.agent_name || '';
           bValue = b.agent_name || '';
@@ -207,32 +211,33 @@ export function SalesTableModal({
     });
 
     return filtered;
-  })();
+  }, [
+    sales,
+    startDate,
+    endDate,
+    voucherTypeFilter,
+    retailerFilter,
+    agentFilter,
+    commissionGroupFilter,
+    terminalFilter,
+    sortField,
+    sortDirection,
+    searchQuery,
+  ]);
 
   // Calculate totals
-  const totals = (() => {
+  const totals = useMemo(() => {
     return filteredAndSortedSales.reduce(
       (acc, sale) => {
-        const supplierCommissionAmount = sale.supplier_commission;
-        const airVoucherProfit = sale.profit || 0;
-
         return {
-          amount: acc.amount + sale.amount,
-          supplierCommission: acc.supplierCommission + (supplierCommissionAmount ?? 0),
-          retailerCommission: acc.retailerCommission + (sale.retailer_commission ?? 0),
-          agentCommission: acc.agentCommission + (sale.agent_commission ?? 0),
-          profit: acc.profit + airVoucherProfit,
+          totalAmount: acc.totalAmount + sale.amount,
         };
       },
       {
-        amount: 0,
-        supplierCommission: 0,
-        retailerCommission: 0,
-        agentCommission: 0,
-        profit: 0,
+        totalAmount: 0,
       }
     );
-  })();
+  }, [filteredAndSortedSales]);
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -256,9 +261,9 @@ export function SalesTableModal({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex flex-shrink-0 items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
+                <Printer className="h-5 w-5 text-amber-600" />
                 <Dialog.Title className="whitespace-nowrap text-lg font-semibold">
-                  Sales Report
+                  Reprints Report
                 </Dialog.Title>
               </div>
 
@@ -356,7 +361,7 @@ export function SalesTableModal({
               <Search className="absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search sales by any field..."
+                placeholder="Search reprints by any field..."
                 className="w-full rounded-md border border-input bg-background py-1.5 pl-9 pr-9 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -458,261 +463,195 @@ export function SalesTableModal({
           </div>
 
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
-            {/* Sales Table */}
-            {sales.length > 0 ? (
-              <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border shadow-sm">
-                <div className="flex-1 overflow-x-auto overflow-y-auto">
-                  <table className="w-full border-collapse">
-                    <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      <tr className="border-b border-border">
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('date')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            DATE
-                            {sortField === 'date' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('retailer_name')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            RETAILER
-                            {sortField === 'retailer_name' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('agent_name')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            AGENT
-                            {sortField === 'agent_name' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
-                        <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('voucher_type')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            TYPE
-                            {sortField === 'voucher_type' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-4 py-3">
-                          <button
-                            onClick={() => handleSort('amount')}
-                            className="flex items-center gap-1 hover:text-foreground"
-                          >
-                            AMOUNT
-                            {sortField === 'amount' &&
-                              (sortDirection === 'asc' ? (
-                                <ChevronUp className="h-3 w-3" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3" />
-                              ))}
-                          </button>
-                        </th>
-                        <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
-                        <th className="whitespace-nowrap px-3 py-3">Ret. Com.</th>
-                        <th className="whitespace-nowrap px-3 py-3">Agent Com.</th>
-                        <th className="whitespace-nowrap px-3 py-3">AV Profit</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredAndSortedSales.map((sale, index) => {
-                        const airVoucherProfit = sale.profit || 0;
-                        const supplierCommissionAmount =
-                          sale.supplier_commission ||
-                          sale.amount * (sale.supplier_commission_pct / 100);
-                        const isReprint = sale.ref_number?.endsWith('-REPRINT');
-                        const isReverse = sale.ref_number?.endsWith('-REVERSE');
+            {/* Reprints Table */}
+            <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border shadow-sm">
+              <div className="flex-1 overflow-x-auto overflow-y-auto">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b border-border">
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('date')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          DATE
+                          {sortField === 'date' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('retailer_name')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          RETAILER
+                          {sortField === 'retailer_name' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('retailer_short_code')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          RETAILER ID
+                          {sortField === 'retailer_short_code' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('agent_name')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          AGENT
+                          {sortField === 'agent_name' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">COM. GROUP</th>
+                      <th className="whitespace-nowrap px-4 py-3">TERMINAL ID</th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('voucher_type')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          TYPE
+                          {sortField === 'voucher_type' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort('amount')}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          AMOUNT
+                          {sortField === 'amount' &&
+                            (sortDirection === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            ))}
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredAndSortedSales.map((sale, index) => {
+                      const isReprint = sale.ref_number?.endsWith('-REPRINT');
+                      const isReverse = sale.ref_number?.endsWith('-REVERSE');
 
-                        return (
-                          <tr
-                            key={`row-${index}`}
-                            className="border-b border-border transition-colors hover:bg-muted/30"
-                          >
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {new Date(sale.created_at).toLocaleString('en-ZA', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                              })}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {sale.retailer_name || 'Unknown'}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {sale.agent_name || '-'}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {sale.commission_group_name || '-'}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                              {sale.terminal_short_code || '-'}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={cn(
-                                    'h-2 w-2 rounded-full',
-                                    sale.voucher_type === 'Mobile'
-                                      ? 'bg-primary'
-                                      : sale.voucher_type === 'OTT'
-                                        ? 'bg-purple-500'
-                                        : sale.voucher_type === 'Hollywoodbets'
-                                          ? 'bg-green-500'
-                                          : sale.voucher_type === 'Ringa'
-                                            ? 'bg-amber-500'
-                                            : 'bg-pink-500'
-                                  )}
-                                />
-                                <span>{sale.voucher_type || 'Unknown'}</span>
-                                {isReprint && (
-                                  <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
-                                    REPRINT
-                                  </span>
+                      return (
+                        <tr
+                          key={`row-${index}`}
+                          className="border-b border-border transition-colors hover:bg-muted/30"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {new Date(sale.created_at).toLocaleString('en-ZA', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.retailer_name || 'Unknown'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.retailer_short_code || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.agent_name || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {sale.commission_group_name || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                            {sale.terminal_short_code || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  'h-2 w-2 rounded-full',
+                                  sale.voucher_type === 'Mobile'
+                                    ? 'bg-primary'
+                                    : sale.voucher_type === 'OTT'
+                                      ? 'bg-purple-500'
+                                      : sale.voucher_type === 'Hollywoodbets'
+                                        ? 'bg-green-500'
+                                        : sale.voucher_type === 'Ringa'
+                                          ? 'bg-amber-500'
+                                          : 'bg-pink-500'
                                 )}
-                                {isReverse && (
-                                  <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
-                                    REVERSE
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                              <span className={cn(isReverse && 'text-red-600')}>
-                                R {sale.amount.toFixed(2)}
-                              </span>
-                            </td>
-                            <td
-                              className={cn(
-                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                                isReverse ? 'text-red-600' : 'text-orange-600'
-                              )}
-                            >
-                              {supplierCommissionAmount !== null
-                                ? `R ${supplierCommissionAmount.toFixed(3)}`
-                                : '-'}
-                            </td>
-                            <td
-                              className={cn(
-                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                                isReverse ? 'text-red-600' : 'text-green-600'
-                              )}
-                            >
-                              {sale.retailer_commission !== null
-                                ? `R ${sale.retailer_commission.toFixed(3)}`
-                                : '-'}
-                            </td>
-                            <td
-                              className={cn(
-                                'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                                isReverse ? 'text-red-600' : 'text-blue-600'
-                              )}
-                            >
-                              {sale.agent_commission !== null
-                                ? `R ${sale.agent_commission.toFixed(3)}`
-                                : '-'}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-sm">
-                              {sale.profit !== null ? (
-                                <span
-                                  className={cn(
-                                    'font-medium',
-                                    airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                                  )}
-                                >
-                                  R {airVoucherProfit.toFixed(3)}
+                              />
+                              <span>{sale.voucher_type || 'Unknown'}</span>
+                              {isReprint && (
+                                <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  REPRINT
                                 </span>
-                              ) : (
-                                '-'
                               )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="sticky bottom-0 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
-                      <tr className="font-semibold">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={6}>
-                          TOTAL: {filteredAndSortedSales.length} sales
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
-                          R {totals.amount.toFixed(2)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-orange-600">
-                          R {totals.supplierCommission.toFixed(3)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-green-600">
-                          R {totals.retailerCommission.toFixed(3)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                          R {totals.agentCommission.toFixed(3)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm">
-                          <span
-                            className={cn(
-                              'font-bold',
-                              totals.profit >= 0 ? 'text-green-600' : 'text-red-600'
-                            )}
-                          >
-                            R {totals.profit.toFixed(3)}
-                          </span>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                              {isReverse && (
+                                <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                                  REVERSE
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                            <span className={cn(isReverse && 'text-red-600')}>
+                              R {sale.amount.toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="sticky bottom-0 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
+                    <tr className="font-semibold">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
+                        TOTAL: {filteredAndSortedSales.length} reprints
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
+                        R {totals.totalAmount.toFixed(2)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-            ) : (
-              <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
-                <div className="mb-3 rounded-full bg-muted p-3">
-                  <Activity className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-                <p className="mb-4 text-muted-foreground">No sales match the selected filters.</p>
-              </div>
-            )}
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
 
       {/* Export Modal */}
-      <ExportModal
+      <ReprintsExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         sales={filteredAndSortedSales}
-        startDate={startDate}
-        endDate={endDate}
       />
     </Dialog.Root>
   );

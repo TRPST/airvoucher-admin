@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
-  Calendar,
+  Printer,
   ChevronUp,
   ChevronDown,
   Activity,
@@ -18,8 +18,8 @@ import {
 import { cn } from '@/utils/cn';
 import { fetchSalesReport, type SalesReport } from '@/actions';
 import { Layout } from '@/components/Layout';
-import { SalesTableModal } from '@/components/admin/reports/SalesTableModal';
-import { ExportModal } from '@/components/admin/reports/ExportModal';
+import { ReprintsTableModal } from '@/components/admin/reports/ReprintsTableModal';
+import { ReprintsExportModal } from '@/components/admin/reports/ReprintsExportModal';
 
 type SortField =
   | 'date'
@@ -31,7 +31,7 @@ type SortField =
 type SortDirection = 'asc' | 'desc';
 type QuickFilter = 'all' | 'today' | 'week' | 'month' | 'lastMonth' | 'year';
 
-function SalesReportContent() {
+function ReprintsReportContent() {
   // Data state
   const [sales, setSales] = useState<SalesReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +46,6 @@ function SalesReportContent() {
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
-  const [reprintFilter, setReprintFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -147,9 +146,10 @@ function SalesReportContent() {
     }
   };
 
-  // Filter and sort sales data
+  // Filter and sort sales data - ONLY REPRINTS
   const filteredAndSortedSales = (() => {
-    let filtered = [...sales];
+    // First, filter to only include reprints
+    let filtered = sales.filter(sale => sale.ref_number?.endsWith('-REPRINT'));
 
     // Apply search filter
     if (searchQuery) {
@@ -175,11 +175,7 @@ function SalesReportContent() {
           sale.terminal_short_code?.toLowerCase().includes(searchLower) ||
           sale.voucher_type?.toLowerCase().includes(searchLower) ||
           sale.amount.toString().includes(searchLower) ||
-          sale.ref_number?.toLowerCase().includes(searchLower) ||
-          sale.supplier_commission?.toString().includes(searchLower) ||
-          sale.retailer_commission?.toString().includes(searchLower) ||
-          sale.agent_commission?.toString().includes(searchLower) ||
-          sale.profit?.toString().includes(searchLower)
+          sale.ref_number?.toLowerCase().includes(searchLower)
         );
       });
     }
@@ -211,13 +207,6 @@ function SalesReportContent() {
     // Apply terminal filter
     if (terminalFilter !== 'all') {
       filtered = filtered.filter(sale => sale.terminal_short_code === terminalFilter);
-    }
-
-    // Apply reprint filter
-    if (reprintFilter === 'exclude') {
-      filtered = filtered.filter(sale => !sale.ref_number?.endsWith('-REPRINT'));
-    } else if (reprintFilter === 'only') {
-      filtered = filtered.filter(sale => sale.ref_number?.endsWith('-REPRINT'));
     }
 
     // Apply sorting
@@ -318,11 +307,11 @@ function SalesReportContent() {
         {/* Header */}
         <div className="mt-2">
           <div className="mb-2 flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Sales Report</h1>
+            <Printer className="h-6 w-6 text-amber-600" />
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reprints Report</h1>
           </div>
           <p className="text-muted-foreground">
-            Comprehensive view of all sales transactions with detailed breakdowns.
+            Detailed view of all reprint transactions for reprinted vouchers.
           </p>
         </div>
       </div>
@@ -433,15 +422,15 @@ function SalesReportContent() {
 
       {/* Statistics Cards */}
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Sales</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Reprints</p>
                 <p className="text-2xl font-bold">{stats.totalSales}</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <ShoppingCart className="h-6 w-6 text-primary" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+                <Printer className="h-6 w-6 text-amber-500" />
               </div>
             </div>
           </div>
@@ -456,44 +445,6 @@ function SalesReportContent() {
                 <HandCoins className="h-6 w-6 text-green-500" />
               </div>
             </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">AirVoucher Profit</p>
-                <p
-                  className={cn(
-                    'text-2xl font-bold',
-                    stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
-                  )}
-                >
-                  R {stats.profit.toFixed(2)}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
-                <TrendingUp className="h-6 w-6 text-amber-500" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="mb-1 text-sm font-medium text-muted-foreground">Supplier Commission</p>
-            <p className="text-lg font-bold text-pink-600">
-              R {stats.supplierCommission.toFixed(2)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="mb-1 text-sm font-medium text-muted-foreground">Retailer Commission</p>
-            <p className="text-lg font-bold text-purple-600">
-              R {stats.retailerCommission.toFixed(2)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="mb-1 text-sm font-medium text-muted-foreground">Agent Commission</p>
-            <p className="text-lg font-bold text-blue-600">R {stats.agentCommission.toFixed(2)}</p>
           </div>
         </div>
       )}
@@ -613,22 +564,6 @@ function SalesReportContent() {
             ))}
           </select>
         </div>
-
-        <div>
-          <label htmlFor="reprintFilter" className="mb-2 block text-sm font-medium">
-            Reprint Filter
-          </label>
-          <select
-            id="reprintFilter"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            value={reprintFilter}
-            onChange={e => setReprintFilter(e.target.value)}
-          >
-            <option value="all">All Sales</option>
-            <option value="exclude">Exclude Reprints</option>
-            <option value="only">Reprints Only</option>
-          </select>
-        </div>
       </div>
 
       {/* Search Bar */}
@@ -637,7 +572,7 @@ function SalesReportContent() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search sales by any field..."
+            placeholder="Search reprints by any field..."
             className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -653,7 +588,8 @@ function SalesReportContent() {
         </div>
         {searchQuery && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Showing {filteredAndSortedSales.length} of {sales.length} sales
+            Showing {filteredAndSortedSales.length} of{' '}
+            {sales.filter(sale => sale.ref_number?.endsWith('-REPRINT')).length} reprints
           </p>
         )}
       </div>
@@ -663,7 +599,7 @@ function SalesReportContent() {
         <div className="flex h-60 items-center justify-center rounded-lg border border-border bg-card">
           <div className="text-center">
             <div className="mb-3 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-            <p className="text-sm text-muted-foreground">Loading sales data...</p>
+            <p className="text-sm text-muted-foreground">Loading reprints data...</p>
           </div>
         </div>
       )}
@@ -682,7 +618,7 @@ function SalesReportContent() {
         <>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {filteredAndSortedSales.length} total sales
+              {filteredAndSortedSales.length} total reprints
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -794,10 +730,6 @@ function SalesReportContent() {
                             ))}
                         </button>
                       </th>
-                      <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
-                      <th className="whitespace-nowrap px-3 py-3">Ret. Com.</th>
-                      <th className="whitespace-nowrap px-3 py-3">Agent Com.</th>
-                      <th className="whitespace-nowrap px-3 py-3">AV Profit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -870,44 +802,6 @@ function SalesReportContent() {
                               R {sale.amount.toFixed(2)}
                             </span>
                           </td>
-                          <td
-                            className={cn(
-                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                              isReverse ? 'text-red-600' : 'text-pink-600'
-                            )}
-                          >
-                            {isReprint ? '-' : `R ${supplierCommissionAmount?.toFixed(3)}`}
-                          </td>
-                          <td
-                            className={cn(
-                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                              isReverse ? 'text-red-600' : 'text-purple-600'
-                            )}
-                          >
-                            {isReprint ? '-' : `R ${sale.retailer_commission?.toFixed(3)}`}
-                          </td>
-                          <td
-                            className={cn(
-                              'whitespace-nowrap px-3 py-3 text-sm font-medium',
-                              isReverse ? 'text-red-600' : 'text-blue-600'
-                            )}
-                          >
-                            {isReprint ? '-' : `R ${sale.agent_commission?.toFixed(3)}`}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-sm">
-                            {isReprint ? (
-                              '-'
-                            ) : (
-                              <span
-                                className={cn(
-                                  'font-medium',
-                                  airVoucherProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                                )}
-                              >
-                                R {airVoucherProfit.toFixed(3)}
-                              </span>
-                            )}
-                          </td>
                         </tr>
                       );
                     })}
@@ -915,29 +809,10 @@ function SalesReportContent() {
                   <tfoot className="sticky bottom-0 z-10 border-t-2 border-border bg-muted/80 backdrop-blur-sm">
                     <tr className="font-semibold">
                       <td className="whitespace-nowrap px-4 py-3 text-sm" colSpan={7}>
-                        TOTAL
+                        TOTAL REPRINTS
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-bold">
                         R {stats.totalAmount.toFixed(2)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-pink-600">
-                        R {stats.supplierCommission.toFixed(3)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-purple-600">
-                        R {stats.retailerCommission.toFixed(3)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm font-bold text-blue-600">
-                        R {stats.agentCommission.toFixed(3)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm">
-                        <span
-                          className={cn(
-                            'font-bold',
-                            stats.profit >= 0 ? 'text-green-600' : 'text-red-600'
-                          )}
-                        >
-                          R {stats.profit.toFixed(3)}
-                        </span>
                       </td>
                     </tr>
                   </tfoot>
@@ -949,15 +824,15 @@ function SalesReportContent() {
               <div className="mb-3 rounded-full bg-muted p-3">
                 <Activity className="h-6 w-6 text-muted-foreground" />
               </div>
-              <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-              <p className="mb-4 text-muted-foreground">No sales match the selected filters.</p>
+              <h3 className="mb-1 text-lg font-medium">No reprint data</h3>
+              <p className="mb-4 text-muted-foreground">No reprints match the selected filters.</p>
             </div>
           )}
         </>
       )}
 
       {/* Modals */}
-      <SalesTableModal
+      <ReprintsTableModal
         isOpen={showTableModal}
         onClose={() => setShowTableModal(false)}
         sales={filteredAndSortedSales}
@@ -965,7 +840,7 @@ function SalesReportContent() {
         initialSortDirection={sortDirection}
       />
 
-      <ExportModal
+      <ReprintsExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         sales={filteredAndSortedSales}
@@ -976,10 +851,10 @@ function SalesReportContent() {
   );
 }
 
-export default function SalesReportPage() {
+export default function ReprintsReportPage() {
   return (
     <Layout role="admin" fullscreen={true}>
-      <SalesReportContent />
+      <ReprintsReportContent />
     </Layout>
   );
 }
