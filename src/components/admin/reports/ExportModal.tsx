@@ -1,7 +1,7 @@
-import { X, FileSpreadsheet, FileText, FileDown } from 'lucide-react';
-import * as Dialog from '@radix-ui/react-dialog';
-import { cn } from '@/utils/cn';
-import type { SalesReport } from '@/actions';
+import { X, FileSpreadsheet, FileText, FileDown } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { cn } from "@/utils/cn";
+import type { SalesReport } from "@/actions";
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -11,7 +11,13 @@ interface ExportModalProps {
   endDate?: string;
 }
 
-export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: ExportModalProps) {
+export function ExportModal({
+  isOpen,
+  onClose,
+  sales,
+  startDate,
+  endDate,
+}: ExportModalProps) {
   // Generate filename based on date range
   const getFilename = (extension: string) => {
     if (startDate && endDate) {
@@ -34,9 +40,9 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
 
       return {
         amount: acc.amount + sale.amount,
-        supplierCommission: acc.supplierCommission + (supplierCommissionAmount || 0),
-        retailerCommission: acc.retailerCommission + (sale.retailer_commission || 0),
-        agentCommission: acc.agentCommission + (sale.agent_commission || 0),
+        supplierCommission: acc.supplierCommission + supplierCommissionAmount,
+        retailerCommission: acc.retailerCommission + sale.retailer_commission,
+        agentCommission: acc.agentCommission + sale.agent_commission,
         profit: acc.profit + airVoucherProfit,
       };
     },
@@ -64,7 +70,7 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
       'AV Profit',
     ];
 
-    const rows = sales.map(sale => {
+    const rows = sales.map((sale) => {
       const supplierCommissionAmount =
         sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
       const airVoucherProfit = sale.profit || 0;
@@ -76,9 +82,9 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
         sale.commission_group_name || '-',
         sale.voucher_type || 'Unknown',
         sale.amount.toFixed(2),
-        (supplierCommissionAmount || 0).toFixed(2),
-        (sale.retailer_commission || 0).toFixed(2),
-        (sale.agent_commission || 0).toFixed(2),
+        supplierCommissionAmount.toFixed(2),
+        sale.retailer_commission.toFixed(2),
+        sale.agent_commission.toFixed(2),
         airVoucherProfit.toFixed(2),
       ];
     });
@@ -99,7 +105,7 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -116,7 +122,7 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
       // Dynamically import xlsx library
       const XLSX = await import('xlsx');
 
-      const data = sales.map(sale => {
+      const data = sales.map((sale) => {
         const supplierCommissionAmount =
           sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
         const airVoucherProfit = sale.profit || 0;
@@ -128,9 +134,9 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
           'Commission Group': sale.commission_group_name || '-',
           Type: sale.voucher_type || 'Unknown',
           Amount: parseFloat(sale.amount.toFixed(2)),
-          'Supplier Commission': parseFloat((supplierCommissionAmount || 0).toFixed(2)),
-          'Retailer Commission': parseFloat((sale.retailer_commission || 0).toFixed(2)),
-          'Agent Commission': parseFloat((sale.agent_commission || 0).toFixed(2)),
+          'Supplier Commission': parseFloat(supplierCommissionAmount.toFixed(2)),
+          'Retailer Commission': parseFloat(sale.retailer_commission.toFixed(2)),
+          'Agent Commission': parseFloat(sale.agent_commission.toFixed(2)),
           'AV Profit': parseFloat(airVoucherProfit.toFixed(2)),
         };
       });
@@ -194,7 +200,7 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
       }
 
       // Prepare table data
-      const tableData = sales.map(sale => {
+      const tableData = sales.map((sale) => {
         const supplierCommissionAmount =
           sale.supplier_commission || sale.amount * (sale.supplier_commission_pct / 100);
         const airVoucherProfit = sale.profit || 0;
@@ -211,9 +217,9 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
           sale.agent_name || '-',
           sale.voucher_type || 'Unknown',
           `R ${sale.amount.toFixed(2)}`,
-          `R ${(supplierCommissionAmount || 0).toFixed(2)}`,
-          `R ${(sale.retailer_commission || 0).toFixed(2)}`,
-          `R ${(sale.agent_commission || 0).toFixed(2)}`,
+          `R ${supplierCommissionAmount.toFixed(2)}`,
+          `R ${sale.retailer_commission.toFixed(2)}`,
+          `R ${sale.agent_commission.toFixed(2)}`,
           `R ${airVoucherProfit.toFixed(2)}`,
         ];
       });
@@ -235,16 +241,16 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
       (doc as any).autoTable({
         head: [
           [
-            'Date',
-            'Retailer',
-            'Agent',
-            'Commission Group',
-            'Type',
-            'Amount',
-            'Supp. Com.',
-            'Ret. Com.',
-            'Agent Com.',
-            'AV Profit',
+      'Date',
+      'Retailer',
+      'Agent',
+      'Commission Group',
+      'Type',
+      'Amount',
+      'Supp. Com.',
+      'Ret. Com.',
+      'Agent Com.',
+      'AV Profit',
           ],
         ],
         body: tableData,
@@ -281,11 +287,13 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileDown className="h-5 w-5 text-primary" />
-              <Dialog.Title className="text-lg font-semibold">Export Sales Report</Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold">
+                Export Sales Report
+              </Dialog.Title>
             </div>
             <Dialog.Close className="rounded-full p-2 hover:bg-muted">
               <X className="h-4 w-4" aria-hidden="true" />
@@ -302,23 +310,25 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
               {/* Excel Export */}
               <button
                 onClick={exportToExcel}
-                className="group flex w-full items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-muted transition-colors group"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10 transition-colors group-hover:bg-green-500/20">
+                <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
                   <FileSpreadsheet className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-medium">Excel (.xlsx)</p>
-                  <p className="text-xs text-muted-foreground">Spreadsheet with formatting</p>
+                  <p className="text-xs text-muted-foreground">
+                    Spreadsheet with formatting
+                  </p>
                 </div>
               </button>
 
               {/* CSV Export */}
               <button
                 onClick={exportToCSV}
-                className="group flex w-full items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"
+                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-muted transition-colors group"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10 transition-colors group-hover:bg-blue-500/20">
+                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
                   <FileText className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1 text-left">
@@ -349,7 +359,7 @@ export function ExportModal({ isOpen, onClose, sales, startDate, endDate }: Expo
 
           <div className="flex justify-end pt-4">
             <Dialog.Close asChild>
-              <button className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted">
+              <button className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted">
                 Cancel
               </button>
             </Dialog.Close>
