@@ -1,4 +1,3 @@
-
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ToastProvider";
@@ -9,7 +8,6 @@ import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
 import { SWRConfig } from "swr";
 import { createClient } from "@/utils/supabase/client";
-
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -37,17 +35,17 @@ export default function App({ Component, pageProps }: AppProps) {
 
   // Check for portal pages (new portal routing structure)
   const isPortalAuthPage =
-    router.pathname.startsWith('/portal/') && router.pathname.endsWith('/auth');
+    router.pathname.startsWith("/portal/") && router.pathname.endsWith("/auth");
 
   // Original checks
-  const isLandingPage = router.pathname === '/';
-  const isAuthPage = router.pathname.startsWith('/auth') || isPortalAuthPage;
-  const is404Page = router.pathname === '/404';
+  const isLandingPage = router.pathname === "/";
+  const isAuthPage = router.pathname.startsWith("/auth") || isPortalAuthPage;
+  const is404Page = router.pathname === "/404";
 
   // Render a loader initially before client-side code runs
   if (!mounted) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
       </div>
     );
@@ -65,7 +63,7 @@ export default function App({ Component, pageProps }: AppProps) {
     onError: (err: unknown) => {
       // Central logging hook for SWR errors
       // eslint-disable-next-line no-console
-      console.error('SWR error', err);
+      console.error("SWR error", err);
     },
   };
 
@@ -87,13 +85,11 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider attribute="class">
       <SWRConfig value={swrConfigValue}>
         <ToastProvider>
-          <PermissionProvider>
-            <TerminalProvider>
-              <Layout>
-                <Component {...pageProps} />
-              </Layout>
-            </TerminalProvider>
-          </PermissionProvider>
+          <TerminalProvider>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          </TerminalProvider>
         </ToastProvider>
       </SWRConfig>
     </ThemeProvider>

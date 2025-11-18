@@ -20,12 +20,8 @@ export default function AdminDashboard() {
   const { isLoading: isAuthLoading } = useRequireRole('admin');
 
   // Fetch dashboard data for stats
-  const {
-    retailers: retailersList,
-    todaySales,
-    isPrimed,
-    error: dashboardError,
-  } = useDashboardData(isAuthLoading);
+  const { retailers: retailersList, todaySales, isPrimed, error: dashboardError } =
+    useDashboardData(isAuthLoading);
 
   // Sales data state
   const [sales, setSales] = useState<SalesReport[]>([]);
@@ -41,7 +37,6 @@ export default function AdminDashboard() {
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
-  const [reprintFilter, setReprintFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
 
   // Modal state
@@ -79,33 +74,28 @@ export default function AdminDashboard() {
   }, [startDate, endDate, isPrimed]);
 
   // Get unique values for filters
-  const voucherTypes = useMemo(
-    () => Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[],
+  const voucherTypes = useMemo(() => 
+    Array.from(new Set(sales.map(sale => sale.voucher_type).filter(Boolean))) as string[],
     [sales]
   );
-  const retailers = useMemo(
-    () => Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[],
+  const retailers = useMemo(() => 
+    Array.from(new Set(sales.map(sale => sale.retailer_name).filter(Boolean))) as string[],
     [sales]
   );
-  const retailerShortCodes = useMemo(
-    () =>
-      Array.from(new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))) as string[],
+  const retailerShortCodes = useMemo(() =>
+    Array.from(new Set(sales.map(sale => sale.retailer_short_code).filter(Boolean))) as string[],
     [sales]
   );
-  const agents = useMemo(
-    () => Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[],
+  const agents = useMemo(() => 
+    Array.from(new Set(sales.map(sale => sale.agent_name).filter(Boolean))) as string[],
     [sales]
   );
-  const commissionGroups = useMemo(
-    () =>
-      Array.from(
-        new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))
-      ) as string[],
+  const commissionGroups = useMemo(() => 
+    Array.from(new Set(sales.map(sale => sale.commission_group_name).filter(Boolean))) as string[],
     [sales]
   );
-  const terminals = useMemo(
-    () =>
-      Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[],
+  const terminals = useMemo(() => 
+    Array.from(new Set(sales.map(sale => sale.terminal_short_code).filter(Boolean))) as string[],
     [sales]
   );
 
@@ -113,7 +103,7 @@ export default function AdminDashboard() {
   const handleQuickFilter = (filter: QuickFilter) => {
     setQuickFilter(filter);
     const now = new Date();
-
+    
     switch (filter) {
       case 'today':
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -183,13 +173,6 @@ export default function AdminDashboard() {
       filtered = filtered.filter(sale => sale.terminal_short_code === terminalFilter);
     }
 
-    // Apply reprint filter
-    if (reprintFilter === 'exclude') {
-      filtered = filtered.filter(sale => !sale.ref_number?.endsWith('-REPRINT'));
-    } else if (reprintFilter === 'only') {
-      filtered = filtered.filter(sale => sale.ref_number?.endsWith('-REPRINT'));
-    }
-
     return filtered;
   }, [
     sales,
@@ -199,7 +182,6 @@ export default function AdminDashboard() {
     agentFilter,
     commissionGroupFilter,
     terminalFilter,
-    reprintFilter,
   ]);
 
   // Calculate dashboard metrics
@@ -236,10 +218,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div
-        className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8"
-        style={{ marginTop: -40 }}
-      >
+      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
         <p className="text-muted-foreground">Welcome to the Airvoucher admin dashboard.</p>
       </div>
@@ -259,11 +238,11 @@ export default function AdminDashboard() {
         startDate={startDate}
         endDate={endDate}
         quickFilter={quickFilter}
-        onStartDateChange={date => {
+        onStartDateChange={(date) => {
           setStartDate(date);
           if (date) setQuickFilter('custom');
         }}
-        onEndDateChange={date => {
+        onEndDateChange={(date) => {
           setEndDate(date);
           if (date) setQuickFilter('custom');
         }}
@@ -274,14 +253,12 @@ export default function AdminDashboard() {
         agentFilter={agentFilter}
         commissionGroupFilter={commissionGroupFilter}
         terminalFilter={terminalFilter}
-        reprintFilter={reprintFilter}
         onVoucherTypeFilterChange={setVoucherTypeFilter}
         onRetailerFilterChange={setRetailerFilter}
         onRetailerShortCodeFilterChange={setRetailerShortCodeFilter}
         onAgentFilterChange={setAgentFilter}
         onCommissionGroupFilterChange={setCommissionGroupFilter}
         onTerminalFilterChange={setTerminalFilter}
-        onReprintFilterChange={setReprintFilter}
         voucherTypes={voucherTypes}
         retailers={retailers}
         retailerShortCodes={retailerShortCodes}
