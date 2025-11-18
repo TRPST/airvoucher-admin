@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useCallback } from 'react';
-import { getUserRole, signOutUser } from '@/actions/userActions';
-import { fetchMyRetailer, RetailerProfile } from '@/actions/retailerActions';
+import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useCallback } from "react";
+import { getUserRole, signOutUser } from "@/actions/userActions";
+import { fetchMyRetailer, RetailerProfile } from "@/actions/retailerActions";
 import {
   LayoutDashboard,
   Store,
@@ -21,19 +21,18 @@ import {
   ChevronRight,
   LogOut,
   Settings,
-  Shield,
-} from 'lucide-react';
+} from "lucide-react";
 // Import Supabase client directly
-import { createClient } from '@/utils/supabase/client';
-import * as Avatar from '@radix-ui/react-avatar';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { motion } from 'framer-motion';
+import { createClient } from "@/utils/supabase/client";
+import * as Avatar from "@radix-ui/react-avatar";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { motion } from "framer-motion";
 
-import { cn } from '@/utils/cn';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { useTerminal } from '@/contexts/TerminalContext';
+import { cn } from "@/utils/cn";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useTerminal } from "@/contexts/TerminalContext";
 
-type UserRole = 'admin' | 'retailer' | 'agent' | 'terminal' | 'cashier';
+type UserRole = "admin" | "retailer" | "agent" | "terminal" | "cashier";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,7 +40,7 @@ interface LayoutProps {
   fullscreen?: boolean;
 }
 
-export function Layout({ children, role = 'admin', fullscreen = false }: LayoutProps) {
+export function Layout({ children, role = "admin", fullscreen = false }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -49,16 +48,23 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
-  const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
-  const { terminalName, retailerName, balance, availableCredit, isBalanceLoading } = useTerminal();
+  const [retailerProfile, setRetailerProfile] =
+    React.useState<RetailerProfile | null>(null);
+  const {
+    terminalName,
+    retailerName,
+    balance,
+    availableCredit,
+    isBalanceLoading,
+  } = useTerminal();
 
   // Debug balance changes
   React.useEffect(() => {
-    if (role === 'cashier') {
+    if (role === "cashier") {
       console.log(
-        'Balance updated in Layout:',
+        "Balance updated in Layout:",
         balance.toFixed(2),
-        'Credit:',
+        "Credit:",
         availableCredit.toFixed(2)
       );
     }
@@ -92,16 +98,16 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
   // Fetch retailer profile if user is a retailer
   React.useEffect(() => {
     const fetchRetailerProfile = async () => {
-      if (role === 'retailer' && user?.id) {
+      if (role === "retailer" && user?.id) {
         try {
           const { data, error } = await fetchMyRetailer(user.id);
           if (error) {
-            console.error('Error fetching retailer profile:', error);
+            console.error("Error fetching retailer profile:", error);
           } else {
             setRetailerProfile(data);
           }
         } catch (err) {
-          console.error('Error fetching retailer profile:', err);
+          console.error("Error fetching retailer profile:", err);
         }
       } else {
         setRetailerProfile(null);
@@ -117,18 +123,18 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
       // Use the signOutUser action instead of directly calling supabase
       const { error } = await signOutUser();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error("Error signing out:", error);
         return;
       }
 
       // Redirect based on role
-      if (role === 'cashier') {
-        router.push('/auth/cashier');
+      if (role === "cashier") {
+        router.push("/auth/cashier");
       } else {
-        router.push('/');
+        router.push("/");
       }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -138,7 +144,7 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
     const { data, error } = await getUserRole(userId);
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      console.error("Error fetching user profile:", error);
       return null;
     }
 
@@ -150,17 +156,19 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
     async (targetRole: UserRole) => {
       if (role !== targetRole) {
         try {
-          console.log(`Switching from ${role} portal to ${targetRole} portal. Signing out first.`);
+          console.log(
+            `Switching from ${role} portal to ${targetRole} portal. Signing out first.`
+          );
           // Sign out the current user using the action
           const { error: signOutError } = await signOutUser();
           if (signOutError) {
-            console.error('Error signing out:', signOutError);
+            console.error("Error signing out:", signOutError);
             return;
           }
           // Redirect to the auth page for the target role
           router.push(`/auth/${targetRole}`);
         } catch (error) {
-          console.error('Error during portal navigation:', error);
+          console.error("Error during portal navigation:", error);
         }
       }
     },
@@ -170,111 +178,106 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
   // Generate navigation items based on user role
   const getNavItems = (role: UserRole) => {
     switch (role) {
-      case 'admin':
+      case "admin":
         return [
           {
-            name: 'Dashboard',
-            href: '/admin',
+            name: "Dashboard",
+            href: "/admin",
             icon: LayoutDashboard,
           },
           {
-            name: 'Agents',
-            href: '/admin/agents',
+            name: "Agents",
+            href: "/admin/agents",
             icon: Users,
           },
           {
-            name: 'Retailers',
-            href: '/admin/retailers',
+            name: "Retailers",
+            href: "/admin/retailers",
             icon: Store,
           },
           {
-            name: 'Vouchers',
-            href: '/admin/vouchers',
+            name: "Vouchers",
+            href: "/admin/vouchers",
             icon: CreditCard,
           },
           {
-            name: 'Commissions',
-            href: '/admin/commissions',
+            name: "Commissions",
+            href: "/admin/commissions",
             icon: Percent,
           },
           {
-            name: 'Reports',
-            href: '/admin/reports',
+            name: "Reports",
+            href: "/admin/reports",
             icon: FileText,
           },
           {
-            name: 'Admins',
-            href: '/admin/admins',
-            icon: Shield,
-          },
-          {
-            name: 'Settings',
-            href: '/admin/settings',
+            name: "Settings",
+            href: "/admin/settings",
             icon: Settings,
           },
           // Profile removed from sidebar nav
         ];
-      case 'retailer':
+      case "retailer":
         return [
           {
-            name: 'Sell',
-            href: '/retailer',
+            name: "Sell",
+            href: "/retailer",
             icon: ShoppingCart,
           },
           {
-            name: 'History',
-            href: '/retailer/history',
+            name: "History",
+            href: "/retailer/history",
             icon: History,
           },
           {
-            name: 'Terminals',
-            href: '/retailer/terminals',
+            name: "Terminals",
+            href: "/retailer/terminals",
             icon: CreditCard,
           },
           {
-            name: 'Account',
-            href: '/retailer/account',
+            name: "Account",
+            href: "/retailer/account",
             icon: User,
           },
         ];
-      case 'agent':
+      case "agent":
         return [
           {
-            name: 'Dashboard',
-            href: '/agent',
+            name: "Dashboard",
+            href: "/agent",
             icon: LayoutDashboard,
           },
           {
-            name: 'Retailers',
-            href: '/agent/retailers',
+            name: "Retailers",
+            href: "/agent/retailers",
             icon: Store,
           },
           {
-            name: 'Commissions',
-            href: '/agent/commissions',
+            name: "Commissions",
+            href: "/agent/commissions",
             icon: Percent,
           },
           // Profile removed from sidebar nav
         ];
-      case 'terminal':
+      case "terminal":
         return [
           {
-            name: 'Sell',
-            href: '/terminal',
+            name: "Sell",
+            href: "/terminal",
             icon: ShoppingCart,
           },
           {
-            name: 'History',
-            href: '/terminal/history',
+            name: "History",
+            href: "/terminal/history",
             icon: History,
           },
           {
-            name: 'Account',
-            href: '/terminal/account',
+            name: "Account",
+            href: "/terminal/account",
             icon: User,
           },
         ];
-      case 'cashier':
+      case "cashier":
         // Cashiers have no sidebar navigation
         return [];
       default:
@@ -285,94 +288,94 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
   // Get bottom tab items for mobile (excludes Reports which stays in sidebar)
   const getBottomTabItems = (role: UserRole) => {
     switch (role) {
-      case 'admin':
+      case "admin":
         return [
           {
-            name: 'Retailers',
-            href: '/admin/retailers',
+            name: "Retailers",
+            href: "/admin/retailers",
             icon: Store,
           },
           {
-            name: 'Agents',
-            href: '/admin/agents',
+            name: "Agents",
+            href: "/admin/agents",
             icon: Users,
           },
           {
-            name: 'Dashboard',
-            href: '/admin',
+            name: "Dashboard",
+            href: "/admin",
             icon: LayoutDashboard,
           },
           {
-            name: 'Vouchers',
-            href: '/admin/vouchers',
+            name: "Vouchers",
+            href: "/admin/vouchers",
             icon: CreditCard,
           },
           {
-            name: 'Commissions',
-            href: '/admin/commissions',
+            name: "Commissions",
+            href: "/admin/commissions",
             icon: Percent,
           },
         ];
-      case 'retailer':
+      case "retailer":
         return [
           {
-            name: 'Sell',
-            href: '/retailer',
+            name: "Sell",
+            href: "/retailer",
             icon: ShoppingCart,
           },
           {
-            name: 'History',
-            href: '/retailer/history',
+            name: "History",
+            href: "/retailer/history",
             icon: History,
           },
           {
-            name: 'Terminals',
-            href: '/retailer/terminals',
+            name: "Terminals",
+            href: "/retailer/terminals",
             icon: CreditCard,
           },
           {
-            name: 'Account',
-            href: '/retailer/account',
+            name: "Account",
+            href: "/retailer/account",
             icon: User,
           },
         ];
-      case 'agent':
+      case "agent":
         return [
           {
-            name: 'Retailers',
-            href: '/agent/retailers',
+            name: "Retailers",
+            href: "/agent/retailers",
             icon: Store,
           },
           {
-            name: 'Dashboard',
-            href: '/agent',
+            name: "Dashboard",
+            href: "/agent",
             icon: LayoutDashboard,
           },
           {
-            name: 'Commissions',
-            href: '/agent/commissions',
+            name: "Commissions",
+            href: "/agent/commissions",
             icon: Percent,
           },
         ];
-      case 'terminal':
+      case "terminal":
         return [
           {
-            name: 'Sell',
-            href: '/terminal',
+            name: "Sell",
+            href: "/terminal",
             icon: ShoppingCart,
           },
           {
-            name: 'History',
-            href: '/terminal/history',
+            name: "History",
+            href: "/terminal/history",
             icon: History,
           },
           {
-            name: 'Account',
-            href: '/terminal/account',
+            name: "Account",
+            href: "/terminal/account",
             icon: User,
           },
         ];
-      case 'cashier':
+      case "cashier":
         // Cashiers have no bottom tab navigation
         return [];
       default:
@@ -383,18 +386,18 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
   // Get sidebar-only items for mobile (only Reports for admin, empty for others)
   const getMobileSidebarItems = (role: UserRole) => {
     switch (role) {
-      case 'admin':
+      case "admin":
         return [
           {
-            name: 'Reports',
-            href: '/admin/reports',
+            name: "Reports",
+            href: "/admin/reports",
             icon: FileText,
           },
         ];
-      case 'retailer':
-      case 'agent':
-      case 'terminal':
-      case 'cashier':
+      case "retailer":
+      case "agent":
+      case "terminal":
+      case "cashier":
         return [];
       default:
         return [];
@@ -407,7 +410,11 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
 
   // Fullscreen layout (no sidebar, no navbar)
   if (fullscreen) {
-    return <div className="bg-background text-foreground">{children}</div>;
+    return (
+      <div className="bg-background text-foreground">
+        {children}
+      </div>
+    );
   }
 
   // Regular layout for other roles
@@ -437,7 +444,7 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
             className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-background p-4 animate-in slide-in-from-left md:hidden">
+          <div className="fixed inset-y-0 left-0 z-50 w-64 animate-in slide-in-from-left border-r border-border bg-background p-4 md:hidden">
             <div className="flex justify-end">
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -449,25 +456,26 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
             </div>
             <div className="mb-4">
               <div className="flex items-center justify-center">
-                <h1 className="flex items-center text-2xl font-bold">
+                <h1 className="text-2xl font-bold flex items-center">
                   <img
                     src="/assets/airvoucher-logo.png"
                     alt="AirVoucher Logo"
-                    className="mr-2 h-8"
+                    className="h-8 mr-2"
                   />
+                  
                 </h1>
               </div>
             </div>
             <nav className="mt-8 flex flex-col space-y-1">
-              {mobileSidebarItems.map(item => (
+              {mobileSidebarItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center rounded-md px-3 py-2 text-sm transition-colors',
+                    "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
                     pathname === item.href
-                      ? 'bg-primary/10 font-medium text-primary'
-                      : 'hover:bg-muted'
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted"
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -481,18 +489,22 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <button
-                      className="flex w-full items-center rounded-md border-0 p-3 outline-none transition-colors hover:bg-muted focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+                      className="w-full p-3 rounded-md flex items-center hover:bg-muted transition-colors outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 focus-visible:outline-none"
                       aria-label="User menu"
                       style={{
-                        outline: 'none !important',
-                        border: 'none !important',
+                        outline: "none !important",
+                        border: "none !important",
                       }}
                     >
-                      <Avatar.Root className="mr-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground">
-                        <Avatar.Fallback>{user.email.charAt(0).toUpperCase()}</Avatar.Fallback>
+                      <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground mr-3">
+                        <Avatar.Fallback>
+                          {user.email.charAt(0).toUpperCase()}
+                        </Avatar.Fallback>
                       </Avatar.Root>
                       <div className="flex-1 text-left">
-                        <p className="truncate text-sm font-medium">{user.email}</p>
+                        <p className="text-sm font-medium truncate">
+                          {user.email}
+                        </p>
                       </div>
                     </button>
                   </DropdownMenu.Trigger>
@@ -501,28 +513,28 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
                       side="top"
                       align="start"
                       sideOffset={8}
-                      className="z-50 min-w-[200px] overflow-hidden border-0 bg-background p-1 shadow-none outline-none ring-0 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 focus:border-0 focus:outline-none focus:ring-0"
+                      className="z-50 min-w-[200px] bg-background shadow-none overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 p-1 border-0 outline-none ring-0 focus:outline-none focus:border-0 focus:ring-0"
                       style={{
-                        boxShadow: 'none !important',
-                        outline: 'none !important',
-                        border: 'none !important',
-                        borderRadius: '0.375rem',
+                        boxShadow: "none !important",
+                        outline: "none !important",
+                        border: "none !important",
+                        borderRadius: "0.375rem",
                       }}
                     >
                       <DropdownMenu.Item
-                        className="group flex cursor-pointer items-center rounded-md border-0 px-3 py-2 text-sm outline-none transition-colors hover:bg-muted focus:border-0 focus:outline-none focus:ring-0 data-[highlighted]:border-0 data-[highlighted]:bg-muted data-[highlighted]:outline-none data-[state=open]:outline-none"
+                        className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
                         onSelect={handleSignOut}
                       >
                         <motion.div
-                          className="flex w-full items-center justify-between"
+                          className="flex items-center justify-between w-full"
                           whileHover={{ scale: 1.01 }}
-                          transition={{ duration: 0.1, ease: 'easeOut' }}
+                          transition={{ duration: 0.1, ease: "easeOut" }}
                         >
                           <div className="flex items-center">
                             <LogOut className="mr-3 h-5 w-5" />
                             Sign Out
                           </div>
-                          <ChevronRight className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </motion.div>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
@@ -532,7 +544,9 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
             )}
             <div className="absolute bottom-4 left-4 right-4">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">© 2025 AirVoucher</div>
+                <div className="text-xs text-muted-foreground">
+                  © 2025 AirVoucher
+                </div>
                 <ThemeToggle />
               </div>
             </div>
@@ -545,22 +559,26 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
         <div className="flex h-full flex-col">
           <div className="mb-4">
             <div className="flex items-center justify-center">
-              <h1 className="flex items-center text-2xl font-bold">
-                <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="mr-2 h-8" />
+              <h1 className="text-2xl font-bold flex items-center">
+                <img
+                  src="/assets/airvoucher-logo.png"
+                  alt="AirVoucher Logo"
+                  className="h-8 mr-2"
+                />                
               </h1>
             </div>
           </div>
 
           <nav className="flex flex-1 flex-col space-y-1">
-            {navItems.map(item => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'group flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors',
+                  "group flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
                   pathname === item.href
-                    ? 'bg-primary/10 font-medium text-primary'
-                    : 'hover:bg-muted'
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "hover:bg-muted"
                 )}
               >
                 <div className="flex items-center">
@@ -569,8 +587,8 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
                 </div>
                 <ChevronRight
                   className={cn(
-                    'h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100',
-                    pathname === item.href ? 'opacity-100' : ''
+                    "h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100",
+                    pathname === item.href ? "opacity-100" : ""
                   )}
                 />
               </Link>
@@ -585,20 +603,22 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button
-                    className="flex w-full items-center rounded-md border-0 p-3 outline-none transition-colors hover:bg-muted focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+                    className="w-full p-3 rounded-md flex items-center hover:bg-muted transition-colors outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 focus-visible:outline-none"
                     aria-label="User menu"
                     style={{
-                      outline: 'none !important',
-                      border: 'none !important',
+                      outline: "none !important",
+                      border: "none !important",
                     }}
                   >
-                    <Avatar.Root className="mr-3 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground">
+                    <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground mr-3">
                       <Avatar.Fallback>
-                        {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                        {user.email ? user.email.charAt(0).toUpperCase() : "U"}
                       </Avatar.Fallback>
                     </Avatar.Root>
                     <div className="flex-1 text-left">
-                      <p className="truncate text-sm font-medium">{user?.email || 'User'}</p>
+                      <p className="text-sm font-medium truncate">
+                        {user?.email || "User"}
+                      </p>
                     </div>
                   </button>
                 </DropdownMenu.Trigger>
@@ -607,28 +627,28 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
                     side="top"
                     align="start"
                     sideOffset={8}
-                    className="z-50 min-w-[200px] overflow-hidden border-0 bg-background p-1 shadow-none outline-none ring-0 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 focus:border-0 focus:outline-none focus:ring-0"
+                    className="z-50 min-w-[200px] bg-background shadow-none overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 p-1 border-0 outline-none ring-0 focus:outline-none focus:border-0 focus:ring-0"
                     style={{
-                      boxShadow: 'none !important',
-                      outline: 'none !important',
-                      border: 'none !important',
-                      borderRadius: '0.375rem',
+                      boxShadow: "none !important",
+                      outline: "none !important",
+                      border: "none !important",
+                      borderRadius: "0.375rem",
                     }}
                   >
                     <DropdownMenu.Item
-                      className="group flex cursor-pointer items-center rounded-md border-0 px-3 py-2 text-sm outline-none transition-colors hover:bg-muted focus:border-0 focus:outline-none focus:ring-0 data-[highlighted]:border-0 data-[highlighted]:bg-muted data-[highlighted]:outline-none data-[state=open]:outline-none"
+                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
                       onSelect={handleSignOut}
                     >
                       <motion.div
-                        className="flex w-full items-center justify-between"
+                        className="flex items-center justify-between w-full"
                         whileHover={{ scale: 1.01 }}
-                        transition={{ duration: 0.1, ease: 'easeOut' }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
                       >
                         <div className="flex items-center">
                           <LogOut className="mr-3 h-5 w-5" />
                           Sign Out
                         </div>
-                        <ChevronRight className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                        <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </motion.div>
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
@@ -637,9 +657,11 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
             </div>
           )}
 
-          <div className="border-t border-border pt-4">
+          <div className="pt-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">© 2025 AirVoucher</div>
+              <div className="text-xs text-muted-foreground">
+                © 2025 AirVoucher
+              </div>
               <ThemeToggle />
             </div>
           </div>
@@ -648,26 +670,30 @@ export function Layout({ children, role = 'admin', fullscreen = false }: LayoutP
 
       {/* Main content */}
       <main className="flex-1 md:pl-64">
-        <div className="mx-auto max-w-7xl p-4 pb-20 md:p-6 md:pb-4 lg:p-8 lg:pb-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8 pb-20 md:pb-4 lg:pb-8">
+          {children}
+        </div>
       </main>
 
       {/* Mobile bottom tab navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border md:hidden">
         <nav className="flex items-center justify-around px-2 py-2">
-          {bottomTabItems.map(item => {
+          {bottomTabItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex min-w-0 flex-1 flex-col items-center justify-center rounded-md px-3 py-2 text-xs transition-colors',
+                  "flex flex-col items-center justify-center px-3 py-2 rounded-md text-xs transition-colors min-w-0 flex-1",
                   isActive
-                    ? 'bg-primary/10 font-medium text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
-                <item.icon className={cn('mb-1 h-5 w-5', isActive ? 'text-primary' : '')} />
+                <item.icon
+                  className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "")}
+                />
                 <span className="truncate">{item.name}</span>
               </Link>
             );
