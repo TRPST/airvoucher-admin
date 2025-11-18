@@ -1,15 +1,14 @@
-
-import "@/styles/globals.css";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { ToastProvider } from "@/components/ToastProvider";
-import { Layout } from "@/components/Layout";
-import { TerminalProvider } from "@/contexts/TerminalContext";
-import { useRouter } from "next/router";
-import type { AppProps } from "next/app";
-import { useEffect, useState } from "react";
-import { SWRConfig } from "swr";
-import { createClient } from "@/utils/supabase/client";
-
+import '@/styles/globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ToastProvider } from '@/components/ToastProvider';
+import { Layout } from '@/components/Layout';
+import { TerminalProvider } from '@/contexts/TerminalContext';
+import { useRouter } from 'next/router';
+import type { AppProps } from 'next/app';
+import { useEffect, useState } from 'react';
+import { SWRConfig } from 'swr';
+import { createClient } from '@/utils/supabase/client';
+import { PermissionProvider } from '@/contexts/PermissionContext';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -23,7 +22,9 @@ export default function App({ Component, pageProps }: AppProps) {
   // Global listener for password recovery events
   useEffect(() => {
     const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         console.log('🔐 Password recovery event detected, redirecting to reset-password page');
         router.push('/auth/reset-password');
