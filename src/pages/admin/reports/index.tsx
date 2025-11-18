@@ -1,7 +1,7 @@
-import * as React from "react";
-import Link from "next/link";
-import { FileText, ChevronRight } from "lucide-react";
-import { motion } from "framer-motion";
+import * as React from 'react';
+import Link from 'next/link';
+import { FileText, ChevronRight, Printer } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 type ReportCardProps = {
   icon: React.ComponentType<{ className?: string }>;
@@ -26,13 +26,11 @@ const ReportCard = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/50"
+        className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
       >
         {/* Icon */}
         <div className="mb-4 flex items-center justify-between">
-          <div
-            className={`flex h-12 w-12 items-center justify-center rounded-lg ${iconBgColor}`}
-          >
+          <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${iconBgColor}`}>
             <Icon className={`h-6 w-6 ${iconColor}`} />
           </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
@@ -55,12 +53,21 @@ export default function AdminReports() {
   const reports: ReportCardProps[] = [
     {
       icon: FileText,
-      title: "Sales Report",
+      title: 'Sales Report',
       description:
-        "Comprehensive view of all sales transactions with detailed breakdowns by voucher type, retailer, and time period.",
-      href: "/admin/reports/sales",
-      iconBgColor: "bg-blue-100 dark:bg-blue-900/20",
-      iconColor: "text-blue-600 dark:text-blue-400",
+        'Comprehensive view of all sales transactions with detailed breakdowns by voucher type, retailer, and time period.',
+      href: '/admin/reports/sales',
+      iconBgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+    },
+    {
+      icon: Printer,
+      title: 'Reprints Report',
+      description:
+        'Detailed view of all reprint transactions, showing vouchers that were reprinted for customers.',
+      href: '/admin/reports/reprints',
+      iconBgColor: 'bg-amber-100 dark:bg-amber-900/20',
+      iconColor: 'text-amber-600 dark:text-amber-400',
     },
     // {
     //   icon: TrendingUp,
@@ -103,16 +110,14 @@ export default function AdminReports() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Reports
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reports</h1>
         <p className="text-muted-foreground">
           Access detailed reports and analytics about your business.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {reports.map((report) => (
+        {reports.map(report => (
           <ReportCard
             key={report.title}
             icon={report.icon}
