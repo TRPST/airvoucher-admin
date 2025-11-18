@@ -18,6 +18,22 @@ export function CustomAuth({ role }: CustomAuthProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPortal, setCurrentPortal] = useState<PortalType | null>(null);
+  const [isRecovery, setIsRecovery] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (
+        hashParams.has("access_token") &&
+        hashParams.get("type") === "recovery"
+      ) {
+        setIsRecovery(true);
+        router.replace("/auth/reset-password" + window.location.hash);
+      }
+    }
+  }, [router]);
+
+  if (isRecovery) return null;
 
   // Detect current portal from hostname on client-side
   useEffect(() => {
@@ -128,7 +144,7 @@ export function CustomAuth({ role }: CustomAuthProps) {
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-4">
         <button
           type="submit"
           disabled={isLoading}
@@ -143,6 +159,13 @@ export function CustomAuth({ role }: CustomAuthProps) {
             <span>Sign In</span>
           )}
         </button>
+
+        <a
+          href="/auth/forgot-password"
+          className="text-center text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          Forgot your password?
+        </a>
       </div>
     </form>
   );

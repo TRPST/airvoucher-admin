@@ -2,15 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // This middleware now focuses on security and common headers
-// Actual routing is handled by next.config.js rewrites for better hydration compatibility
-
+// For implicit flow (client-only), we do NOT handle auth on the server
 export function middleware(request: NextRequest) {
   // Add debug logging
   console.log('Middleware triggered for path:', request.nextUrl.pathname);
   console.log('Hostname:', request.headers.get('host'));
-  
-  // We'll use this middleware for future auth/security needs
-  // But for now, the routing is handled by next.config.js
+
+  // Just pass through - auth is handled client-side with implicit flow
   return NextResponse.next();
 }
 
