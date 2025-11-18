@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, ChevronUp, ChevronDown, Activity, Download } from 'lucide-react';
+import { X, Calendar, ChevronUp, ChevronDown, Activity, Download, Search } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/utils/cn';
 import type { SalesReport } from '@/actions';
@@ -34,6 +34,7 @@ export function SalesTableModal({
   const [quickFilter, setQuickFilter] = useState<
     'all' | 'today' | 'week' | 'month' | 'year' | 'custom'
   >('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Table state
   const [sortField, setSortField] = useState<SortField>(initialSortField);
@@ -97,6 +98,39 @@ export function SalesTableModal({
   // Filter and sort sales data
   const filteredAndSortedSales = (() => {
     let filtered = [...sales];
+
+    // Apply search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(sale => {
+        const dateString = new Date(sale.created_at)
+          .toLocaleString('en-ZA', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+          .toLowerCase();
+
+        return (
+          dateString.includes(searchLower) ||
+          sale.retailer_name?.toLowerCase().includes(searchLower) ||
+          sale.retailer_short_code?.toLowerCase().includes(searchLower) ||
+          sale.agent_name?.toLowerCase().includes(searchLower) ||
+          sale.commission_group_name?.toLowerCase().includes(searchLower) ||
+          sale.terminal_short_code?.toLowerCase().includes(searchLower) ||
+          sale.voucher_type?.toLowerCase().includes(searchLower) ||
+          sale.amount.toString().includes(searchLower) ||
+          sale.ref_number?.toLowerCase().includes(searchLower) ||
+          sale.supplier_commission?.toString().includes(searchLower) ||
+          sale.retailer_commission?.toString().includes(searchLower) ||
+          sale.agent_commission?.toString().includes(searchLower) ||
+          sale.profit?.toString().includes(searchLower)
+        );
+      });
+    }
 
     // Apply date range filter
     if (startDate) {
@@ -316,7 +350,34 @@ export function SalesTableModal({
             </Dialog.Close>
           </div>
 
-          {/* Row 2: Filter Dropdowns + Export Button */}
+          {/* Row 2: Search Bar */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search sales by any field..."
+                className="w-full rounded-md border border-input bg-background py-1.5 pl-9 pr-9 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-muted"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <p className="flex-shrink-0 text-xs text-muted-foreground">
+                {filteredAndSortedSales.length} of {sales.length}
+              </p>
+            )}
+          </div>
+
+          {/* Row 3: Filter Dropdowns + Export Button */}
           <div className="flex items-center justify-between gap-3">
             {/* Compact Filters */}
             <div className="flex flex-1 items-center gap-2 overflow-x-auto">

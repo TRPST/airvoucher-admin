@@ -12,6 +12,8 @@ import {
   Maximize2,
   Download,
   HandCoins,
+  Search,
+  X,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { fetchSalesReport, type SalesReport } from '@/actions';
@@ -45,6 +47,7 @@ function ReprintsReportContent() {
   const [commissionGroupFilter, setCommissionGroupFilter] = useState<string>('all');
   const [terminalFilter, setTerminalFilter] = useState<string>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Table state
   const [sortField, setSortField] = useState<SortField>('date');
@@ -147,6 +150,35 @@ function ReprintsReportContent() {
   const filteredAndSortedSales = (() => {
     // First, filter to only include reprints
     let filtered = sales.filter(sale => sale.ref_number?.endsWith('-REPRINT'));
+
+    // Apply search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(sale => {
+        const dateString = new Date(sale.created_at)
+          .toLocaleString('en-ZA', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+          .toLowerCase();
+
+        return (
+          dateString.includes(searchLower) ||
+          sale.retailer_name?.toLowerCase().includes(searchLower) ||
+          sale.retailer_short_code?.toLowerCase().includes(searchLower) ||
+          sale.agent_name?.toLowerCase().includes(searchLower) ||
+          sale.commission_group_name?.toLowerCase().includes(searchLower) ||
+          sale.terminal_short_code?.toLowerCase().includes(searchLower) ||
+          sale.voucher_type?.toLowerCase().includes(searchLower) ||
+          sale.amount.toString().includes(searchLower) ||
+          sale.ref_number?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
 
     // Apply voucher type filter
     if (voucherTypeFilter !== 'all') {
@@ -532,6 +564,34 @@ function ReprintsReportContent() {
             ))}
           </select>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search reprints by any field..."
+            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-muted"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Showing {filteredAndSortedSales.length} of{' '}
+            {sales.filter(sale => sale.ref_number?.endsWith('-REPRINT')).length} reprints
+          </p>
+        )}
       </div>
 
       {/* Loading State */}
