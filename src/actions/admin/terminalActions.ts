@@ -15,9 +15,7 @@ export async function fetchTerminals(retailerId: string): Promise<ResponseType<T
       name,
       last_active,
       status,
-      short_code,
-      serial_number,
-      imei_number
+      short_code
     `
     )
     .eq('retailer_id', retailerId);
