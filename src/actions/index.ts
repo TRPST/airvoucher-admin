@@ -76,6 +76,7 @@ export {
   getVoucherCommissionOverridesForType,
   getVoucherAmountsForType,
   type VoucherCommissionOverride,
+  type CommissionType,
 } from './admin/commissionOverrideActions';
 
 // Deposit exports

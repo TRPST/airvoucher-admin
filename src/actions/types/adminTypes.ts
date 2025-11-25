@@ -114,6 +114,7 @@ export type CommissionRate = {
   retailer_pct: number;
   agent_pct: number;
   supplier_pct: number;
+  commission_type?: 'fixed' | 'percentage';
   voucher_type_name?: string;
 };
 

@@ -1,17 +1,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import {
-  ChevronLeft,
-  Loader2,
-  AlertCircle,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
-import {
-  updateCommissionGroup,
-  archiveCommissionGroup,
-} from '@/actions';
+import { ChevronLeft, Loader2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { updateCommissionGroup, archiveCommissionGroup } from '@/actions';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 import {
@@ -30,6 +21,7 @@ import {
   voucherTypesFetcher,
 } from '@/lib/swr/fetchers';
 import { VoucherTypeCommissionCard } from '@/components/admin/commissions/VoucherTypeCommissionCard';
+import { NetworkCard } from '@/components/admin/commissions/NetworkCard';
 import type { VoucherType } from '@/actions/types/adminTypes';
 
 type CommissionRate = {
@@ -95,16 +87,16 @@ export default function CommissionGroupDetail() {
   // Build derived commission rates with network/category info
   const typedVoucherTypes = (voucherTypesData as VoucherType[]) || [];
   const currentGroup = React.useMemo(
-    () => (allGroups ?? []).find((g) => g.id === groupId),
+    () => (allGroups ?? []).find(g => g.id === groupId),
     [allGroups, groupId]
   );
 
   const commissionRates: CommissionRate[] = React.useMemo(() => {
     if (!currentGroup) return [];
     const rates: CommissionRate[] = currentGroup.rates
-      .filter((rate) => typedVoucherTypes.some((vt) => vt.id === rate.voucher_type_id))
-      .map((rate) => {
-        const voucherType = typedVoucherTypes.find((vt) => vt.id === rate.voucher_type_id);
+      .filter(rate => typedVoucherTypes.some(vt => vt.id === rate.voucher_type_id))
+      .map(rate => {
+        const voucherType = typedVoucherTypes.find(vt => vt.id === rate.voucher_type_id);
         return {
           voucher_type_id: rate.voucher_type_id,
           voucher_type_name: rate.voucher_type_name || '',
@@ -122,18 +114,18 @@ export default function CommissionGroupDetail() {
   // Group rates by category
   const { networkRates, billPaymentRates, otherRates } = React.useMemo(() => {
     const networkProviders = ['mtn', 'cellc', 'vodacom', 'telkom'];
-    
+
     const networks: Record<string, CommissionRate[]> = {
       mtn: [],
       cellc: [],
       vodacom: [],
       telkom: [],
     };
-    
+
     const billPayments: CommissionRate[] = [];
     const others: CommissionRate[] = [];
 
-    commissionRates.forEach((rate) => {
+    commissionRates.forEach(rate => {
       if (rate.network_provider && networkProviders.includes(rate.network_provider)) {
         networks[rate.network_provider].push(rate);
       } else if (rate.category === 'bill_payment') {
@@ -217,7 +209,7 @@ export default function CommissionGroupDetail() {
     try {
       setIsArchiving(true);
       const { error } = await archiveCommissionGroup(groupId);
-      
+
       if (error) {
         console.error('Error archiving commission group:', error);
         toast.error(error.message || 'Failed to archive group');
@@ -226,7 +218,7 @@ export default function CommissionGroupDetail() {
 
       toast.success('Commission group archived successfully');
       setIsArchiveModalOpen(false);
-      
+
       // Redirect to commissions list
       router.push('/admin/commissions');
     } catch (err) {
@@ -271,7 +263,10 @@ export default function CommissionGroupDetail() {
   return (
     <div className="space-y-6">
       {/* Sticky header section */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8" style={{marginTop: -40}}>
+      <div
+        className="sticky top-0 z-10 -mx-6 border-b border-border bg-background px-6 pb-4 pt-6 md:-mx-8 md:px-8"
+        style={{ marginTop: -40 }}
+      >
         {/* Back button */}
         <Link href="/admin/commissions" passHref>
           <button className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary">
@@ -307,134 +302,26 @@ export default function CommissionGroupDetail() {
         </div>
       </div>
 
-      {/* MTN Vouchers Section */}
-      {networkRates.mtn.length > 0 && (
+      {/* Network Providers Section */}
+      {(networkRates.mtn.length > 0 ||
+        networkRates.cellc.length > 0 ||
+        networkRates.vodacom.length > 0 ||
+        networkRates.telkom.length > 0) && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">MTN Vouchers</h2>
+          <h2 className="text-xl font-semibold">Mobile Networks</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {networkRates.mtn
-              .filter((rate) => {
-                const name = rate.voucher_type_name.toLowerCase();
-                return (
-                  name.includes('airtime') ||
-                  name.includes('daily') ||
-                  name.includes('weekly') ||
-                  name.includes('monthly')
-                );
-              })
-              .map((rate, index) => (
-                <VoucherTypeCommissionCard
-                  key={rate.voucher_type_id}
-                  voucherTypeId={rate.voucher_type_id}
-                  voucherTypeName={rate.voucher_type_name}
-                  supplierPct={rate.supplier_pct}
-                  retailerPct={rate.retailer_pct}
-                  agentPct={rate.agent_pct}
-                  groupId={groupId!}
-                  index={index}
-                  networkProvider="mtn"
-                  category={rate.category}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* CellC Vouchers Section */}
-      {networkRates.cellc.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">CellC Vouchers</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {networkRates.cellc
-              .filter((rate) => {
-                const name = rate.voucher_type_name.toLowerCase();
-                return (
-                  name.includes('airtime') ||
-                  name.includes('daily') ||
-                  name.includes('weekly') ||
-                  name.includes('monthly')
-                );
-              })
-              .map((rate, index) => (
-                <VoucherTypeCommissionCard
-                  key={rate.voucher_type_id}
-                  voucherTypeId={rate.voucher_type_id}
-                  voucherTypeName={rate.voucher_type_name}
-                  supplierPct={rate.supplier_pct}
-                  retailerPct={rate.retailer_pct}
-                  agentPct={rate.agent_pct}
-                  groupId={groupId!}
-                  index={index}
-                  networkProvider="cellc"
-                  category={rate.category}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Vodacom Vouchers Section */}
-      {networkRates.vodacom.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Vodacom Vouchers</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {networkRates.vodacom
-              .filter((rate) => {
-                const name = rate.voucher_type_name.toLowerCase();
-                return (
-                  name.includes('airtime') ||
-                  name.includes('daily') ||
-                  name.includes('weekly') ||
-                  name.includes('monthly')
-                );
-              })
-              .map((rate, index) => (
-                <VoucherTypeCommissionCard
-                  key={rate.voucher_type_id}
-                  voucherTypeId={rate.voucher_type_id}
-                  voucherTypeName={rate.voucher_type_name}
-                  supplierPct={rate.supplier_pct}
-                  retailerPct={rate.retailer_pct}
-                  agentPct={rate.agent_pct}
-                  groupId={groupId!}
-                  index={index}
-                  networkProvider="vodacom"
-                  category={rate.category}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Telkom Vouchers Section */}
-      {networkRates.telkom.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Telkom Vouchers</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {networkRates.telkom
-              .filter((rate) => {
-                const name = rate.voucher_type_name.toLowerCase();
-                return (
-                  name.includes('airtime') ||
-                  name.includes('daily') ||
-                  name.includes('weekly') ||
-                  name.includes('monthly')
-                );
-              })
-              .map((rate, index) => (
-                <VoucherTypeCommissionCard
-                  key={rate.voucher_type_id}
-                  voucherTypeId={rate.voucher_type_id}
-                  voucherTypeName={rate.voucher_type_name}
-                  supplierPct={rate.supplier_pct}
-                  retailerPct={rate.retailer_pct}
-                  agentPct={rate.agent_pct}
-                  groupId={groupId!}
-                  index={index}
-                  networkProvider="telkom"
-                  category={rate.category}
-                />
-              ))}
+            {networkRates.mtn.length > 0 && (
+              <NetworkCard provider="mtn" groupId={groupId!} index={0} />
+            )}
+            {networkRates.vodacom.length > 0 && (
+              <NetworkCard provider="vodacom" groupId={groupId!} index={1} />
+            )}
+            {networkRates.cellc.length > 0 && (
+              <NetworkCard provider="cellc" groupId={groupId!} index={2} />
+            )}
+            {networkRates.telkom.length > 0 && (
+              <NetworkCard provider="telkom" groupId={groupId!} index={3} />
+            )}
           </div>
         </div>
       )}
@@ -510,7 +397,7 @@ export default function CommissionGroupDetail() {
               <input
                 type="text"
                 value={groupForm.name}
-                onChange={(e) => setGroupForm((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={e => setGroupForm(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 placeholder="Enter group name"
               />
@@ -519,9 +406,7 @@ export default function CommissionGroupDetail() {
               <label className="text-sm text-muted-foreground">Description</label>
               <textarea
                 value={groupForm.description}
-                onChange={(e) =>
-                  setGroupForm((prev) => ({ ...prev, description: e.target.value }))
-                }
+                onChange={e => setGroupForm(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 placeholder="Optional description"
                 rows={3}
@@ -538,7 +423,9 @@ export default function CommissionGroupDetail() {
             </button>
             <button
               onClick={saveGroupDetails}
-              disabled={isUpdatingGroup || !groupForm.name.trim() || groupForm.name.trim().length < 2}
+              disabled={
+                isUpdatingGroup || !groupForm.name.trim() || groupForm.name.trim().length < 2
+              }
               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
             >
               {isUpdatingGroup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -554,13 +441,15 @@ export default function CommissionGroupDetail() {
           <DialogHeader>
             <DialogTitle>Archive Commission Group</DialogTitle>
             <DialogDescription>
-              Are you sure you want to archive "{groupName}"? This action will hide the group from the active list.
+              Are you sure you want to archive "{groupName}"? This action will hide the group from
+              the active list.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-4 text-sm">
+          <div className="rounded-md bg-amber-50 p-4 text-sm dark:bg-amber-950/20">
             <p className="text-amber-800 dark:text-amber-200">
-              Archiving this group will not affect existing retailers or agents assigned to it, but it will no longer be available for new assignments.
+              Archiving this group will not affect existing retailers or agents assigned to it, but
+              it will no longer be available for new assignments.
             </p>
           </div>
 
