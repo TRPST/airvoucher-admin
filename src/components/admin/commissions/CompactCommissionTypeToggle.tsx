@@ -23,7 +23,9 @@ export function CompactCommissionTypeToggle({
           'px-2 py-1 text-xs font-medium transition-colors',
           'border-r border-border',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          value === 'percentage' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+          value === 'percentage'
+            ? 'rounded-l-md bg-primary text-primary-foreground'
+            : 'rounded-l-md hover:bg-muted'
         )}
       >
         %
@@ -35,10 +37,12 @@ export function CompactCommissionTypeToggle({
         className={cn(
           'px-2 py-1 text-xs font-medium transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          value === 'fixed' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+          value === 'fixed'
+            ? 'rounded-r-md bg-primary text-primary-foreground'
+            : 'rounded-r-md hover:bg-muted'
         )}
       >
-        R
+        Fixed
       </button>
     </div>
   );

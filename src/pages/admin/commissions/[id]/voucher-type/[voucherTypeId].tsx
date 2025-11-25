@@ -1089,7 +1089,7 @@ export default function VoucherAmountCommissions() {
       </div>
 
       {/* SECTION 6: Footer Summary */}
-      <div className="sticky bottom-0 rounded-lg border border-border bg-card p-3 shadow-sm">
+      {/* <div className="sticky bottom-0 rounded-lg border border-border bg-card p-3 shadow-sm">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium text-muted-foreground">Summary:</span>
           <div className="flex items-center gap-4">
@@ -1104,7 +1104,7 @@ export default function VoucherAmountCommissions() {
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Bulk Edit Modal */}
       <Dialog open={isBulkModalOpen} onOpenChange={setIsBulkModalOpen}>
