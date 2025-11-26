@@ -10,9 +10,11 @@ import {
   Check,
   X,
   Pencil,
+  RotateCcw,
 } from 'lucide-react';
 import {
   upsertVoucherCommissionOverride,
+  deleteVoucherCommissionOverride,
   upsertCommissionRate,
   type VoucherCommissionOverride,
   type CommissionType,
@@ -65,6 +67,7 @@ export default function VoucherAmountCommissions() {
   const voucherTypeId = typeof voucherTypeIdParam === 'string' ? voucherTypeIdParam : undefined;
 
   // Default rates editing state
+  const [isEditingDefaults, setIsEditingDefaults] = React.useState(false);
   const [defaultsDraft, setDefaultsDraft] = React.useState<{
     supplier_pct: string;
     retailer_pct: string;
@@ -292,6 +295,7 @@ export default function VoucherAmountCommissions() {
       }
 
       await mutate(SwrKeys.commissionGroups());
+      setIsEditingDefaults(false);
       toast.success('Default commission rates updated');
     } catch (err) {
       console.error('Error saving default rates:', err);
@@ -301,7 +305,11 @@ export default function VoucherAmountCommissions() {
     }
   };
 
-  // Default rates cancel handler
+  // Default rates edit handlers
+  const startEditingDefaults = () => {
+    setIsEditingDefaults(true);
+  };
+
   const cancelDefaultsEdit = () => {
     setDefaultsDraft({
       supplier_pct:
@@ -318,6 +326,7 @@ export default function VoucherAmountCommissions() {
           : (defaultRates.agent_pct * 100).toFixed(2),
     });
     setDefaultsCommissionType(defaultRates.commission_type);
+    setIsEditingDefaults(false);
   };
 
   // Inline row editing controls
@@ -351,6 +360,32 @@ export default function VoucherAmountCommissions() {
   const closeRowEdit = () => {
     setEditingRowAmount(null);
     setRowDraft(null);
+  };
+
+  const resetRowToDefaults = async () => {
+    if (!rowDraft || !groupId || !voucherTypeId) return;
+
+    try {
+      setIsSaving(true);
+      const amount = rowDraft.amount;
+
+      // Delete the override to link back to defaults
+      const { error } = await deleteVoucherCommissionOverride(voucherTypeId, amount, groupId);
+
+      if (error) {
+        console.error(`Error deleting override for R${amount}:`, error);
+        throw new Error(`Failed to reset commission for R${amount}`);
+      }
+
+      await mutate(SwrKeys.commissionOverrides(groupId, voucherTypeId));
+      closeRowEdit();
+      toast.success(`Reset R${amount} to default rates`);
+    } catch (err) {
+      console.error('Error resetting to defaults:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to reset to defaults');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRowInputChange = (
@@ -457,19 +492,10 @@ export default function VoucherAmountCommissions() {
             throw new Error(`Failed to update commission for R${amount}`);
           }
         } else if (originalRate.hasOverride) {
-          // Reset to defaults
-          const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId,
-            amount,
-            supplier_pct: defaultRates.supplier_pct,
-            retailer_pct: defaultRates.retailer_pct,
-            agent_pct: defaultRates.agent_pct,
-            commission_type: defaultRates.commission_type,
-            commission_group_id: groupId,
-          };
-          const { error } = await upsertVoucherCommissionOverride(override);
+          // Delete the override to link back to defaults
+          const { error } = await deleteVoucherCommissionOverride(voucherTypeId, amount, groupId);
           if (error) {
-            console.error(`Error resetting override for R${amount}:`, error);
+            console.error(`Error deleting override for R${amount}:`, error);
             throw new Error(`Failed to reset commission for R${amount}`);
           }
         }
@@ -511,6 +537,36 @@ export default function VoucherAmountCommissions() {
   const clearSelection = () => setSelectedAmounts(new Set());
 
   // Bulk edit handlers
+  const resetBulkToDefaults = async () => {
+    if (selectedAmounts.size === 0 || !groupId || !voucherTypeId) return;
+
+    try {
+      setIsBulkSaving(true);
+
+      // Delete all overrides for selected amounts
+      for (const amount of selectedAmounts) {
+        const { error } = await deleteVoucherCommissionOverride(voucherTypeId, amount, groupId);
+
+        if (error) {
+          console.error(`Error deleting override for R${amount}:`, error);
+          throw new Error(`Failed to reset commission for R${amount}`);
+        }
+      }
+
+      await mutate(SwrKeys.commissionOverrides(groupId, voucherTypeId));
+      setIsBulkModalOpen(false);
+      clearSelection();
+      toast.success(
+        `Reset ${selectedAmounts.size} ${selectedAmounts.size === 1 ? 'voucher' : 'vouchers'} to default rates`
+      );
+    } catch (err) {
+      console.error('Error resetting to defaults:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to reset to defaults');
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
   const handleBulkInputChange = (
     field: 'supplier_pct' | 'retailer_pct' | 'agent_pct',
     value: string
@@ -589,19 +645,10 @@ export default function VoucherAmountCommissions() {
             throw new Error(`Failed to update commission for R${amount}`);
           }
         } else if (originalRate.hasOverride) {
-          const override: VoucherCommissionOverride = {
-            voucher_type_id: voucherTypeId,
-            amount,
-            supplier_pct: defaultRates.supplier_pct,
-            retailer_pct: defaultRates.retailer_pct,
-            agent_pct: defaultRates.agent_pct,
-            commission_type: defaultRates.commission_type,
-            commission_group_id: groupId,
-          };
-
-          const { error } = await upsertVoucherCommissionOverride(override);
+          // Delete the override to link back to defaults
+          const { error } = await deleteVoucherCommissionOverride(voucherTypeId, amount, groupId);
           if (error) {
-            console.error(`Error resetting override for R${amount}:`, error);
+            console.error(`Error deleting override for R${amount}:`, error);
             throw new Error(`Failed to reset commission for R${amount}`);
           }
         }
@@ -691,67 +738,103 @@ export default function VoucherAmountCommissions() {
       <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
         <div className="mb-3 flex items-center gap-3">
           <h3 className="text-sm font-medium">Default Commission Rates</h3>
-          <CompactCommissionTypeToggle
-            value={defaultsCommissionType}
-            onChange={setDefaultsCommissionType}
-            disabled={isSavingDefaults}
-          />
+          {isEditingDefaults && (
+            <CompactCommissionTypeToggle
+              value={defaultsCommissionType}
+              onChange={setDefaultsCommissionType}
+              disabled={isSavingDefaults}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Supplier Input */}
+          {/* Supplier */}
           <div className="flex items-center gap-1">
             <label className="text-xs font-medium text-pink-600">Supplier</label>
-            <input
-              type="text"
-              value={defaultsDraft.supplier_pct}
-              onChange={e => setDefaultsDraft(prev => ({ ...prev, supplier_pct: e.target.value }))}
-              disabled={isSavingDefaults}
-              className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-xs text-muted-foreground">
-              {defaultsCommissionType === 'percentage' ? '%' : 'R'}
-            </span>
+            {isEditingDefaults ? (
+              <>
+                <input
+                  type="text"
+                  value={defaultsDraft.supplier_pct}
+                  onChange={e =>
+                    setDefaultsDraft(prev => ({ ...prev, supplier_pct: e.target.value }))
+                  }
+                  disabled={isSavingDefaults}
+                  className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {defaultsCommissionType === 'percentage' ? '%' : 'R'}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm">
+                {defaultRates.commission_type === 'fixed'
+                  ? `R${defaultRates.supplier_pct.toFixed(2)}`
+                  : `${(defaultRates.supplier_pct * 100).toFixed(2)}%`}
+              </span>
+            )}
           </div>
 
-          {/* Retailer Input */}
+          {/* Retailer */}
           <div className="flex items-center gap-1">
             <label className="text-xs font-medium text-purple-600">Retailer</label>
-            <input
-              type="text"
-              value={defaultsDraft.retailer_pct}
-              onChange={e => setDefaultsDraft(prev => ({ ...prev, retailer_pct: e.target.value }))}
-              disabled={isSavingDefaults}
-              className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-xs text-muted-foreground">
-              {defaultsCommissionType === 'percentage' ? '%' : 'R'}
-            </span>
+            {isEditingDefaults ? (
+              <>
+                <input
+                  type="text"
+                  value={defaultsDraft.retailer_pct}
+                  onChange={e =>
+                    setDefaultsDraft(prev => ({ ...prev, retailer_pct: e.target.value }))
+                  }
+                  disabled={isSavingDefaults}
+                  className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {defaultsCommissionType === 'percentage' ? '%' : 'R'}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm">
+                {defaultRates.commission_type === 'fixed'
+                  ? `R${defaultRates.retailer_pct.toFixed(2)}`
+                  : `${(defaultRates.retailer_pct * 100).toFixed(2)}%`}
+              </span>
+            )}
           </div>
 
-          {/* Agent Input */}
+          {/* Agent */}
           <div className="flex items-center gap-1">
             <label className="text-xs font-medium text-blue-600">Agent</label>
-            <input
-              type="text"
-              value={defaultsDraft.agent_pct}
-              onChange={e => setDefaultsDraft(prev => ({ ...prev, agent_pct: e.target.value }))}
-              disabled={isSavingDefaults}
-              className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-xs text-muted-foreground">
-              {defaultsCommissionType === 'percentage' ? '%' : 'R'}
-            </span>
+            {isEditingDefaults ? (
+              <>
+                <input
+                  type="text"
+                  value={defaultsDraft.agent_pct}
+                  onChange={e => setDefaultsDraft(prev => ({ ...prev, agent_pct: e.target.value }))}
+                  disabled={isSavingDefaults}
+                  className="w-16 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {defaultsCommissionType === 'percentage' ? '%' : 'R'}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm">
+                {defaultRates.commission_type === 'fixed'
+                  ? `R${defaultRates.agent_pct.toFixed(2)}`
+                  : `${(defaultRates.agent_pct * 100).toFixed(2)}%`}
+              </span>
+            )}
           </div>
 
-          {/* Save and Cancel buttons - only show when there are changes */}
-          {hasDefaultChanges && (
+          {/* Action buttons */}
+          {isEditingDefaults ? (
             <>
               {/* Save Button */}
               <button
                 onClick={saveDefaultRates}
                 disabled={isSavingDefaults}
-                className="ml-auto inline-flex items-center justify-center rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                className="inline-flex items-center justify-center rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-50"
                 title="Save"
               >
                 {isSavingDefaults ? (
@@ -771,6 +854,14 @@ export default function VoucherAmountCommissions() {
                 <X className="h-4 w-4" />
               </button>
             </>
+          ) : (
+            <button
+              onClick={startEditingDefaults}
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium hover:bg-muted"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
           )}
         </div>
       </div>
@@ -833,10 +924,17 @@ export default function VoucherAmountCommissions() {
                   rate.agent_pct !== defaultRates.agent_pct;
 
                 // Calculate commission amounts (for display mode)
-                const supplierAmount = rate.amount * rate.supplier_pct;
-                const retailerAmount = rate.amount * rate.retailer_pct;
+                const supplierAmount =
+                  rate.commission_type === 'fixed'
+                    ? rate.supplier_pct
+                    : rate.amount * rate.supplier_pct;
+                const retailerAmount =
+                  rate.commission_type === 'fixed'
+                    ? rate.retailer_pct
+                    : rate.amount * rate.retailer_pct;
                 const netBalance = supplierAmount - retailerAmount;
-                const agentAmount = netBalance * rate.agent_pct;
+                const agentAmount =
+                  rate.commission_type === 'fixed' ? rate.agent_pct : netBalance * rate.agent_pct;
                 const avProfit = netBalance - agentAmount;
 
                 // Calculate live preview (for edit mode)
@@ -1061,6 +1159,14 @@ export default function VoucherAmountCommissions() {
                           >
                             <X className="h-4 w-4" />
                           </button>
+                          <button
+                            onClick={resetRowToDefaults}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded p-1 text-gray-600 hover:bg-orange-50 disabled:opacity-50"
+                            title="Reset to defaults"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
                         </div>
                       ) : (
                         <button
@@ -1145,6 +1251,15 @@ export default function VoucherAmountCommissions() {
               className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
             >
               Cancel
+            </button>
+            <button
+              onClick={resetBulkToDefaults}
+              disabled={isBulkSaving}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-orange-600 bg-background px-4 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-orange-50 disabled:opacity-50"
+              title="Reset to defaults"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset to Defaults
             </button>
             <button
               onClick={applyBulkEdits}

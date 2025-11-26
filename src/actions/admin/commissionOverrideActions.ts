@@ -77,6 +77,23 @@ export async function getVoucherCommissionOverridesForType(
 /**
  * Get all voucher amounts for a specific voucher type
  */
+export async function deleteVoucherCommissionOverride(
+  voucher_type_id: string,
+  amount: number,
+  commission_group_id: string
+): Promise<ResponseType<null>> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('voucher_commission_overrides')
+    .delete()
+    .eq('voucher_type_id', voucher_type_id)
+    .eq('amount', amount)
+    .eq('commission_group_id', commission_group_id);
+
+  return { data: null, error };
+}
+
 export async function getVoucherAmountsForType(
   voucher_type_id: string
 ): Promise<ResponseType<{ amount: number }[]>> {
