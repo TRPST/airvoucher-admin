@@ -73,6 +73,7 @@ export {
 export {
   getVoucherCommissionOverride,
   upsertVoucherCommissionOverride,
+  deleteVoucherCommissionOverride,
   getVoucherCommissionOverridesForType,
   getVoucherAmountsForType,
   type VoucherCommissionOverride,
